@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "308257216122",
+    "firebase_url": "https://ots-broker-default-rtdb.firebaseio.com",
+    "project_id": "ots-broker",
+    "storage_bucket": "ots-broker.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:308257216122:android:e91fe3f7c14d6ade108dc3",
+        "android_client_info": {
+          "package_name": "org.saarthakgimsss.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "308257216122-jluej7duqqfcihqq7ijmpeugu3mrkn6c.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCcV2PO0EQ-4YfTS3ByZORWfwRX1HIGy9U"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "308257216122-jluej7duqqfcihqq7ijmpeugu3mrkn6c.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "308257216122-25a8ahdktckjp5fsj9h6v6ounrh5n3ud.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.webnmediasolutions.OTS-Driver"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
