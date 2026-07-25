@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Brand, Spacing } from '@/constants/theme';
 import { ThemedText } from './ThemedText';
+import { ThemeToggle } from './ThemeToggle';
 
 const logoSource = require('../../../assets/images/icon.png');
 
@@ -33,14 +34,17 @@ export function AppHeader({
           {address}
         </ThemedText>
       </View>
-      <Pressable
-        hitSlop={10}
-        onPress={() => router.push('/notifications')}
-        style={styles.bell}
-        accessibilityLabel="Notifications"
-      >
-        <Ionicons name="notifications-outline" size={22} color="#fff" />
-      </Pressable>
+      <View style={styles.actions}>
+        <ThemeToggle />
+        <Pressable
+          hitSlop={10}
+          onPress={() => router.push('/notifications')}
+          style={styles.bell}
+          accessibilityLabel="Notifications"
+        >
+          <Ionicons name="notifications-outline" size={22} color="#fff" />
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -52,6 +56,11 @@ const styles = StyleSheet.create({
     backgroundColor: Brand.blue,
     paddingHorizontal: Spacing.three,
     paddingBottom: Spacing.two + 2,
+  },
+  actions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
   },
   logo: {
     width: 38,

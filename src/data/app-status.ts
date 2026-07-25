@@ -36,6 +36,8 @@ export interface AppStatus {
   email: string | null;
   whatsapp: string | null;
   enabledSections: EnabledSections;
+  minVersion: string | null;
+  storeUrl: string | null;
 }
 
 interface ApiEnvelope<T> {
@@ -67,6 +69,8 @@ export async function fetchAppStatus(): Promise<AppStatus> {
     email: string | null;
     whatsapp: string | null;
     enabled_sections?: Partial<Record<SectionKey, boolean>>;
+    min_version?: string | null;
+    store_url?: string | null;
   }>;
 
   if (!json.status || !json.data) {
@@ -83,16 +87,37 @@ export async function fetchAppStatus(): Promise<AppStatus> {
     email: json.data.email,
     whatsapp: json.data.whatsapp,
     enabledSections: { ...ALL_SECTIONS_ENABLED, ...json.data.enabled_sections },
+    minVersion: json.data.min_version ?? null,
+    storeUrl: json.data.store_url ?? null,
   };
 }
 
-/** Registers this install so it shows up in the admin's device list (and can be blocked). */
-export async function registerDevice(): Promise<void> {
+export interface DeviceProfile {
+  userType?: string;
+  role?: string;
+  fullName?: string;
+  studentClass?: string;
+  section?: string;
+  phone?: string;
+}
+
+/** Registers this install so it shows up in the admin's device list (and can be
+ * blocked). Called on every launch (no profile) and again after onboarding
+ * (with the collected profile) — device_register upserts by device_id and
+ * never overwrites a stored field with a blank one, so this is safe to call
+ * repeatedly. */
+export async function registerDevice(profile?: DeviceProfile): Promise<void> {
   const deviceId = await getDeviceId();
   const body = new FormData();
   body.append('device_id', deviceId);
   body.append('platform', Platform.OS);
   body.append('app_version', getAppVersion());
+  if (profile?.userType) body.append('user_type', profile.userType);
+  if (profile?.role) body.append('role', profile.role);
+  if (profile?.fullName) body.append('full_name', profile.fullName);
+  if (profile?.studentClass) body.append('class', profile.studentClass);
+  if (profile?.section) body.append('section', profile.section);
+  if (profile?.phone) body.append('phone', profile.phone);
 
   await fetch(`${BASE_URL}/device_register`, { method: 'POST', body }).catch(() => {
     // Best-effort — a failed registration shouldn't block app usage.

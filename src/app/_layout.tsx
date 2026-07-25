@@ -1,3 +1,4 @@
+import * as SystemUI from 'expo-system-ui';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useCallback, useEffect, useState } from 'react';
@@ -6,17 +7,36 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { Brand } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { ThemeModeProvider } from '@/hooks/use-theme-mode';
 import { ALL_SECTIONS_ENABLED, AppStatus, fetchAppStatus, registerDevice } from '@/data/app-status';
+import { getAppVersion } from '@/lib/device';
+import { isOnboardingComplete } from '@/lib/onboarding';
+import { isUpdateRequired } from '@/lib/version';
 import { LockScreen } from '@/components/ui/LockScreen';
+import { UpdateRequiredScreen } from '@/components/ui/UpdateRequiredScreen';
 import { DetailHeader } from '@/components/ui/DetailHeader';
 import { SectionsProvider } from '@/hooks/use-sections';
+import { OnboardingFlow } from '@/components/onboarding/OnboardingFlow';
 
-export default function RootLayout() {
+const FAIL_OPEN_STATUS: AppStatus = {
+  enabled: true,
+  reason: null,
+  title: null,
+  message: null,
+  devName: null,
+  phone: null,
+  email: null,
+  whatsapp: null,
+  enabledSections: ALL_SECTIONS_ENABLED,
+  minVersion: null,
+  storeUrl: null,
+};
+
+function RootLayoutInner() {
   const theme = useTheme();
-  const scheme = useColorScheme();
   const [status, setStatus] = useState<AppStatus | null>(null);
   const [checking, setChecking] = useState(true);
+  const [onboarded, setOnboarded] = useState<boolean | null>(null);
 
   const checkStatus = useCallback(async () => {
     setChecking(true);
@@ -26,17 +46,7 @@ export default function RootLayout() {
     } catch {
       // If the check itself fails (offline, backend down), fail open —
       // don't lock users out of the whole app over a network hiccup.
-      setStatus({
-        enabled: true,
-        reason: null,
-        title: null,
-        message: null,
-        devName: null,
-        phone: null,
-        email: null,
-        whatsapp: null,
-        enabledSections: ALL_SECTIONS_ENABLED,
-      });
+      setStatus(FAIL_OPEN_STATUS);
     } finally {
       setChecking(false);
     }
@@ -45,13 +55,27 @@ export default function RootLayout() {
   useEffect(() => {
     checkStatus();
     registerDevice();
+    isOnboardingComplete().then(setOnboarded);
   }, [checkStatus]);
 
-  if (checking && !status) {
+  useEffect(() => {
+    SystemUI.setBackgroundColorAsync(theme.background).catch(() => {});
+  }, [theme.background]);
+
+  if ((checking && !status) || onboarded === null) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: Brand.blueDark }}>
         <ActivityIndicator color="#fff" size="large" />
       </View>
+    );
+  }
+
+  if (status && isUpdateRequired(getAppVersion(), status.minVersion)) {
+    return (
+      <SafeAreaProvider>
+        <StatusBar style="light" />
+        <UpdateRequiredScreen storeUrl={status.storeUrl} />
+      </SafeAreaProvider>
     );
   }
 
@@ -60,6 +84,15 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <StatusBar style="light" />
         <LockScreen status={status} onRetry={checkStatus} retrying={checking} />
+      </SafeAreaProvider>
+    );
+  }
+
+  if (!onboarded) {
+    return (
+      <SafeAreaProvider>
+        <StatusBar style="dark" />
+        <OnboardingFlow onDone={() => setOnboarded(true)} />
       </SafeAreaProvider>
     );
   }
@@ -80,7 +113,7 @@ export default function RootLayout() {
           <Stack.Screen name="news/index" options={{ header: () => <DetailHeader title="Latest News" /> }} />
           <Stack.Screen name="announcements" options={{ headerShown: false }} />
           <Stack.Screen name="notices" options={{ header: () => <DetailHeader title="Notices" /> }} />
-          <Stack.Screen name="result" options={{ header: () => <DetailHeader title="Check Result" /> }} />
+          <Stack.Screen name="result" options={{ header: () => <DetailHeader title="Result / Report Card" /> }} />
           <Stack.Screen name="contact" options={{ header: () => <DetailHeader title="Contact Us" /> }} />
           <Stack.Screen name="about" options={{ header: () => <DetailHeader title="About Us" /> }} />
           <Stack.Screen name="teachers" options={{ header: () => <DetailHeader title="Our Teachers" /> }} />
@@ -91,5 +124,13 @@ export default function RootLayout() {
         </Stack>
       </SectionsProvider>
     </SafeAreaProvider>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <ThemeModeProvider>
+      <RootLayoutInner />
+    </ThemeModeProvider>
   );
 }
