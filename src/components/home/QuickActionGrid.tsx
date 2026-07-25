@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Radius, Spacing, TileColors } from '@/constants/theme';
 import { SectionKey, useSections } from '@/hooks/use-sections';
+import { useTheme } from '@/hooks/use-theme';
 import { Card } from '../ui/Card';
 import { ThemedText } from '../ui/ThemedText';
 
@@ -25,36 +26,46 @@ const ACTIONS: QuickAction[] = [
   { key: 'contact', label: 'Contact', icon: 'call', colors: TileColors.red, href: '/contact', section: null },
 ];
 
+// Tiles are always shown (even when the admin has turned the section off) so
+// the app doesn't feel like features vanished — tapping a disabled one just
+// opens its "Coming Soon" state (SectionUnavailable) instead of the real
+// screen; a small lock badge previews that before the tap.
 export function QuickActionGrid() {
   const sections = useSections();
-  const visible = ACTIONS.filter((a) => a.section === null || sections[a.section]);
-
-  if (visible.length === 0) return null;
+  const theme = useTheme();
 
   return (
     <View style={styles.grid}>
-      {visible.map((action) => (
-        <Pressable
-          key={action.key}
-          style={[styles.tileWrap, { width: `${100 / visible.length - 2}%` }]}
-          onPress={() => router.push(action.href)}
-        >
-          <Card style={styles.tile}>
-            <View style={[styles.iconCircle, { backgroundColor: action.colors.bg }]}>
-              <Ionicons name={action.icon} size={22} color={action.colors.fg} />
-            </View>
-            <ThemedText
-              type="small"
-              style={styles.label}
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.8}
-            >
-              {action.label}
-            </ThemedText>
-          </Card>
-        </Pressable>
-      ))}
+      {ACTIONS.map((action) => {
+        const enabled = action.section === null || sections[action.section];
+        return (
+          <Pressable
+            key={action.key}
+            style={[styles.tileWrap, { width: `${100 / ACTIONS.length - 2}%` }]}
+            onPress={() => router.push(action.href)}
+          >
+            <Card style={styles.tile}>
+              <View style={[styles.iconCircle, { backgroundColor: action.colors.bg }]}>
+                <Ionicons name={action.icon} size={22} color={action.colors.fg} />
+              </View>
+              {!enabled ? (
+                <View style={[styles.lockBadge, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+                  <Ionicons name="hourglass-outline" size={10} color={theme.textSecondary} />
+                </View>
+              ) : null}
+              <ThemedText
+                type="small"
+                style={styles.label}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.8}
+              >
+                {action.label}
+              </ThemedText>
+            </Card>
+          </Pressable>
+        );
+      })}
     </View>
   );
 }
@@ -80,6 +91,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: Spacing.one,
+  },
+  lockBadge: {
+    position: 'absolute',
+    top: 0,
+    right: 12,
+    width: 18,
+    height: 18,
+    borderRadius: Radius.pill,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   label: {
     textAlign: 'center',

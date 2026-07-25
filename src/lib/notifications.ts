@@ -38,3 +38,20 @@ export async function ensureNotificationChannel() {
     enableVibrate: true,
   });
 }
+
+/** The backend sends pushes via the raw FCM HTTP v1 API (see Fcm.php), not
+ * Expo's push service — so we need the native FCM registration token
+ * (`getDevicePushTokenAsync`), not an Expo push token
+ * (`getExpoPushTokenAsync`, which is a different `ExponentPushToken[...]`
+ * string the backend's FCM sender can't use). Returns null if permission
+ * isn't granted yet or the device has no push capability (e.g. simulator). */
+export async function getFcmPushToken(): Promise<string | null> {
+  try {
+    const { status } = await Notifications.getPermissionsAsync();
+    if (status !== 'granted') return null;
+    const { data } = await Notifications.getDevicePushTokenAsync();
+    return typeof data === 'string' ? data : null;
+  } catch {
+    return null;
+  }
+}

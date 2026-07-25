@@ -19,6 +19,9 @@ interface Row {
   label: string;
   icon: keyof typeof Ionicons.glyphMap;
   onPress: () => void;
+  /** Section is admin-disabled — row still shows, but tapping it lands on
+   * the Coming Soon state rather than real content. */
+  locked?: boolean;
 }
 
 function RowList({ rows }: { rows: Row[] }) {
@@ -40,6 +43,9 @@ function RowList({ rows }: { rows: Row[] }) {
               <Ionicons name={item.icon} size={18} color={theme.tint} />
             </View>
             <ThemedText type="default">{item.label}</ThemedText>
+            {item.locked ? (
+              <Ionicons name="hourglass-outline" size={13} color={theme.textSecondary} style={styles.lockIcon} />
+            ) : null}
           </View>
           <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
         </Pressable>
@@ -55,35 +61,46 @@ export default function MoreScreen() {
   const exploreRows: Row[] = [
     { label: 'Notifications', icon: 'notifications-outline', onPress: () => router.push('/notifications') },
     { label: 'About Us', icon: 'information-circle-outline', onPress: () => router.push('/about') },
-    sections.notices
-      ? { label: 'Announcements', icon: 'megaphone-outline', onPress: () => router.push('/notices') }
-      : null,
-    sections.result
-      ? { label: 'Result / Report Card', icon: 'document-text-outline', onPress: () => router.push('/result') }
-      : null,
+    {
+      label: 'Announcements',
+      icon: 'megaphone-outline',
+      onPress: () => router.push('/notices'),
+      locked: !sections.notices,
+    },
+    {
+      label: 'Result / Report Card',
+      icon: 'document-text-outline',
+      onPress: () => router.push('/result'),
+      locked: !sections.result,
+    },
     { label: 'Contact Us', icon: 'call-outline', onPress: () => router.push('/contact') },
-  ].filter((r): r is Row => r !== null);
+  ];
 
   const infoRows: Row[] = [
-    sections.teachers
-      ? { label: 'Our Teachers', icon: 'people-outline', onPress: () => router.push('/teachers') }
-      : null,
-    sections.top_students
-      ? { label: 'Top Students', icon: 'ribbon-outline', onPress: () => router.push('/top-students') }
-      : null,
-    sections.disclosure
-      ? {
-          label: 'Mandatory Disclosure',
-          icon: 'shield-checkmark-outline',
-          onPress: () => router.push('/disclosure'),
-        }
-      : null,
+    {
+      label: 'Our Teachers',
+      icon: 'people-outline',
+      onPress: () => router.push('/teachers'),
+      locked: !sections.teachers,
+    },
+    {
+      label: 'Top Students',
+      icon: 'ribbon-outline',
+      onPress: () => router.push('/top-students'),
+      locked: !sections.top_students,
+    },
+    {
+      label: 'Mandatory Disclosure',
+      icon: 'shield-checkmark-outline',
+      onPress: () => router.push('/disclosure'),
+      locked: !sections.disclosure,
+    },
     {
       label: 'School Website',
       icon: 'globe-outline',
       onPress: () => Linking.openURL('https://www.saarthakgimsss12a.org'),
     },
-  ].filter((r): r is Row => r !== null);
+  ];
 
   const followRows: Row[] = [
     {
@@ -195,6 +212,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: Spacing.three,
+  },
+  lockIcon: {
+    marginLeft: Spacing.two,
   },
   footer: {
     alignItems: 'center',

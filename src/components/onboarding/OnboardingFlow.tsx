@@ -8,6 +8,7 @@ import { registerDevice } from '@/data/app-status';
 import { Brand, Radius, Shadow, Spacing } from '@/constants/theme';
 import { markOnboardingComplete } from '@/lib/onboarding';
 import { requestOnboardingPermissions } from '@/lib/permissions';
+import { getFcmPushToken } from '@/lib/notifications';
 import { useTheme } from '@/hooks/use-theme';
 import { Button } from '@/components/ui/Button';
 import { SelectField } from '@/components/ui/SelectField';
@@ -90,6 +91,10 @@ export function OnboardingFlow({ onDone }: OnboardingFlowProps) {
     }).catch(() => {});
     onDone();
     await requestOnboardingPermissions();
+    // Permission was just granted (or denied) above — try once more to pick
+    // up a push token now that we know. No-ops silently if denied.
+    const pushToken = await getFcmPushToken();
+    if (pushToken) registerDevice({ pushToken }).catch(() => {});
   }
 
   async function skip() {

@@ -5,12 +5,9 @@ import React from 'react';
 import { AppHeader } from '@/components/ui/AppHeader';
 import { TabHeader } from '@/components/ui/TabHeader';
 import { useTheme } from '@/hooks/use-theme';
-import { useSectionEnabled } from '@/hooks/use-sections';
 
 export default function TabsLayout() {
   const theme = useTheme();
-  const eventsEnabled = useSectionEnabled('events');
-  const galleryEnabled = useSectionEnabled('gallery');
 
   return (
     <Tabs
@@ -33,7 +30,6 @@ export default function TabsLayout() {
         name="events"
         options={{
           title: 'Events',
-          href: eventsEnabled ? undefined : null,
           header: () => <TabHeader title="Events" />,
           tabBarIcon: ({ color, size }) => <Ionicons name="calendar" size={size} color={color} />,
         }}
@@ -42,7 +38,6 @@ export default function TabsLayout() {
         name="gallery"
         options={{
           title: 'Gallery',
-          href: galleryEnabled ? undefined : null,
           header: () => <TabHeader title="Gallery" />,
           tabBarIcon: ({ color, size }) => <Ionicons name="images" size={size} color={color} />,
         }}

@@ -103,6 +103,8 @@ export interface DeviceProfile {
   /** Teacher designation (PRT/TGT/PGT). */
   designation?: string;
   phone?: string;
+  /** Native FCM registration token — see lib/notifications.ts's getFcmPushToken(). */
+  pushToken?: string | null;
 }
 
 /** Registers this install so it shows up in the admin's device list (and can be
@@ -124,6 +126,7 @@ export async function registerDevice(profile?: DeviceProfile): Promise<void> {
   if (profile?.stream) body.append('stream', profile.stream);
   if (profile?.designation) body.append('designation', profile.designation);
   if (profile?.phone) body.append('phone', profile.phone);
+  if (profile?.pushToken) body.append('push_token', profile.pushToken);
 
   await fetch(`${BASE_URL}/device_register`, { method: 'POST', body }).catch(() => {
     // Best-effort — a failed registration shouldn't block app usage.
