@@ -7,10 +7,12 @@ import { AvatarFgPalette, AvatarPalette, Radius, Spacing } from '@/constants/the
 import { Card } from '@/components/ui/Card';
 import { Screen } from '@/components/ui/Screen';
 import { EmptyState, ErrorState, Loading } from '@/components/ui/states';
+import { SectionUnavailable } from '@/components/ui/SectionUnavailable';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { useTheme } from '@/hooks/use-theme';
 import { fetchTeachers } from '@/data/api';
 import { useFetch } from '@/hooks/use-fetch';
+import { useSectionEnabled } from '@/hooks/use-sections';
 import { Teacher } from '@/data/types';
 
 function initialsFor(name: string | null | undefined) {
@@ -74,7 +76,10 @@ function TeacherCard({ teacher, index }: { teacher: Teacher; index: number }) {
 }
 
 export default function TeachersScreen() {
+  const enabled = useSectionEnabled('teachers');
   const { data, loading, error, refetch } = useFetch(fetchTeachers);
+
+  if (!enabled) return <SectionUnavailable />;
 
   if (loading && !data) {
     return (

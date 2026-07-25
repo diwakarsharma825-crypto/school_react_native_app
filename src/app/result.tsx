@@ -6,14 +6,17 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Screen } from '@/components/ui/Screen';
 import { ErrorState, Loading } from '@/components/ui/states';
+import { SectionUnavailable } from '@/components/ui/SectionUnavailable';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { useTheme } from '@/hooks/use-theme';
 import { checkResult, fetchResultSessions } from '@/data/api';
 import { useFetch } from '@/hooks/use-fetch';
+import { useSectionEnabled } from '@/hooks/use-sections';
 import { ResultCheckResponse } from '@/data/types';
 
 export default function ResultScreen() {
   const theme = useTheme();
+  const enabled = useSectionEnabled('result');
   const sessions = useFetch(fetchResultSessions);
   const [sessionId, setSessionId] = useState<string | undefined>(undefined);
   const [srn, setSrn] = useState('');
@@ -23,6 +26,8 @@ export default function ResultScreen() {
   const [result, setResult] = useState<ResultCheckResponse | undefined>(undefined);
 
   const activeSession = sessionId ?? (sessions.data && sessions.data[0] ? String(sessions.data[0].id) : undefined);
+
+  if (!enabled) return <SectionUnavailable />;
 
   async function handleSearch() {
     if (!activeSession || !srn.trim() || !dob.trim()) {

@@ -13,11 +13,13 @@ import { EmptyState, ErrorState, Loading } from '@/components/ui/states';
 import { Spacing } from '@/constants/theme';
 import { fetchHome, fetchSettings } from '@/data/api';
 import { useFetch } from '@/hooks/use-fetch';
+import { useSectionEnabled } from '@/hooks/use-sections';
 import { stripHtml } from '@/lib/format';
 
 export default function HomeScreen() {
   const home = useFetch(fetchHome);
   const settings = useFetch(fetchSettings);
+  const eventsEnabled = useSectionEnabled('events');
 
   const refreshAll = useCallback(() => {
     home.refetch();
@@ -81,27 +83,31 @@ export default function HomeScreen() {
             <EmptyState message="No news yet." />
           )}
 
-          <SectionHeader title="Latest Events" onSeeAll={() => router.push('/(tabs)/events')} />
-          {home.data.events.length > 0 ? (
-            <View style={{ marginBottom: Spacing.four }}>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                {home.data.events.map((e) => (
-                  <MediaCard
-                    key={e.id}
-                    title={e.title}
-                    date={e.event_from}
-                    imageUrl={e.image_url}
-                    excerpt={e.note}
-                    category="Event"
-                    width={220}
-                    onPress={() => router.push(`/event/${e.id}`)}
-                  />
-                ))}
-              </ScrollView>
-            </View>
-          ) : (
-            <EmptyState message="No upcoming events." />
-          )}
+          {eventsEnabled ? (
+            <>
+              <SectionHeader title="Latest Events" onSeeAll={() => router.push('/(tabs)/events')} />
+              {home.data.events.length > 0 ? (
+                <View style={{ marginBottom: Spacing.four }}>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                    {home.data.events.map((e) => (
+                      <MediaCard
+                        key={e.id}
+                        title={e.title}
+                        date={e.event_from}
+                        imageUrl={e.image_url}
+                        excerpt={e.note}
+                        category="Event"
+                        width={220}
+                        onPress={() => router.push(`/event/${e.id}`)}
+                      />
+                    ))}
+                  </ScrollView>
+                </View>
+              ) : (
+                <EmptyState message="No upcoming events." />
+              )}
+            </>
+          ) : null}
         </>
       ) : (
         <EmptyState message="Nothing to show yet." />

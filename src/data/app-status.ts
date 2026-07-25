@@ -3,6 +3,29 @@ import { Platform } from 'react-native';
 import { BASE_URL } from './api';
 import { getAppVersion, getDeviceId } from '@/lib/device';
 
+export type SectionKey =
+  | 'events'
+  | 'gallery'
+  | 'notices'
+  | 'result'
+  | 'teachers'
+  | 'top_students'
+  | 'disclosure';
+
+/** Admin-controlled section visibility. Defaults to all-true so nothing
+ * flickers hidden while the first app_status check is still in flight. */
+export type EnabledSections = Record<SectionKey, boolean>;
+
+export const ALL_SECTIONS_ENABLED: EnabledSections = {
+  events: true,
+  gallery: true,
+  notices: true,
+  result: true,
+  teachers: true,
+  top_students: true,
+  disclosure: true,
+};
+
 export interface AppStatus {
   enabled: boolean;
   reason: 'device_blocked' | 'app_disabled' | null;
@@ -12,6 +35,7 @@ export interface AppStatus {
   phone: string | null;
   email: string | null;
   whatsapp: string | null;
+  enabledSections: EnabledSections;
 }
 
 interface ApiEnvelope<T> {
@@ -42,6 +66,7 @@ export async function fetchAppStatus(): Promise<AppStatus> {
     phone: string | null;
     email: string | null;
     whatsapp: string | null;
+    enabled_sections?: Partial<Record<SectionKey, boolean>>;
   }>;
 
   if (!json.status || !json.data) {
@@ -57,6 +82,7 @@ export async function fetchAppStatus(): Promise<AppStatus> {
     phone: json.data.phone,
     email: json.data.email,
     whatsapp: json.data.whatsapp,
+    enabledSections: { ...ALL_SECTIONS_ENABLED, ...json.data.enabled_sections },
   };
 }
 

@@ -7,16 +7,21 @@ import { Radius, Spacing } from '@/constants/theme';
 import { Card } from '@/components/ui/Card';
 import { Screen } from '@/components/ui/Screen';
 import { EmptyState, ErrorState, Loading } from '@/components/ui/states';
+import { SectionUnavailable } from '@/components/ui/SectionUnavailable';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { useTheme } from '@/hooks/use-theme';
 import { fetchMandatoryDisclosure } from '@/data/api';
 import { useFetch } from '@/hooks/use-fetch';
+import { useSectionEnabled } from '@/hooks/use-sections';
 import { MandatoryDisclosureDoc } from '@/data/types';
 
 export default function DisclosureScreen() {
   const theme = useTheme();
+  const enabled = useSectionEnabled('disclosure');
   const { data, loading, error, refetch } = useFetch(fetchMandatoryDisclosure);
   const [selected, setSelected] = useState<MandatoryDisclosureDoc | null>(null);
+
+  if (!enabled) return <SectionUnavailable />;
 
   if (loading && !data) {
     return (

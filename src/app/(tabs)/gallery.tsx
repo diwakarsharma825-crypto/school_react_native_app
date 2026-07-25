@@ -7,19 +7,24 @@ import { Radius, Spacing } from '@/constants/theme';
 import { Card } from '@/components/ui/Card';
 import { Screen } from '@/components/ui/Screen';
 import { EmptyState, ErrorState, Loading } from '@/components/ui/states';
+import { SectionUnavailable } from '@/components/ui/SectionUnavailable';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { fetchGalleries } from '@/data/api';
 import { useFetch } from '@/hooks/use-fetch';
+import { useSectionEnabled } from '@/hooks/use-sections';
 import { formatDate } from '@/lib/format';
 
 const COLUMNS = 2;
 const GAP = Spacing.three;
 
 export default function GalleryScreen() {
+  const enabled = useSectionEnabled('gallery');
   const { width: screenWidth } = useWindowDimensions();
   const contentWidth = Math.min(screenWidth, 720) - Spacing.three * 2;
   const tileWidth = (contentWidth - GAP * (COLUMNS - 1)) / COLUMNS;
   const { data, loading, error, refetch } = useFetch(fetchGalleries);
+
+  if (!enabled) return <SectionUnavailable />;
 
   if (loading && !data) {
     return (

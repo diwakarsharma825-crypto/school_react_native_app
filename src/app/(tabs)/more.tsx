@@ -11,6 +11,7 @@ import { ThemedText } from '@/components/ui/ThemedText';
 import { useTheme } from '@/hooks/use-theme';
 import { fetchSettings } from '@/data/api';
 import { useFetch } from '@/hooks/use-fetch';
+import { useSections } from '@/hooks/use-sections';
 
 const logoSource = require('../../../assets/images/icon.png');
 
@@ -22,6 +23,7 @@ interface Row {
 
 function RowList({ rows }: { rows: Row[] }) {
   const theme = useTheme();
+  if (rows.length === 0) return null;
   return (
     <Card style={styles.listCard}>
       {rows.map((item, idx) => (
@@ -48,25 +50,40 @@ function RowList({ rows }: { rows: Row[] }) {
 
 export default function MoreScreen() {
   const { data: settings } = useFetch(fetchSettings);
+  const sections = useSections();
 
   const exploreRows: Row[] = [
     { label: 'Notifications', icon: 'notifications-outline', onPress: () => router.push('/notifications') },
     { label: 'About Us', icon: 'information-circle-outline', onPress: () => router.push('/about') },
-    { label: 'Announcements', icon: 'megaphone-outline', onPress: () => router.push('/notices') },
-    { label: 'Result / Report Card', icon: 'document-text-outline', onPress: () => router.push('/result') },
+    sections.notices
+      ? { label: 'Announcements', icon: 'megaphone-outline', onPress: () => router.push('/notices') }
+      : null,
+    sections.result
+      ? { label: 'Result / Report Card', icon: 'document-text-outline', onPress: () => router.push('/result') }
+      : null,
     { label: 'Contact Us', icon: 'call-outline', onPress: () => router.push('/contact') },
-  ];
+  ].filter((r): r is Row => r !== null);
 
   const infoRows: Row[] = [
-    { label: 'Our Teachers', icon: 'people-outline', onPress: () => router.push('/teachers') },
-    { label: 'Top Students', icon: 'ribbon-outline', onPress: () => router.push('/top-students') },
-    { label: 'Mandatory Disclosure', icon: 'shield-checkmark-outline', onPress: () => router.push('/disclosure') },
+    sections.teachers
+      ? { label: 'Our Teachers', icon: 'people-outline', onPress: () => router.push('/teachers') }
+      : null,
+    sections.top_students
+      ? { label: 'Top Students', icon: 'ribbon-outline', onPress: () => router.push('/top-students') }
+      : null,
+    sections.disclosure
+      ? {
+          label: 'Mandatory Disclosure',
+          icon: 'shield-checkmark-outline',
+          onPress: () => router.push('/disclosure'),
+        }
+      : null,
     {
       label: 'School Website',
       icon: 'globe-outline',
       onPress: () => Linking.openURL('https://www.saarthakgimsss12a.org'),
     },
-  ];
+  ].filter((r): r is Row => r !== null);
 
   const followRows: Row[] = [
     {

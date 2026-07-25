@@ -5,10 +5,12 @@ import { Radius, Shadow, Spacing } from '@/constants/theme';
 import { Card } from '@/components/ui/Card';
 import { Screen } from '@/components/ui/Screen';
 import { EmptyState, ErrorState, Loading } from '@/components/ui/states';
+import { SectionUnavailable } from '@/components/ui/SectionUnavailable';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { useTheme } from '@/hooks/use-theme';
 import { fetchHolidays, fetchNews, fetchNotices } from '@/data/api';
 import { useFetch } from '@/hooks/use-fetch';
+import { useSectionEnabled } from '@/hooks/use-sections';
 import { formatDate, stripHtml } from '@/lib/format';
 
 type TabKey = 'news' | 'notice' | 'holiday';
@@ -23,6 +25,7 @@ const TABS: { key: TabKey; label: string }[] = [
  * (News, Notices, Holidays) behind a segmented tab switcher. */
 export default function NoticesScreen() {
   const theme = useTheme();
+  const enabled = useSectionEnabled('notices');
   const [active, setActive] = useState<TabKey>('notice');
 
   const news = useFetch(fetchNews);
@@ -40,6 +43,8 @@ export default function NoticesScreen() {
     }
     return (holidays.data ?? []).map((h) => ({ id: h.id, title: h.title, date: h.date_from, detail: h.note ?? '' }));
   }, [active, news.data, notices.data, holidays.data]);
+
+  if (!enabled) return <SectionUnavailable />;
 
   const loading = current.loading;
   const error = current.error;

@@ -1,207 +1,65 @@
-# 05 · API Integration Contract
+# 05 · API Integration Contract (REAL — verified against the live server)
 
-> **This is the file to fill in.** It defines every endpoint the app needs, the exact JSON
-> shape it expects, and how it plugs into the code. Give the values here and the app goes live.
+> This used to be a template to fill in. It no longer is — the real API was found and
+> documented directly from `sarthak-backend/application/modules/web/controllers/Api.php`
+> plus live requests against the production server. **If you're adding a new screen, open
+> `Api.php` and read the real method, or `fetch()` the real endpoint in a browser console —
+> do not guess field names from what "sounds right".** Guessed field names caused multiple
+> runtime crashes and blank UI in this session (see the note at the bottom).
 
-- **App-side code that consumes these:** `src/data/api.ts` (the only file that changes).
-- **Data shapes (TypeScript):** `src/data/types.ts`.
-- **Today:** `api.ts` has `USE_MOCK = true` and returns placeholder data. Setting `BASE_URL`
-  and flipping `USE_MOCK = false` (or per-function) switches to your live API.
-
----
-
-## Step 1 — Base configuration
-
-Fill these in and hand them back (or paste a Postman/Swagger link and Claude maps everything):
+## Base configuration
 
 ```
-BASE_URL   =  https://__________________________   (e.g. https://api.saarthakgimsss12a.org)
-Auth       =  none | API key header | bearer token   (which? and header name if any)
-Format      =  JSON
+BASE_URL = https://www.saarthakgimsss12a.org/api
+Auth     = none (public read endpoints; CORS is open, * origin)
+Format   = JSON, always wrapped: { "status": bool, "message": string, "data": T }
 ```
 
-If auth is needed, say how (e.g. header `x-api-key: <key>`), and how the key is provided.
+`src/data/api.ts`'s `getJson<T>()` unwraps `.data` — functions return `T` directly, already
+unwrapped. `USE_MOCK` is `false` by default; `src/data/mock.ts` still exists as an offline
+reference/fallback but is not imported by `api.ts`.
 
----
+## Endpoints and their REAL field names
 
-## Step 2 — Endpoints
+| App function | Path | Real fields you actually get | Notes |
+|---|---|---|---|
+| `fetchHome()` | `GET /home` | `{ sliders, notices, events, news, feedbacks, stats }` | One call for the whole Home screen |
+| `fetchSettings()` | `GET /settings` | `school_name, address, phone, email, logo_url, front_logo_url, about_text, about_image_url, courses_text, course_image_url, principle_text, principle_image_url, footer, facebook_url, twitter_url, instagram_url, linkedin_url, youtube_url` | Rich-text fields (`about_text`, `courses_text`, `principle_text`) are **raw HTML** — run through `stripHtml()` |
+| `fetchStats()` | `GET /stats` | `total_students, total_teachers, total_staff, total_events` | |
+| `fetchSliders()` | `GET /sliders` | `id, title?, subtitle?, image_url` | Home banner carousel |
+| `fetchNews(limit)` / `fetchNewsItem(id)` | `GET /news`, `/news/{id}` | `id, title, date, image_url, news` (⚠️ **not** `description` — the body/excerpt column is literally called `news`) | |
+| `fetchNotices(limit)` / `fetchNotice(id)` | `GET /notices`, `/notices/{id}` | `id, title, date, notice` (⚠️ body is `notice`, HTML) | |
+| `fetchHolidays()` | `GET /holidays` | `id, title, date_from, date_to, note` (⚠️ **no** `date` field — it's `date_from`/`date_to`; body is `note`) | |
+| `fetchEvents(limit)` / `fetchEvent(id)` | `GET /events`, `/events/{id}` | `id, title, event_from, event_to, event_place, note, image_url` (⚠️ **no** `date`/`description`/`location` — they're `event_from`, `note`, `event_place`) | |
+| `fetchGalleries()` | `GET /galleries` | `id, title, cover_image_url, image_count, created_at` (⚠️ **no** dedicated `date` field — derive display date from `created_at`, format `"YYYY-MM-DD HH:MM:SS"`, split off the date part before formatting) | List is ALBUMS, not flat photos |
+| `fetchGalleryImages(albumId)` | `GET /galleries/{id}` | one album's images | |
+| `fetchTeachers()` | `GET /teachers` | `id, teacher_name, type, designation, qualification, total_experience, photo_url` (⚠️ **not** `name`/`subject`/`experience` — this crashed the app once already) | `photo_url` is often `null` — UI falls back to colored initials avatar |
+| `fetchStaff()` | `GET /staff` | similar shape to teachers, field names not yet double-checked against live data — verify before using | Currently unused by any screen |
+| `fetchMandatoryDisclosure()` | `GET /mandatory_disclosure` | `[{ title, image_url }]` | Static curated list server-side |
+| `fetchPages(slug?)` | `GET /pages`, `/pages/{slug}` | dynamic CMS pages | |
+| `fetchResultSessions()` | `GET /result_sessions` | `[{ id, label }]` | Academic year dropdown |
+| `checkResult({session_id, srn, dob})` | `POST /result_check` | `{ valid, student: {id,name,srn,class,section}, pdf_url }` | Real lookup is **session + SRN + DOB**, not class+roll like an early mock guessed |
+| `/result_pdf?id=&h=` | `GET` (opened via `Linking`, not fetched as JSON) | streams a PDF | Signed link from `result_check`'s response, don't construct it yourself |
+| `registerDevice()` | `POST /device_register` | `{ device_id, phone?, push_token?, platform, model?, os_version?, app_version, ... }` | Fire-and-forget on every launch |
+| `fetchAppStatus()` | `GET /app_status?device_id=` | `{ enabled, reason, title, message, dev_name, phone, email, whatsapp }` | See 01-project-overview.md's "App restriction" section |
+| `fetchNotifications()` | `GET /notifications` | `[{ id, title, body, image_url?, video_url?, created_at }]` | `body` may be HTML — strip it |
 
-For each row: the app function, the HTTP call it will make, and the model it maps to.
-**Method is GET unless noted.** Fill the "Your URL / path" column (or confirm the suggested path).
+## Known gaps / unverified
 
-| # | App function (`api.ts`) | Suggested path | Your URL / path | Returns (model) |
-|---|-------------------------|----------------|-----------------|-----------------|
-| 1 | `fetchBanners()` | `/banners` | ______________ | `Banner[]` |
-| 2 | `fetchFacilities()` | `/facilities` | ______________ | `Facility[]` |
-| 3 | `fetchStats()` | `/stats` | ______________ | `Stat[]` |
-| 4 | `fetchPrincipalMessage()` | `/principal` | ______________ | `PrincipalMessage` |
-| 5 | `fetchEvents()` | `/events` | ______________ | `EventItem[]` |
-| 6 | `fetchEvent(id)` | `/events/{id}` | ______________ | `EventItem` |
-| 7 | `fetchNews()` | `/news` | ______________ | `NewsItem[]` |
-| 8 | `fetchNewsItem(id)` | `/news/{id}` | ______________ | `NewsItem` |
-| 9 | `fetchAnnouncements()` | `/announcements` | ______________ | `Announcement[]` |
-| 10 | `fetchGallery()` | `/gallery` | ______________ | `GalleryImage[]` |
-| 11 | `fetchContact()` | `/contact` | ______________ | `ContactInfo` |
-| 12 | `fetchResult(class, roll)` | `/result?class={c}&roll={r}` | ______________ | `ResultRecord` |
+- `StaffMember`/`fetchStaff()` — type exists in `types.ts` but no screen consumes it yet and
+  its exact field names haven't been confirmed against a live response the way teachers'
+  were. Verify before building a "Our Staff" screen.
+- `top-students.tsx` — the backend has **no ranked/topper field** on `/students`. The
+  current screen is a placeholder pointing users to News/Notices where topper
+  announcements actually get posted (see the "TOPPERS OF CLASS X & XII" news post). If real
+  topper data becomes available server-side, redesign this screen properly.
 
-> If your API returns a wrapper like `{ "data": [...] , "status": "ok" }`, that's fine — just
-> note it and Claude will unwrap `.data` in `api.ts`. Field names not matching the shapes below
-> are also fine; note the differences and they'll be mapped.
+## The lesson, for next time
 
----
-
-## Step 3 — Expected JSON shapes
-
-These mirror `src/data/types.ts`. Match them if you can; otherwise send your actual shapes and
-they'll be mapped. Dates: ISO `YYYY-MM-DD` preferred (any parseable date works).
-
-### 1. Banner[] — hero carousel
-```json
-[
-  {
-    "id": "b1",
-    "title": "Welcome to Saarthak GIMSS",
-    "subtitle": "Vedic Culture · Scientific Approach · Communication",
-    "imageUrl": "https://.../banner1.jpg",
-    "ctaLabel": "Admissions Open",
-    "ctaHref": "contact"
-  }
-]
-```
-`subtitle`, `ctaLabel`, `ctaHref` optional. `ctaHref` may be a screen name
-(`events` | `gallery` | `contact`) or omitted.
-
-### 2. Facility[] — Our Facilities cards
-```json
-[
-  { "id": "f1", "title": "Our Teachers", "description": "…", "icon": "people", "imageUrl": "https://.../t.jpg" }
-]
-```
-`icon` = an Ionicons name (`people`, `happy`, `book`, `school`…). `imageUrl` optional.
-
-### 3. Stat[] — achievement counters
-```json
-[
-  { "id": "s1", "label": "Teachers", "value": 22, "icon": "people" },
-  { "id": "s2", "label": "Students", "value": 2759, "icon": "school" },
-  { "id": "s3", "label": "Events", "value": 3, "icon": "calendar" }
-]
-```
-`value` must be a number (the app animates 0 → value).
-
-### 4. PrincipalMessage — single object
-```json
-{ "name": "Dr. A. Sharma", "role": "Principal, Saarthak GIMSS", "photoUrl": "https://.../p.jpg", "message": "…" }
-```
-
-### 5 & 6. EventItem / EventItem[]
-```json
-{
-  "id": "e1",
-  "title": "Annual Sports Day",
-  "date": "2026-09-28",
-  "location": "School Grounds, Sector 12-A",
-  "imageUrl": "https://.../e.jpg",
-  "excerpt": "Short one-line summary for the card.",
-  "body": "Full description shown on the detail screen."
-}
-```
-`location` optional. List endpoint returns an array of these; detail endpoint returns one.
-
-### 7 & 8. NewsItem / NewsItem[]
-```json
-{ "id": "n1", "title": "CBSE Toppers Announced", "date": "2026-06-15", "imageUrl": "https://.../n.jpg", "excerpt": "…", "body": "…" }
-```
-
-### 9. Announcement[] — News / Notice / Holiday
-```json
-[
-  { "id": "a1", "kind": "notice",  "title": "Fee submission open", "date": "2026-07-10", "detail": "…" },
-  { "id": "a2", "kind": "holiday", "title": "Independence Day",     "date": "2026-08-15", "detail": "…" },
-  { "id": "a3", "kind": "news",    "title": "New Science Lab",      "date": "2026-07-05", "detail": "…" }
-]
-```
-`kind` must be one of: `"news"`, `"notice"`, `"holiday"` (used by the segmented tabs).
-
-### 10. GalleryImage[]
-```json
-[
-  { "id": "g1", "imageUrl": "https://.../1.jpg", "caption": "Sports Day", "album": "Events" }
-]
-```
-`caption`, `album` optional.
-
-### 11. ContactInfo — single object
-```json
-{
-  "address": "Saarthak GIMSS, Sector 12-A, Panchkula, Haryana 134109",
-  "phone": "+91 00000 00000",
-  "email": "info@saarthakgimsss12a.org",
-  "mapUrl": "https://maps.google.com/?q=Sector+12A+Panchkula",
-  "social": { "facebook": "https://…", "youtube": "https://…", "instagram": "https://…" }
-}
-```
-
-### 12. ResultRecord — report card lookup
-```json
-{
-  "studentName": "…",
-  "className": "Class VIII-A",
-  "rollNo": "23",
-  "term": "Term 1, 2026",
-  "percentage": 88.4,
-  "subjects": [
-    { "name": "English", "marks": 86, "max": 100, "grade": "A" }
-  ]
-}
-```
-Query params: `class` and `roll` (adjust to your API — e.g. admission number — and note it).
-Consider what happens for "not found" (404 vs empty) so the app shows the right message.
-
----
-
-## Step 4 — How it gets wired (Claude does this)
-
-In `src/data/api.ts`, each function currently looks like:
-
-```ts
-export async function fetchEvents(): Promise<EventItem[]> {
-  if (USE_MOCK) return delay().then(() => mockEvents);
-  return getJson<EventItem[]>('/events');   // ← real endpoint
-}
-```
-
-Going live means: set `BASE_URL`, set `USE_MOCK = false`, confirm each path, and add any
-field-mapping. Example if your API differs (wrapped + different keys):
-
-```ts
-export async function fetchEvents(): Promise<EventItem[]> {
-  const res = await getJson<{ data: any[] }>('/api/v1/events');
-  return res.data.map((e) => ({
-    id: String(e.event_id),
-    title: e.name,
-    date: e.event_date,
-    location: e.venue,
-    imageUrl: e.image,
-    excerpt: e.short_desc,
-    body: e.description,
-  }));
-}
-```
-
-## Notes / gotchas
-
-- **CORS** doesn't apply (native app), but **HTTPS is required** for release builds
-  (Android blocks plain `http://` by default).
-- **Image URLs** must be publicly reachable absolute URLs.
-- Keep responses reasonably small; pagination can be added later if lists grow large.
-- Send even a **partial** set of endpoints — the app wires per-section, so any live endpoint
-  can go in while the rest stay on mock.
-
-## Checklist to hand back
-
-- [ ] Base URL
-- [ ] Auth details (if any)
-- [ ] The 12 endpoint paths (or a Postman/Swagger link)
-- [ ] Any fields that differ from the shapes above
-- [ ] Result lookup params (class + roll? admission no.?) and not-found behavior
+Every one of the "known gaps" above, and several bugs already fixed this session
+(teachers screen crash, blank date badges on event/news cards, raw HTML rendering in
+principal's message), came from **assuming a field name instead of checking the real
+response**. The fix is always the same: open `Api.php` for the PHP-side truth, or run
+`fetch('https://www.saarthakgimsss12a.org/api/<endpoint>').then(r=>r.json())` in a browser
+console pointed at the running app, and read the actual JSON before writing the TypeScript
+type.

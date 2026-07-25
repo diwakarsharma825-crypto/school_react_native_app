@@ -5,9 +5,11 @@ import { AvatarFgPalette, AvatarPalette, Radius, Spacing } from '@/constants/the
 import { Card } from '@/components/ui/Card';
 import { Screen } from '@/components/ui/Screen';
 import { EmptyState, ErrorState, Loading } from '@/components/ui/states';
+import { SectionUnavailable } from '@/components/ui/SectionUnavailable';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { fetchStats } from '@/data/api';
 import { useFetch } from '@/hooks/use-fetch';
+import { useSectionEnabled } from '@/hooks/use-sections';
 
 // NOTE: gap-filled screen — the real app doesn't expose a dedicated
 // "top students" endpoint (the backend's /students list has no ranking or
@@ -15,7 +17,10 @@ import { useFetch } from '@/hooks/use-fetch';
 // /stats with a note, keeping the same card language as Teachers, rather
 // than fabricating a ranked list the API can't back up.
 export default function TopStudentsScreen() {
+  const enabled = useSectionEnabled('top_students');
   const { data, loading, error, refetch } = useFetch(fetchStats);
+
+  if (!enabled) return <SectionUnavailable />;
 
   if (loading && !data) {
     return (
