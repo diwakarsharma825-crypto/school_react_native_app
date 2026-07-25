@@ -23,7 +23,7 @@ import {
 // flip it to true (or point BASE_URL elsewhere) if the live API is
 // unreachable in your environment. src/data/mock.ts is kept as a reference
 // for the old shapes and is no longer wired into these functions.
-export const BASE_URL = 'https://www.saarthakgimsss12a.org/api';
+export const BASE_URL = 'https://testing.saarthakgimsss12a.org/api';
 export const USE_MOCK = false;
 
 interface ApiEnvelope<T> {

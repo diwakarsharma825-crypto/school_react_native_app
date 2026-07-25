@@ -573,7 +573,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: Radius.sm,
     paddingHorizontal: Spacing.two,
-    paddingVertical: Spacing.two,
+    paddingVertical: Spacing.two + 2,
+    fontSize: 16,
   },
   row: {
     flexDirection: 'row',
