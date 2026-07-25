@@ -1,27 +1,25 @@
-import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import React, { useState } from 'react';
-import { Modal, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { router } from 'expo-router';
+import React from 'react';
+import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 
 import { Radius, Spacing } from '@/constants/theme';
+import { Card } from '@/components/ui/Card';
 import { Screen } from '@/components/ui/Screen';
 import { EmptyState, ErrorState, Loading } from '@/components/ui/states';
 import { ThemedText } from '@/components/ui/ThemedText';
-import { useTheme } from '@/hooks/use-theme';
-import { fetchGallery } from '@/data/api';
+import { fetchGalleries } from '@/data/api';
 import { useFetch } from '@/hooks/use-fetch';
-import { GalleryImage } from '@/data/types';
+import { formatDate } from '@/lib/format';
 
-const COLUMNS = 3;
-const GAP = Spacing.two;
+const COLUMNS = 2;
+const GAP = Spacing.three;
 
 export default function GalleryScreen() {
-  const theme = useTheme();
   const { width: screenWidth } = useWindowDimensions();
   const contentWidth = Math.min(screenWidth, 720) - Spacing.three * 2;
-  const tileSize = (contentWidth - GAP * (COLUMNS - 1)) / COLUMNS;
-  const { data, loading, error, refetch } = useFetch(fetchGallery);
-  const [selected, setSelected] = useState<GalleryImage | null>(null);
+  const tileWidth = (contentWidth - GAP * (COLUMNS - 1)) / COLUMNS;
+  const { data, loading, error, refetch } = useFetch(fetchGalleries);
 
   if (loading && !data) {
     return (
@@ -37,37 +35,28 @@ export default function GalleryScreen() {
         <ErrorState message="Could not load gallery." onRetry={refetch} />
       ) : data && data.length > 0 ? (
         <View style={styles.grid}>
-          {data.map((img) => (
-            <Pressable key={img.id} onPress={() => setSelected(img)}>
-              <Image
-                source={{ uri: img.imageUrl }}
-                style={[styles.tile, { width: tileSize, height: tileSize }]}
-                contentFit="cover"
-              />
+          {data.map((album) => (
+            <Pressable key={album.id} onPress={() => router.push(`/gallery/${album.id}`)} style={{ width: tileWidth }}>
+              <Card style={styles.card}>
+                {album.cover_image_url ? (
+                  <Image source={{ uri: album.cover_image_url }} style={styles.cover} contentFit="cover" />
+                ) : (
+                  <View style={[styles.cover, styles.coverFallback]} />
+                )}
+                <ThemedText type="smallBold" numberOfLines={2} style={styles.title}>
+                  {album.title}
+                </ThemedText>
+                <ThemedText type="small" themeColor="textSecondary">
+                  {album.image_count} photos
+                  {album.created_at ? ` · ${formatDate(album.created_at.split(' ')[0])}` : ''}
+                </ThemedText>
+              </Card>
             </Pressable>
           ))}
         </View>
       ) : (
-        <EmptyState message="No photos yet." icon="images-outline" />
+        <EmptyState message="No albums yet." icon="images-outline" />
       )}
-
-      <Modal visible={!!selected} transparent animationType="fade" onRequestClose={() => setSelected(null)}>
-        <View style={styles.modalBackdrop}>
-          <Pressable style={styles.closeButton} onPress={() => setSelected(null)} hitSlop={12}>
-            <Ionicons name="close" size={28} color="#fff" />
-          </Pressable>
-          {selected ? (
-            <>
-              <Image source={{ uri: selected.imageUrl }} style={styles.fullImage} contentFit="contain" />
-              {selected.caption ? (
-                <ThemedText type="default" style={styles.caption}>
-                  {selected.caption}
-                </ThemedText>
-              ) : null}
-            </>
-          ) : null}
-        </View>
-      </Modal>
     </Screen>
   );
 }
@@ -76,29 +65,23 @@ const styles = StyleSheet.create({
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    justifyContent: 'space-between',
     gap: GAP,
   },
-  tile: {
-    borderRadius: Radius.sm,
+  card: {
+    padding: Spacing.two,
+    marginBottom: Spacing.three,
   },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.92)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  closeButton: {
-    position: 'absolute',
-    top: 50,
-    right: 20,
-    zIndex: 1,
-  },
-  fullImage: {
+  cover: {
     width: '100%',
-    height: '80%',
+    aspectRatio: 1,
+    borderRadius: Radius.md,
+    marginBottom: Spacing.two,
   },
-  caption: {
-    color: '#fff',
-    marginTop: Spacing.two,
+  coverFallback: {
+    backgroundColor: '#E1E5EA',
+  },
+  title: {
+    marginBottom: Spacing.half,
   },
 });

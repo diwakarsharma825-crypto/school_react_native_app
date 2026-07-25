@@ -1,39 +1,35 @@
 import {
-  Announcement,
-  Banner,
-  ContactInfo,
+  DynamicPage,
   EventItem,
-  Facility,
+  GalleryAlbum,
   GalleryImage,
+  Holiday,
+  HomeData,
+  MandatoryDisclosureDoc,
   NewsItem,
-  PrincipalMessage,
-  ResultRecord,
-  Stat,
+  Notice,
+  ResultCheckResponse,
+  ResultSession,
+  Settings,
+  Slider,
+  StaffMember,
+  Stats,
+  Teacher,
 } from './types';
-import {
-  findMockResult,
-  mockAnnouncements,
-  mockBanners,
-  mockContact,
-  mockEvents,
-  mockFacilities,
-  mockGallery,
-  mockNews,
-  mockPrincipalMessage,
-  mockStats,
-} from './mock';
 
 // ─── Single swap-point ──────────────────────────────────────────────────────
-// Today: USE_MOCK = true, every function resolves mock data after a short
-// simulated delay. Going live: set BASE_URL, flip USE_MOCK to false (or drop
-// it per-function) and confirm/adjust paths + field-mapping below.
+// The app talks to the real, live Saarthak GIMSSS backend by default.
+// USE_MOCK stays available as a manual override for offline development —
+// flip it to true (or point BASE_URL elsewhere) if the live API is
+// unreachable in your environment. src/data/mock.ts is kept as a reference
+// for the old shapes and is no longer wired into these functions.
 export const BASE_URL = 'https://www.saarthakgimsss12a.org/api';
-export const USE_MOCK = true;
+export const USE_MOCK = false;
 
-const MOCK_DELAY_MS = 400;
-
-function delay<T>(value: T, ms: number = MOCK_DELAY_MS): Promise<T> {
-  return new Promise((resolve) => setTimeout(() => resolve(value), ms));
+interface ApiEnvelope<T> {
+  status: boolean;
+  message: string;
+  data: T;
 }
 
 export async function getJson<T>(path: string): Promise<T> {
@@ -47,81 +43,129 @@ export async function getJson<T>(path: string): Promise<T> {
   if (!response.ok) {
     throw new Error(`Request to ${url} failed with status ${response.status}`);
   }
+  let json: ApiEnvelope<T>;
   try {
-    return (await response.json()) as T;
+    json = (await response.json()) as ApiEnvelope<T>;
   } catch (err) {
     throw new Error(`Invalid JSON response from ${url}`);
   }
-}
-
-export async function fetchBanners(): Promise<Banner[]> {
-  if (USE_MOCK) return delay(mockBanners);
-  return getJson<Banner[]>('/banners');
-}
-
-export async function fetchFacilities(): Promise<Facility[]> {
-  if (USE_MOCK) return delay(mockFacilities);
-  return getJson<Facility[]>('/facilities');
-}
-
-export async function fetchStats(): Promise<Stat[]> {
-  if (USE_MOCK) return delay(mockStats);
-  return getJson<Stat[]>('/stats');
-}
-
-export async function fetchPrincipalMessage(): Promise<PrincipalMessage> {
-  if (USE_MOCK) return delay(mockPrincipalMessage);
-  return getJson<PrincipalMessage>('/principal');
-}
-
-export async function fetchEvents(): Promise<EventItem[]> {
-  if (USE_MOCK) return delay(mockEvents);
-  return getJson<EventItem[]>('/events');
-}
-
-export async function fetchEvent(id: string): Promise<EventItem> {
-  if (USE_MOCK) {
-    const found = mockEvents.find((e) => e.id === id);
-    if (!found) throw new Error('Event not found');
-    return delay(found);
+  if (!json.status) {
+    throw new Error(json.message || `Request to ${url} returned an error`);
   }
-  return getJson<EventItem>(`/events/${id}`);
+  return json.data;
 }
 
-export async function fetchNews(): Promise<NewsItem[]> {
-  if (USE_MOCK) return delay(mockNews);
-  return getJson<NewsItem[]>('/news');
+async function postJson<T>(path: string, body: Record<string, string>): Promise<T> {
+  const url = `${BASE_URL}${path}`;
+  const form = new FormData();
+  Object.entries(body).forEach(([key, value]) => form.append(key, value));
+  let response: Response;
+  try {
+    response = await fetch(url, { method: 'POST', body: form });
+  } catch (err) {
+    throw new Error(`Network request failed for ${url}`);
+  }
+  let json: ApiEnvelope<T>;
+  try {
+    json = (await response.json()) as ApiEnvelope<T>;
+  } catch (err) {
+    throw new Error(`Invalid JSON response from ${url}`);
+  }
+  if (!json.status) {
+    throw new Error(json.message || `Request to ${url} returned an error`);
+  }
+  return json.data;
+}
+
+export async function fetchHome(): Promise<HomeData> {
+  return getJson<HomeData>('/home');
+}
+
+export async function fetchSettings(): Promise<Settings> {
+  return getJson<Settings>('/settings');
+}
+
+export async function fetchStats(): Promise<Stats> {
+  return getJson<Stats>('/stats');
+}
+
+export async function fetchSliders(): Promise<Slider[]> {
+  return getJson<Slider[]>('/sliders');
+}
+
+export async function fetchNews(limit = 100): Promise<NewsItem[]> {
+  return getJson<NewsItem[]>(`/news?limit=${limit}`);
 }
 
 export async function fetchNewsItem(id: string): Promise<NewsItem> {
-  if (USE_MOCK) {
-    const found = mockNews.find((n) => n.id === id);
-    if (!found) throw new Error('News item not found');
-    return delay(found);
-  }
   return getJson<NewsItem>(`/news/${id}`);
 }
 
-export async function fetchAnnouncements(): Promise<Announcement[]> {
-  if (USE_MOCK) return delay(mockAnnouncements);
-  return getJson<Announcement[]>('/announcements');
+export async function fetchNotices(limit = 50): Promise<Notice[]> {
+  return getJson<Notice[]>(`/notices?limit=${limit}`);
 }
 
-export async function fetchGallery(): Promise<GalleryImage[]> {
-  if (USE_MOCK) return delay(mockGallery);
-  return getJson<GalleryImage[]>('/gallery');
+export async function fetchNotice(id: string): Promise<Notice> {
+  return getJson<Notice>(`/notices/${id}`);
 }
 
-export async function fetchContact(): Promise<ContactInfo> {
-  if (USE_MOCK) return delay(mockContact);
-  return getJson<ContactInfo>('/contact');
+export async function fetchHolidays(): Promise<Holiday[]> {
+  return getJson<Holiday[]>('/holidays');
 }
 
-export async function fetchResult(className: string, roll: string): Promise<ResultRecord> {
-  if (USE_MOCK) {
-    const found = findMockResult(className, roll);
-    if (!found) throw new Error('No result found for the given class and roll number.');
-    return delay(found);
-  }
-  return getJson<ResultRecord>(`/result?class=${encodeURIComponent(className)}&roll=${encodeURIComponent(roll)}`);
+export async function fetchEvents(limit = 50): Promise<EventItem[]> {
+  return getJson<EventItem[]>(`/events?limit=${limit}`);
+}
+
+export async function fetchEvent(id: string): Promise<EventItem> {
+  return getJson<EventItem>(`/events/${id}`);
+}
+
+export async function fetchGalleries(): Promise<GalleryAlbum[]> {
+  return getJson<GalleryAlbum[]>('/galleries');
+}
+
+export async function fetchGalleryImages(albumId: string): Promise<GalleryImage[]> {
+  return getJson<GalleryImage[]>(`/galleries/${albumId}`);
+}
+
+export async function fetchTeachers(): Promise<Teacher[]> {
+  return getJson<Teacher[]>('/teachers');
+}
+
+export async function fetchStaff(): Promise<StaffMember[]> {
+  return getJson<StaffMember[]>('/staff');
+}
+
+export async function fetchMandatoryDisclosure(): Promise<MandatoryDisclosureDoc[]> {
+  return getJson<MandatoryDisclosureDoc[]>('/mandatory_disclosure');
+}
+
+export async function fetchPages(): Promise<DynamicPage[]> {
+  return getJson<DynamicPage[]>('/pages');
+}
+
+export async function fetchPage(slug: string): Promise<DynamicPage> {
+  return getJson<DynamicPage>(`/pages/${slug}`);
+}
+
+export async function fetchResultSessions(): Promise<ResultSession[]> {
+  return getJson<ResultSession[]>('/result_sessions');
+}
+
+export async function checkResult(sessionId: string, srn: string, dob: string): Promise<ResultCheckResponse> {
+  return postJson<ResultCheckResponse>('/result_check', { session_id: sessionId, srn, dob });
+}
+
+export interface AppNotification {
+  id: number | string;
+  title: string;
+  body: string;
+  image_url: string | null;
+  video_url: string | null;
+  created_at: string;
+}
+
+export async function fetchNotifications(limit = 50): Promise<AppNotification[]> {
+  return getJson<AppNotification[]>(`/notifications?limit=${limit}`);
 }

@@ -8,7 +8,7 @@ import { Screen } from '@/components/ui/Screen';
 import { ErrorState, Loading } from '@/components/ui/states';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { useTheme } from '@/hooks/use-theme';
-import { fetchContact } from '@/data/api';
+import { fetchSettings } from '@/data/api';
 import { useFetch } from '@/hooks/use-fetch';
 
 function ContactRow({
@@ -33,7 +33,7 @@ function ContactRow({
 
 export default function ContactScreen() {
   const theme = useTheme();
-  const { data, loading, error, refetch } = useFetch(fetchContact);
+  const { data, loading, error, refetch } = useFetch(fetchSettings);
 
   if (loading && !data) {
     return (
@@ -57,7 +57,11 @@ export default function ContactScreen() {
         Contact Us
       </ThemedText>
       <Card style={styles.card}>
-        <ContactRow icon="location" label={data.address} onPress={() => Linking.openURL(data.mapUrl)} />
+        <ContactRow
+          icon="location"
+          label={data.address}
+          onPress={() => Linking.openURL(`https://maps.google.com/?q=${encodeURIComponent(data.address)}`)}
+        />
         <ContactRow icon="call" label={data.phone} onPress={() => Linking.openURL(`tel:${data.phone}`)} />
         <ContactRow icon="mail" label={data.email} onPress={() => Linking.openURL(`mailto:${data.email}`)} />
       </Card>
@@ -66,18 +70,18 @@ export default function ContactScreen() {
         Follow Us
       </ThemedText>
       <View style={styles.socialRow}>
-        {data.social.facebook ? (
-          <Pressable onPress={() => Linking.openURL(data.social.facebook!)} style={[styles.socialIcon, { backgroundColor: theme.backgroundElement }]}>
+        {data.facebook_url ? (
+          <Pressable onPress={() => Linking.openURL(data.facebook_url!)} style={[styles.socialIcon, { backgroundColor: theme.backgroundElement }]}>
             <Ionicons name="logo-facebook" size={22} color={theme.tint} />
           </Pressable>
         ) : null}
-        {data.social.youtube ? (
-          <Pressable onPress={() => Linking.openURL(data.social.youtube!)} style={[styles.socialIcon, { backgroundColor: theme.backgroundElement }]}>
+        {data.youtube_url ? (
+          <Pressable onPress={() => Linking.openURL(data.youtube_url!)} style={[styles.socialIcon, { backgroundColor: theme.backgroundElement }]}>
             <Ionicons name="logo-youtube" size={22} color={theme.tint} />
           </Pressable>
         ) : null}
-        {data.social.instagram ? (
-          <Pressable onPress={() => Linking.openURL(data.social.instagram!)} style={[styles.socialIcon, { backgroundColor: theme.backgroundElement }]}>
+        {data.instagram_url ? (
+          <Pressable onPress={() => Linking.openURL(data.instagram_url!)} style={[styles.socialIcon, { backgroundColor: theme.backgroundElement }]}>
             <Ionicons name="logo-instagram" size={22} color={theme.tint} />
           </Pressable>
         ) : null}

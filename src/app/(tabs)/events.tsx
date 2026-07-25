@@ -29,9 +29,10 @@ export default function EventsScreen() {
             <MediaCard
               key={e.id}
               title={e.title}
-              date={e.date}
-              imageUrl={e.imageUrl}
-              excerpt={e.excerpt}
+              date={e.event_from}
+              imageUrl={e.image_url}
+              excerpt={e.note}
+              category="Event"
               onPress={() => router.push(`/event/${e.id}`)}
             />
           ))}

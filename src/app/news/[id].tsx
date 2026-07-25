@@ -30,7 +30,7 @@ export default function NewsDetailScreen() {
 
   return (
     <Screen>
-      <ArticleDetail title={data.title} date={data.date} imageUrl={data.imageUrl} body={data.body} />
+      <ArticleDetail title={data.title} date={data.date} imageUrl={data.image_url} body={data.news ?? ''} />
     </Screen>
   );
 }

@@ -9,6 +9,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AppStatus, fetchAppStatus, registerDevice } from '@/data/app-status';
 import { LockScreen } from '@/components/ui/LockScreen';
+import { DetailHeader } from '@/components/ui/DetailHeader';
 
 export default function RootLayout() {
   const theme = useTheme();
@@ -57,19 +58,24 @@ export default function RootLayout() {
       <StatusBar style="light" />
       <Stack
         screenOptions={{
-          headerStyle: { backgroundColor: Brand.blue },
-          headerTintColor: theme.textOnBrand,
-          headerTitleStyle: { fontWeight: '700' },
+          header: () => <DetailHeader title="" />,
           contentStyle: { backgroundColor: theme.background },
         }}
       >
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="event/[id]" options={{ title: 'Event' }} />
-        <Stack.Screen name="news/[id]" options={{ title: 'News' }} />
-        <Stack.Screen name="announcements" options={{ title: 'Announcements' }} />
-        <Stack.Screen name="result" options={{ title: 'Result' }} />
-        <Stack.Screen name="contact" options={{ title: 'Contact Us' }} />
-        <Stack.Screen name="about" options={{ title: 'About Us' }} />
+        <Stack.Screen name="event/[id]" options={{ header: () => <DetailHeader title="Event" /> }} />
+        <Stack.Screen name="news/[id]" options={{ header: () => <DetailHeader title="News" /> }} />
+        <Stack.Screen name="news/index" options={{ header: () => <DetailHeader title="Latest News" /> }} />
+        <Stack.Screen name="announcements" options={{ headerShown: false }} />
+        <Stack.Screen name="notices" options={{ header: () => <DetailHeader title="Notices" /> }} />
+        <Stack.Screen name="result" options={{ header: () => <DetailHeader title="Check Result" /> }} />
+        <Stack.Screen name="contact" options={{ header: () => <DetailHeader title="Contact Us" /> }} />
+        <Stack.Screen name="about" options={{ header: () => <DetailHeader title="About Us" /> }} />
+        <Stack.Screen name="teachers" options={{ header: () => <DetailHeader title="Our Teachers" /> }} />
+        <Stack.Screen name="top-students" options={{ header: () => <DetailHeader title="Top Students" /> }} />
+        <Stack.Screen name="disclosure" options={{ header: () => <DetailHeader title="Mandatory Disclosure" /> }} />
+        <Stack.Screen name="notifications" options={{ header: () => <DetailHeader title="Notifications" /> }} />
+        <Stack.Screen name="gallery/[id]" options={{ header: () => <DetailHeader title="Album" /> }} />
       </Stack>
     </SafeAreaProvider>
   );

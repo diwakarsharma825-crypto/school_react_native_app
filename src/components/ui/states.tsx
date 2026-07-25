@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import React from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
@@ -7,11 +8,16 @@ import { useTheme } from '@/hooks/use-theme';
 import { Button } from './Button';
 import { ThemedText } from './ThemedText';
 
+const logoSource = require('../../../assets/images/icon.png');
+
 export function Loading({ label = 'Loading…' }: { label?: string }) {
   const theme = useTheme();
   return (
     <View style={styles.center}>
-      <ActivityIndicator color={theme.tint} size="large" />
+      <View style={styles.logoWrap}>
+        <Image source={logoSource} style={styles.logo} contentFit="cover" />
+        <ActivityIndicator color={theme.tint} size="small" style={styles.spinner} />
+      </View>
       <ThemedText type="small" themeColor="textSecondary" style={styles.spacingTop}>
         {label}
       </ThemedText>
@@ -66,6 +72,22 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: Spacing.five,
     paddingHorizontal: Spacing.three,
+  },
+  logoWrap: {
+    width: 72,
+    height: 72,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logo: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+  },
+  spinner: {
+    position: 'absolute',
+    bottom: -6,
+    right: -6,
   },
   spacingTop: {
     marginTop: Spacing.two,

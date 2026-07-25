@@ -1,31 +1,53 @@
+import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import React, { useState } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Radius, Spacing } from '@/constants/theme';
-import { PrincipalMessage } from '@/data/types';
+import { useTheme } from '@/hooks/use-theme';
 import { Card } from '../ui/Card';
 import { ThemedText } from '../ui/ThemedText';
 
 interface PrincipalCardProps {
-  principal: PrincipalMessage;
+  photoUrl: string | null;
+  message: string;
 }
 
-export function PrincipalCard({ principal }: PrincipalCardProps) {
+const TRUNCATE_LENGTH = 180;
+
+export function PrincipalCard({ photoUrl, message }: PrincipalCardProps) {
+  const theme = useTheme();
+  const [expanded, setExpanded] = useState(false);
+  const isLong = message.length > TRUNCATE_LENGTH;
+  const shown = expanded || !isLong ? message : `${message.slice(0, TRUNCATE_LENGTH).trim()}…`;
+
   return (
     <Card>
       <View style={styles.header}>
-        <Image source={{ uri: principal.photoUrl }} style={styles.photo} contentFit="cover" />
+        {photoUrl ? (
+          <Image source={{ uri: photoUrl }} style={styles.photo} contentFit="cover" />
+        ) : (
+          <View style={[styles.photo, styles.photoFallback, { backgroundColor: theme.backgroundElement }]}>
+            <Ionicons name="person" size={26} color={theme.tint} />
+          </View>
+        )}
         <View style={styles.headerText}>
-          <ThemedText type="smallBold">{principal.name}</ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">
-            {principal.role}
-          </ThemedText>
+          <ThemedText type="smallBold">From the Principal&apos;s Desk</ThemedText>
         </View>
       </View>
-      <ThemedText type="default" style={styles.message}>
-        {principal.message}
-      </ThemedText>
+      <View style={styles.quoteRow}>
+        <Ionicons name="chatbox-ellipses-outline" size={18} color={theme.accent} style={styles.quoteIcon} />
+        <ThemedText type="default" style={styles.message}>
+          {shown}
+        </ThemedText>
+      </View>
+      {isLong ? (
+        <Pressable onPress={() => setExpanded((v) => !v)} hitSlop={8}>
+          <ThemedText type="smallBold" themeColor="tint" style={styles.readMore}>
+            {expanded ? 'Read less ⌃' : 'Read more ⌄'}
+          </ThemedText>
+        </Pressable>
+      ) : null}
     </Card>
   );
 }
@@ -42,10 +64,26 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
     marginRight: Spacing.three,
   },
+  photoFallback: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   headerText: {
     flex: 1,
   },
+  quoteRow: {
+    flexDirection: 'row',
+  },
+  quoteIcon: {
+    marginRight: Spacing.two,
+    marginTop: 2,
+  },
   message: {
+    flex: 1,
+    fontStyle: 'italic',
     lineHeight: 22,
+  },
+  readMore: {
+    marginTop: Spacing.two,
   },
 });

@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import React from 'react';
 
-import { Brand } from '@/constants/theme';
+import { AppHeader } from '@/components/ui/AppHeader';
 import { useTheme } from '@/hooks/use-theme';
 
 export default function TabsLayout() {
@@ -11,9 +11,7 @@ export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerStyle: { backgroundColor: Brand.blue },
-        headerTintColor: theme.textOnBrand,
-        headerTitleStyle: { fontWeight: '700' },
+        header: () => <AppHeader />,
         tabBarActiveTintColor: theme.tint,
         tabBarInactiveTintColor: theme.textSecondary,
         tabBarStyle: { backgroundColor: theme.surface, borderTopColor: theme.border },
@@ -22,7 +20,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Saarthak GIMSS',
+          title: 'Saarthak GIMSSS',
           tabBarLabel: 'Home',
           tabBarIcon: ({ color, size }) => <Ionicons name="home" size={size} color={color} />,
         }}

@@ -10,6 +10,18 @@ export const Brand = {
   white: '#FFFFFF',
 };
 
+/** Pastel tile colors for the home quick-action grid (Result/Notices/Disclosure/Contact). */
+export const TileColors = {
+  orange: { bg: '#FDECD8', fg: '#E8871E' },
+  blue: { bg: '#DCE8F7', fg: '#2E6FBE' },
+  green: { bg: '#DFF1E1', fg: '#2E7D32' },
+  red: { bg: '#FBE2E2', fg: '#C62828' },
+};
+
+/** Cycled avatar palette for teacher initials avatars. */
+export const AvatarPalette = ['#DCE8F7', '#FDECD8', '#DFF1E1', '#F4E3F7', '#FDE8E8'];
+export const AvatarFgPalette = ['#2E6FBE', '#E8871E', '#2E7D32', '#8E44AD', '#C62828'];
+
 export const Colors = {
   light: {
     text: '#151718',

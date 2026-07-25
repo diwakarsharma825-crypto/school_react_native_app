@@ -32,10 +32,10 @@ export default function EventDetailScreen() {
     <Screen>
       <ArticleDetail
         title={data.title}
-        date={data.date}
-        imageUrl={data.imageUrl}
-        body={data.body}
-        meta={data.location}
+        date={data.event_from}
+        imageUrl={data.image_url}
+        body={data.note ?? ''}
+        location={data.event_place}
       />
     </Screen>
   );

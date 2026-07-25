@@ -1,20 +1,21 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
+import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { NativeScrollEvent, NativeSyntheticEvent, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { NativeScrollEvent, NativeSyntheticEvent, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 
-import { Radius, Spacing } from '@/constants/theme';
+import { Brand, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { Banner } from '@/data/types';
+import { Slider } from '@/data/types';
 import { ThemedText } from '../ui/ThemedText';
 
 interface CarouselProps {
-  banners: Banner[];
+  sliders: Slider[];
 }
 
 const AUTO_ADVANCE_MS = 4500;
 
-export function Carousel({ banners }: CarouselProps) {
+export function Carousel({ sliders }: CarouselProps) {
   const theme = useTheme();
   const { width: screenWidth } = useWindowDimensions();
   const SLIDE_WIDTH = Math.min(screenWidth - Spacing.three * 2, 720 - Spacing.three * 2);
@@ -22,23 +23,23 @@ export function Carousel({ banners }: CarouselProps) {
   const scrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
-    if (banners.length <= 1) return;
+    if (sliders.length <= 1) return;
     const timer = setInterval(() => {
       setIndex((prev) => {
-        const next = (prev + 1) % banners.length;
+        const next = (prev + 1) % sliders.length;
         scrollRef.current?.scrollTo({ x: next * SLIDE_WIDTH, animated: true });
         return next;
       });
     }, AUTO_ADVANCE_MS);
     return () => clearInterval(timer);
-  }, [banners.length, SLIDE_WIDTH]);
+  }, [sliders.length, SLIDE_WIDTH]);
 
   function onMomentumScrollEnd(e: NativeSyntheticEvent<NativeScrollEvent>) {
     const newIndex = Math.round(e.nativeEvent.contentOffset.x / SLIDE_WIDTH);
     setIndex(newIndex);
   }
 
-  if (banners.length === 0) return null;
+  if (sliders.length === 0) return null;
 
   return (
     <View>
@@ -52,33 +53,37 @@ export function Carousel({ banners }: CarouselProps) {
         onMomentumScrollEnd={onMomentumScrollEnd}
         style={{ width: SLIDE_WIDTH }}
       >
-        {banners.map((banner) => (
-          <View key={banner.id} style={[styles.slide, { width: SLIDE_WIDTH }]}>
-            <Image source={{ uri: banner.imageUrl }} style={styles.image} contentFit="cover" />
-            <LinearGradient
-              colors={['transparent', 'rgba(0,0,0,0.75)']}
-              style={styles.overlay}
-            >
-              <ThemedText type="subtitle" style={styles.overlayTitle}>
-                {banner.title}
+        {sliders.map((slide) => (
+          <View key={slide.id} style={[styles.slide, { width: SLIDE_WIDTH }]}>
+            <Image source={{ uri: slide.image_url }} style={styles.image} contentFit="cover" />
+            <View style={styles.badge}>
+              <ThemedText type="small" style={styles.badgeText}>
+                ✨ Saarthak GIMSSS
               </ThemedText>
-              {banner.subtitle ? (
+            </View>
+            <LinearGradient colors={['transparent', 'rgba(0,0,0,0.8)']} style={styles.overlay}>
+              <ThemedText type="subtitle" style={styles.overlayTitle}>
+                {slide.title || 'Welcome to Saarthak GIMSSS'}
+              </ThemedText>
+              {slide.subtitle ? (
                 <ThemedText type="small" style={styles.overlaySubtitle}>
-                  {banner.subtitle}
+                  {slide.subtitle}
                 </ThemedText>
               ) : null}
+              <Pressable style={styles.cta} onPress={() => router.push('/contact')}>
+                <ThemedText type="smallBold" style={styles.ctaText}>
+                  Contact Us
+                </ThemedText>
+              </Pressable>
             </LinearGradient>
           </View>
         ))}
       </ScrollView>
       <View style={styles.dots}>
-        {banners.map((banner, i) => (
+        {sliders.map((slide, i) => (
           <View
-            key={banner.id}
-            style={[
-              styles.dot,
-              { backgroundColor: i === index ? theme.accent : theme.border },
-            ]}
+            key={slide.id}
+            style={[styles.dot, { backgroundColor: i === index ? theme.accent : theme.border }]}
           />
         ))}
       </View>
@@ -88,13 +93,26 @@ export function Carousel({ banners }: CarouselProps) {
 
 const styles = StyleSheet.create({
   slide: {
-    height: 200,
+    height: 220,
     borderRadius: Radius.lg,
     overflow: 'hidden',
   },
   image: {
     width: '100%',
     height: '100%',
+  },
+  badge: {
+    position: 'absolute',
+    top: Spacing.two,
+    left: Spacing.two,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    borderRadius: Radius.pill,
+    paddingHorizontal: Spacing.two,
+    paddingVertical: 4,
+  },
+  badgeText: {
+    color: Brand.blue,
+    fontWeight: '700',
   },
   overlay: {
     position: 'absolute',
@@ -108,7 +126,19 @@ const styles = StyleSheet.create({
   },
   overlaySubtitle: {
     color: '#fff',
+    opacity: 0.9,
     marginTop: Spacing.half,
+  },
+  cta: {
+    backgroundColor: Brand.saffron,
+    alignSelf: 'flex-start',
+    borderRadius: Radius.pill,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.one + 2,
+    marginTop: Spacing.two,
+  },
+  ctaText: {
+    color: '#fff',
   },
   dots: {
     flexDirection: 'row',
