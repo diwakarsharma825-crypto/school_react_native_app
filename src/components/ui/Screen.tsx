@@ -16,6 +16,11 @@ interface ScreenProps {
 
 const MAX_CONTENT_WIDTH = 720;
 
+// Every screen already sits below a custom header (AppHeader/TabHeader/
+// DetailHeader) that reserves the top safe-area inset itself — applying it
+// again here just adds a redundant gap between the header and content.
+const DEFAULT_EDGES: Array<'top' | 'right' | 'bottom' | 'left'> = ['bottom', 'left', 'right'];
+
 export function Screen({ children, refreshing = false, onRefresh, scroll = true, contentStyle, edges }: ScreenProps) {
   const theme = useTheme();
 
@@ -26,7 +31,7 @@ export function Screen({ children, refreshing = false, onRefresh, scroll = true,
   );
 
   return (
-    <SafeAreaView style={[styles.flex, { backgroundColor: theme.background }]} edges={edges}>
+    <SafeAreaView style={[styles.flex, { backgroundColor: theme.background }]} edges={edges ?? DEFAULT_EDGES}>
       {scroll ? (
         <ScrollView
           contentContainerStyle={styles.scrollContent}

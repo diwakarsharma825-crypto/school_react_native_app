@@ -6,26 +6,26 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Spacing } from '@/constants/theme';
+import { fetchSettings } from '@/data/api';
 import { useBrand } from '@/hooks/use-brand';
+import { useFetch } from '@/hooks/use-fetch';
 import { useTheme } from '@/hooks/use-theme';
 import { ThemedText } from './ThemedText';
 import { ThemeToggle } from './ThemeToggle';
 
 const logoSource = require('../../../assets/images/icon.png');
 
-interface AppHeaderProps {
-  schoolName?: string;
-  address?: string;
-}
-
-/** Top-level header: circular logo, school name, address subtitle, bell icon. */
-export function AppHeader({
-  schoolName = 'Saarthak GIMSSS',
-  address = 'Sector 12-A, Panchkula, Haryana',
-}: AppHeaderProps) {
+/** Top-level header: circular logo, school name, address subtitle, bell icon.
+ * Fetches its own copy of /settings (same endpoint the More screen uses) so
+ * the name/address shown here always matches the admin-configured school
+ * profile rather than a hardcoded fallback. */
+export function AppHeader() {
   const insets = useSafeAreaInsets();
   const theme = useTheme();
   const brand = useBrand();
+  const { data: settings } = useFetch(fetchSettings);
+  const schoolName = settings?.school_name ?? 'Saarthak GIMSSS';
+  const address = settings?.address ?? 'Sector 12-A, Panchkula, Haryana';
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + Spacing.two, backgroundColor: theme.tint }]}>

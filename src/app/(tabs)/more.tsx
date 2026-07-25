@@ -95,11 +95,6 @@ export default function MoreScreen() {
       onPress: () => router.push('/disclosure'),
       locked: !sections.disclosure,
     },
-    {
-      label: 'School Website',
-      icon: 'globe-outline',
-      onPress: () => Linking.openURL('https://www.saarthakgimsss12a.org'),
-    },
   ];
 
   const followRows: Row[] = [

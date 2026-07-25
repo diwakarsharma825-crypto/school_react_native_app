@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -17,10 +16,7 @@ interface AchieverCardProps {
 export function AchieverCard({ achiever, paletteIndex, width }: AchieverCardProps) {
   return (
     <Card style={[styles.card, width ? { width, marginRight: Spacing.three } : undefined]}>
-      <LinearGradient
-        colors={[AvatarPalette[paletteIndex % AvatarPalette.length], Brand.white]}
-        style={styles.photo}
-      >
+      <View style={[styles.photo, { backgroundColor: AvatarPalette[paletteIndex % AvatarPalette.length] }]}>
         <Ionicons name="person" size={34} color={AvatarFgPalette[paletteIndex % AvatarFgPalette.length]} />
         <View style={styles.classBadge}>
           <ThemedText type="small" style={styles.classBadgeLabel}>
@@ -30,7 +26,7 @@ export function AchieverCard({ achiever, paletteIndex, width }: AchieverCardProp
         <View style={styles.trophyBadge}>
           <ThemedText type="default">🏆</ThemedText>
         </View>
-      </LinearGradient>
+      </View>
       <View style={styles.body}>
         <ThemedText type="smallBold">{achiever.name}</ThemedText>
         <ThemedText type="small" themeColor="textSecondary">
