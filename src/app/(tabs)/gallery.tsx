@@ -52,7 +52,7 @@ export default function GalleryScreen() {
                   {album.title}
                 </ThemedText>
                 <ThemedText type="small" themeColor="textSecondary">
-                  {album.image_count} photos
+                  {album.image_count} {album.image_count === 1 ? 'photo' : 'photos'}
                   {album.created_at ? ` · ${formatDate(album.created_at.split(' ')[0])}` : ''}
                 </ThemedText>
               </Card>
