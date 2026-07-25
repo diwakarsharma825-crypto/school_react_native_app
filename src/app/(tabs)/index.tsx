@@ -2,15 +2,17 @@ import { router } from 'expo-router';
 import React, { useCallback } from 'react';
 import { ScrollView, View } from 'react-native';
 
+import { AchieverCard } from '@/components/home/AchieverCard';
 import { Carousel } from '@/components/home/Carousel';
+import { EventSpotlightCard } from '@/components/home/EventSpotlightCard';
 import { PrincipalCard } from '@/components/home/PrincipalCard';
 import { QuickActionGrid } from '@/components/home/QuickActionGrid';
 import { StatsRow } from '@/components/home/StatsRow';
-import { MediaCard } from '@/components/ui/MediaCard';
 import { Screen } from '@/components/ui/Screen';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { EmptyState, ErrorState, Loading } from '@/components/ui/states';
 import { Spacing } from '@/constants/theme';
+import { ACHIEVERS } from '@/data/achievers';
 import { fetchHome, fetchSettings } from '@/data/api';
 import { useFetch } from '@/hooks/use-fetch';
 import { useSectionEnabled } from '@/hooks/use-sections';
@@ -20,6 +22,7 @@ export default function HomeScreen() {
   const home = useFetch(fetchHome);
   const settings = useFetch(fetchSettings);
   const eventsEnabled = useSectionEnabled('events');
+  const topStudentsEnabled = useSectionEnabled('top_students');
 
   const refreshAll = useCallback(() => {
     home.refetch();
@@ -63,26 +66,6 @@ export default function HomeScreen() {
 
           <StatsRow stats={home.data.stats} />
 
-          <SectionHeader title="Latest News" onSeeAll={() => router.push('/news')} />
-          {home.data.news.length > 0 ? (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {home.data.news.map((n) => (
-                <MediaCard
-                  key={n.id}
-                  title={n.title}
-                  date={n.date}
-                  imageUrl={n.image_url}
-                  excerpt={n.news}
-                  category="News"
-                  width={220}
-                  onPress={() => router.push(`/news/${n.id}`)}
-                />
-              ))}
-            </ScrollView>
-          ) : (
-            <EmptyState message="No news yet." />
-          )}
-
           {eventsEnabled ? (
             <>
               <SectionHeader title="Latest Events" onSeeAll={() => router.push('/(tabs)/events')} />
@@ -90,14 +73,12 @@ export default function HomeScreen() {
                 <View style={{ marginBottom: Spacing.four }}>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                     {home.data.events.map((e) => (
-                      <MediaCard
+                      <EventSpotlightCard
                         key={e.id}
                         title={e.title}
                         date={e.event_from}
+                        place={e.event_place}
                         imageUrl={e.image_url}
-                        excerpt={e.note}
-                        category="Event"
-                        width={220}
                         onPress={() => router.push(`/event/${e.id}`)}
                       />
                     ))}
@@ -106,6 +87,19 @@ export default function HomeScreen() {
               ) : (
                 <EmptyState message="No upcoming events." />
               )}
+            </>
+          ) : null}
+
+          {topStudentsEnabled ? (
+            <>
+              <SectionHeader title="Top Achievers" onSeeAll={() => router.push('/top-students')} />
+              <View style={{ marginBottom: Spacing.four }}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  {ACHIEVERS.map((a, i) => (
+                    <AchieverCard key={a.name} achiever={a} paletteIndex={i} width={190} />
+                  ))}
+                </ScrollView>
+              </View>
             </>
           ) : null}
         </>

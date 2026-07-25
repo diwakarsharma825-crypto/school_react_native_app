@@ -3,11 +3,10 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useNetworkState } from 'expo-network';
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { OfflineScreen } from '@/components/ui/OfflineScreen';
+import { LaunchScreen } from '@/components/ui/LaunchScreen';
 
-import { Brand } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ThemeModeProvider } from '@/hooks/use-theme-mode';
 import { ALL_SECTIONS_ENABLED, AppStatus, fetchAppStatus, registerDevice } from '@/data/app-status';
@@ -88,11 +87,7 @@ function RootLayoutInner() {
   }
 
   if ((checking && !status) || onboarded === null) {
-    return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: Brand.blueDark }}>
-        <ActivityIndicator color="#fff" size="large" />
-      </View>
-    );
+    return <LaunchScreen />;
   }
 
   if (status && isUpdateRequired(getAppVersion(), status.minVersion)) {
