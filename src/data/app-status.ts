@@ -38,6 +38,9 @@ export interface AppStatus {
   enabledSections: EnabledSections;
   minVersion: string | null;
   storeUrl: string | null;
+  appLogoUrl: string | null;
+  primaryColor: string | null;
+  accentColor: string | null;
 }
 
 interface ApiEnvelope<T> {
@@ -71,6 +74,9 @@ export async function fetchAppStatus(): Promise<AppStatus> {
     enabled_sections?: Partial<Record<SectionKey, boolean>>;
     min_version?: string | null;
     store_url?: string | null;
+    app_logo_url?: string | null;
+    primary_color?: string | null;
+    accent_color?: string | null;
   }>;
 
   if (!json.status || !json.data) {
@@ -89,6 +95,9 @@ export async function fetchAppStatus(): Promise<AppStatus> {
     enabledSections: { ...ALL_SECTIONS_ENABLED, ...json.data.enabled_sections },
     minVersion: json.data.min_version ?? null,
     storeUrl: json.data.store_url ?? null,
+    appLogoUrl: json.data.app_logo_url ?? null,
+    primaryColor: json.data.primary_color ?? null,
+    accentColor: json.data.accent_color ?? null,
   };
 }
 

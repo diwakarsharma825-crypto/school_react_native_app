@@ -4,7 +4,8 @@ import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Brand, Spacing } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 import { ThemedText } from './ThemedText';
 
 interface DetailHeaderProps {
@@ -14,9 +15,10 @@ interface DetailHeaderProps {
 /** Detail-screen header: plain back arrow + title, no bell, no address. */
 export function DetailHeader({ title }: DetailHeaderProps) {
   const insets = useSafeAreaInsets();
+  const theme = useTheme();
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + Spacing.two }]}>
+    <View style={[styles.container, { paddingTop: insets.top + Spacing.two, backgroundColor: theme.tint }]}>
       <Pressable
         hitSlop={10}
         onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
@@ -37,7 +39,6 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Brand.blue,
     paddingHorizontal: Spacing.two,
     paddingBottom: Spacing.two + 2,
   },

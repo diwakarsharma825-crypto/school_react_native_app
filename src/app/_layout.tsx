@@ -8,6 +8,7 @@ import { OfflineScreen } from '@/components/ui/OfflineScreen';
 import { LaunchScreen } from '@/components/ui/LaunchScreen';
 
 import { useTheme } from '@/hooks/use-theme';
+import { BrandProvider } from '@/hooks/use-brand';
 import { ThemeModeProvider } from '@/hooks/use-theme-mode';
 import { ALL_SECTIONS_ENABLED, AppStatus, fetchAppStatus, registerDevice } from '@/data/app-status';
 import { getAppVersion } from '@/lib/device';
@@ -34,6 +35,9 @@ const FAIL_OPEN_STATUS: AppStatus = {
   enabledSections: ALL_SECTIONS_ENABLED,
   minVersion: null,
   storeUrl: null,
+  appLogoUrl: null,
+  primaryColor: null,
+  accentColor: null,
 };
 
 function RootLayoutInner() {
@@ -119,6 +123,13 @@ function RootLayoutInner() {
 
   return (
     <SafeAreaProvider>
+      <BrandProvider
+        value={{
+          logoUrl: status?.appLogoUrl ?? null,
+          primaryColor: status?.primaryColor ?? null,
+          accentColor: status?.accentColor ?? null,
+        }}
+      >
       <SectionsProvider value={status?.enabledSections ?? ALL_SECTIONS_ENABLED}>
         <StatusBar style="light" />
         <Stack
@@ -143,6 +154,7 @@ function RootLayoutInner() {
           <Stack.Screen name="gallery/[id]" options={{ header: () => <DetailHeader title="Album" /> }} />
         </Stack>
       </SectionsProvider>
+      </BrandProvider>
     </SafeAreaProvider>
   );
 }

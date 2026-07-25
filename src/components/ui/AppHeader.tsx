@@ -5,7 +5,9 @@ import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Brand, Spacing } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
+import { useBrand } from '@/hooks/use-brand';
+import { useTheme } from '@/hooks/use-theme';
 import { ThemedText } from './ThemedText';
 import { ThemeToggle } from './ThemeToggle';
 
@@ -22,10 +24,12 @@ export function AppHeader({
   address = 'Sector 12-A, Panchkula, Haryana',
 }: AppHeaderProps) {
   const insets = useSafeAreaInsets();
+  const theme = useTheme();
+  const brand = useBrand();
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + Spacing.two }]}>
-      <Image source={logoSource} style={styles.logo} contentFit="cover" />
+    <View style={[styles.container, { paddingTop: insets.top + Spacing.two, backgroundColor: theme.tint }]}>
+      <Image source={brand.logoUrl ? { uri: brand.logoUrl } : logoSource} style={styles.logo} contentFit="cover" />
       <View style={styles.textWrap}>
         <ThemedText type="smallBold" themeColor="textOnBrand" numberOfLines={1} style={styles.name}>
           {schoolName}
@@ -53,7 +57,6 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Brand.blue,
     paddingHorizontal: Spacing.three,
     paddingBottom: Spacing.two + 2,
   },
