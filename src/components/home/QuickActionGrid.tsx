@@ -43,7 +43,13 @@ export function QuickActionGrid() {
             <View style={[styles.iconCircle, { backgroundColor: action.colors.bg }]}>
               <Ionicons name={action.icon} size={22} color={action.colors.fg} />
             </View>
-            <ThemedText type="small" style={styles.label}>
+            <ThemedText
+              type="small"
+              style={styles.label}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.8}
+            >
               {action.label}
             </ThemedText>
           </Card>

@@ -116,7 +116,7 @@ function RootLayoutInner() {
           <Stack.Screen name="news/[id]" options={{ header: () => <DetailHeader title="News" /> }} />
           <Stack.Screen name="news/index" options={{ header: () => <DetailHeader title="Latest News" /> }} />
           <Stack.Screen name="announcements" options={{ headerShown: false }} />
-          <Stack.Screen name="notices" options={{ header: () => <DetailHeader title="Notices" /> }} />
+          <Stack.Screen name="notices" options={{ header: () => <DetailHeader title="Announcements" /> }} />
           <Stack.Screen name="result" options={{ header: () => <DetailHeader title="Result / Report Card" /> }} />
           <Stack.Screen name="contact" options={{ header: () => <DetailHeader title="Contact Us" /> }} />
           <Stack.Screen name="about" options={{ header: () => <DetailHeader title="About Us" /> }} />
