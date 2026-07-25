@@ -11,12 +11,15 @@ import { ThemeModeProvider } from '@/hooks/use-theme-mode';
 import { ALL_SECTIONS_ENABLED, AppStatus, fetchAppStatus, registerDevice } from '@/data/app-status';
 import { getAppVersion } from '@/lib/device';
 import { isOnboardingComplete } from '@/lib/onboarding';
+import { configureNotificationHandler, ensureNotificationChannel } from '@/lib/notifications';
 import { isUpdateRequired } from '@/lib/version';
 import { LockScreen } from '@/components/ui/LockScreen';
 import { UpdateRequiredScreen } from '@/components/ui/UpdateRequiredScreen';
 import { DetailHeader } from '@/components/ui/DetailHeader';
 import { SectionsProvider } from '@/hooks/use-sections';
 import { OnboardingFlow } from '@/components/onboarding/OnboardingFlow';
+
+configureNotificationHandler();
 
 const FAIL_OPEN_STATUS: AppStatus = {
   enabled: true,
@@ -56,6 +59,7 @@ function RootLayoutInner() {
     checkStatus();
     registerDevice();
     isOnboardingComplete().then(setOnboarded);
+    ensureNotificationChannel();
   }, [checkStatus]);
 
   useEffect(() => {

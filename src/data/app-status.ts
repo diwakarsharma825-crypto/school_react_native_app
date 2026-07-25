@@ -98,6 +98,10 @@ export interface DeviceProfile {
   fullName?: string;
   studentClass?: string;
   section?: string;
+  /** Student stream, only meaningful for Class 11/12 (Arts/Non-Medical/Medical). */
+  stream?: string;
+  /** Teacher designation (PRT/TGT/PGT). */
+  designation?: string;
   phone?: string;
 }
 
@@ -117,6 +121,8 @@ export async function registerDevice(profile?: DeviceProfile): Promise<void> {
   if (profile?.fullName) body.append('full_name', profile.fullName);
   if (profile?.studentClass) body.append('class', profile.studentClass);
   if (profile?.section) body.append('section', profile.section);
+  if (profile?.stream) body.append('stream', profile.stream);
+  if (profile?.designation) body.append('designation', profile.designation);
   if (profile?.phone) body.append('phone', profile.phone);
 
   await fetch(`${BASE_URL}/device_register`, { method: 'POST', body }).catch(() => {

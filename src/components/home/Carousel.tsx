@@ -56,26 +56,25 @@ export function Carousel({ sliders }: CarouselProps) {
         {sliders.map((slide) => (
           <View key={slide.id} style={[styles.slide, { width: SLIDE_WIDTH }]}>
             <Image source={{ uri: slide.image_url }} style={styles.image} contentFit="cover" />
-            <View style={styles.badge}>
-              <ThemedText type="small" style={styles.badgeText}>
-                ✨ Saarthak GIMSSS
-              </ThemedText>
-            </View>
-            <LinearGradient colors={['transparent', 'rgba(0,0,0,0.8)']} style={styles.overlay}>
-              <ThemedText type="subtitle" style={styles.overlayTitle}>
-                {slide.title || 'Welcome to Saarthak GIMSSS'}
-              </ThemedText>
-              {slide.subtitle ? (
-                <ThemedText type="small" style={styles.overlaySubtitle}>
-                  {slide.subtitle}
-                </ThemedText>
-              ) : null}
-              <Pressable style={styles.cta} onPress={() => router.push('/contact')}>
-                <ThemedText type="smallBold" style={styles.ctaText}>
-                  Contact Us
-                </ThemedText>
-              </Pressable>
-            </LinearGradient>
+            {slide.title || slide.subtitle ? (
+              <LinearGradient colors={['transparent', 'rgba(0,0,0,0.8)']} style={styles.overlay}>
+                {slide.title ? (
+                  <ThemedText type="subtitle" style={styles.overlayTitle}>
+                    {slide.title}
+                  </ThemedText>
+                ) : null}
+                {slide.subtitle ? (
+                  <ThemedText type="small" style={styles.overlaySubtitle}>
+                    {slide.subtitle}
+                  </ThemedText>
+                ) : null}
+                <Pressable style={styles.cta} onPress={() => router.push('/contact')}>
+                  <ThemedText type="smallBold" style={styles.ctaText}>
+                    Contact Us
+                  </ThemedText>
+                </Pressable>
+              </LinearGradient>
+            ) : null}
           </View>
         ))}
       </ScrollView>

@@ -10,6 +10,7 @@ import { markOnboardingComplete } from '@/lib/onboarding';
 import { requestOnboardingPermissions } from '@/lib/permissions';
 import { useTheme } from '@/hooks/use-theme';
 import { Button } from '@/components/ui/Button';
+import { SelectField } from '@/components/ui/SelectField';
 import { ThemedText } from '@/components/ui/ThemedText';
 
 const logoSource = require('../../../assets/images/icon.png');
@@ -18,6 +19,25 @@ type Belonging = 'saarthak' | 'other';
 type UserType = 'student' | 'teacher' | 'other';
 
 const TOTAL_STEPS = 4;
+
+const CLASS_OPTIONS = Array.from({ length: 12 }, (_, i) => {
+  const n = String(i + 1);
+  return { label: `Class ${n}`, value: n };
+});
+
+const STREAM_OPTIONS = [
+  { label: 'Arts', value: 'Arts' },
+  { label: 'Non-Medical', value: 'Non-Medical' },
+  { label: 'Medical', value: 'Medical' },
+];
+
+const DESIGNATION_OPTIONS = [
+  { label: 'PRT (Primary Teacher)', value: 'PRT' },
+  { label: 'TGT (Trained Graduate Teacher)', value: 'TGT' },
+  { label: 'PGT (Post Graduate Teacher)', value: 'PGT' },
+];
+
+const STREAM_ELIGIBLE_CLASSES = ['11', '12'];
 
 interface OnboardingFlowProps {
   onDone: () => void;
@@ -29,8 +49,10 @@ export function OnboardingFlow({ onDone }: OnboardingFlowProps) {
   const [belonging, setBelonging] = useState<Belonging | null>(null);
   const [userType, setUserType] = useState<UserType | null>(null);
   const [fullName, setFullName] = useState('');
-  const [studentClass, setStudentClass] = useState('');
+  const [studentClass, setStudentClass] = useState<string | null>(null);
   const [section, setSection] = useState('');
+  const [stream, setStream] = useState<string | null>(null);
+  const [designation, setDesignation] = useState<string | null>(null);
   const [mobile, setMobile] = useState('');
   const [nameError, setNameError] = useState<string | null>(null);
   const [mobileError, setMobileError] = useState<string | null>(null);
@@ -58,10 +80,12 @@ export function OnboardingFlow({ onDone }: OnboardingFlowProps) {
     await markOnboardingComplete();
     await registerDevice({
       userType: userType ?? undefined,
-      role: userType ?? undefined,
+      role: userType === 'teacher' ? designation ?? undefined : userType ?? undefined,
       fullName: trimmedName,
-      studentClass: studentClass.trim() || undefined,
-      section: section.trim() || undefined,
+      studentClass: userType === 'student' ? studentClass ?? undefined : undefined,
+      section: userType === 'student' ? section.trim() || undefined : undefined,
+      stream: userType === 'student' ? stream ?? undefined : undefined,
+      designation: userType === 'teacher' ? designation ?? undefined : undefined,
       phone: `+91${trimmedMobile}`,
     }).catch(() => {});
     onDone();
@@ -90,6 +114,7 @@ export function OnboardingFlow({ onDone }: OnboardingFlowProps) {
         {step === 2 ? <UserTypeStep value={userType} onChange={setUserType} /> : null}
         {step === 3 ? (
           <DetailsStep
+            userType={userType}
             fullName={fullName}
             onFullName={setFullName}
             nameError={nameError}
@@ -97,6 +122,10 @@ export function OnboardingFlow({ onDone }: OnboardingFlowProps) {
             onClass={setStudentClass}
             section={section}
             onSection={setSection}
+            stream={stream}
+            onStream={setStream}
+            designation={designation}
+            onDesignation={setDesignation}
             mobile={mobile}
             onMobile={setMobile}
             mobileError={mobileError}
@@ -273,19 +302,25 @@ function UserTypeStep({ value, onChange }: { value: UserType | null; onChange: (
 }
 
 interface DetailsStepProps {
+  userType: UserType | null;
   fullName: string;
   onFullName: (v: string) => void;
   nameError: string | null;
-  studentClass: string;
+  studentClass: string | null;
   onClass: (v: string) => void;
   section: string;
   onSection: (v: string) => void;
+  stream: string | null;
+  onStream: (v: string) => void;
+  designation: string | null;
+  onDesignation: (v: string) => void;
   mobile: string;
   onMobile: (v: string) => void;
   mobileError: string | null;
 }
 
 function DetailsStep({
+  userType,
   fullName,
   onFullName,
   nameError,
@@ -293,11 +328,17 @@ function DetailsStep({
   onClass,
   section,
   onSection,
+  stream,
+  onStream,
+  designation,
+  onDesignation,
   mobile,
   onMobile,
   mobileError,
 }: DetailsStepProps) {
   const theme = useTheme();
+  const showStream = userType === 'student' && studentClass !== null && STREAM_ELIGIBLE_CLASSES.includes(studentClass);
+
   return (
     <View>
       <ThemedText type="title" style={styles.stepTitle}>
@@ -318,32 +359,52 @@ function DetailsStep({
         style={[styles.input, { borderColor: theme.border, color: theme.text }]}
       />
 
-      <View style={styles.row}>
-        <View style={styles.rowItem}>
-          <ThemedText type="smallBold" style={styles.fieldLabel}>
-            Class
-          </ThemedText>
-          <TextInput
-            value={studentClass}
-            onChangeText={onClass}
-            placeholder="e.g. 11"
-            placeholderTextColor={theme.textSecondary}
-            style={[styles.input, { borderColor: theme.border, color: theme.text }]}
-          />
-        </View>
-        <View style={styles.rowItem}>
-          <ThemedText type="smallBold" style={styles.fieldLabel}>
-            Section
-          </ThemedText>
-          <TextInput
-            value={section}
-            onChangeText={onSection}
-            placeholder="e.g. A"
-            placeholderTextColor={theme.textSecondary}
-            style={[styles.input, { borderColor: theme.border, color: theme.text }]}
-          />
-        </View>
-      </View>
+      {userType === 'student' ? (
+        <>
+          <View style={styles.row}>
+            <View style={styles.rowItem}>
+              <SelectField
+                label="Class"
+                placeholder="Select class"
+                value={studentClass}
+                options={CLASS_OPTIONS}
+                onChange={onClass}
+              />
+            </View>
+            <View style={styles.rowItem}>
+              <ThemedText type="smallBold" style={styles.fieldLabel}>
+                Section
+              </ThemedText>
+              <TextInput
+                value={section}
+                onChangeText={onSection}
+                placeholder="e.g. A"
+                placeholderTextColor={theme.textSecondary}
+                style={[styles.input, { borderColor: theme.border, color: theme.text }]}
+              />
+            </View>
+          </View>
+          {showStream ? (
+            <SelectField
+              label="Stream"
+              placeholder="Select stream"
+              value={stream}
+              options={STREAM_OPTIONS}
+              onChange={onStream}
+            />
+          ) : null}
+        </>
+      ) : null}
+
+      {userType === 'teacher' ? (
+        <SelectField
+          label="Designation"
+          placeholder="Select designation"
+          value={designation}
+          options={DESIGNATION_OPTIONS}
+          onChange={onDesignation}
+        />
+      ) : null}
 
       <ThemedText type="smallBold" style={styles.fieldLabel}>
         Mobile Number

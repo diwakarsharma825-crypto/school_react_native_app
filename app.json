@@ -48,7 +48,14 @@
           "locationWhenInUsePermission": "Saarthak GIMSSS uses your location to show school-area relevant information."
         }
       ],
-      "expo-notifications",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#123A6B",
+          "sounds": ["./assets/sounds/notification.wav"]
+        }
+      ],
       "expo-sharing",
       "expo-video"
     ],
