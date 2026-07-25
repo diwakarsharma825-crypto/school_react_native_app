@@ -2,6 +2,7 @@ import { Platform } from 'react-native';
 
 import { BASE_URL } from './api';
 import { getAppVersion, getDeviceId } from '@/lib/device';
+import type { LayoutItem, LayoutTarget } from '@/lib/layout';
 
 export type SectionKey =
   | 'events'
@@ -41,6 +42,40 @@ export interface AppStatus {
   appLogoUrl: string | null;
   primaryColor: string | null;
   accentColor: string | null;
+  homeTiles: LayoutItem[];
+  bottomTabs: LayoutItem[];
+}
+
+/** Matches what the backend seeds app_layout_items with — used as a
+ * fail-open fallback if the API doesn't return layout arrays (older
+ * backend) or returns them empty. */
+export const DEFAULT_HOME_TILES: LayoutItem[] = [
+  { label: 'Result', icon: 'document-text', colorBg: '#FDECD8', colorFg: '#E8871E', target: 'result', targetUrl: null },
+  { label: 'Notices', icon: 'megaphone', colorBg: '#DCE8F7', colorFg: '#2E6FBE', target: 'notices', targetUrl: null },
+  { label: 'Disclosure', icon: 'shield-checkmark', colorBg: '#DFF1E1', colorFg: '#2E7D32', target: 'disclosure', targetUrl: null },
+  { label: 'Contact', icon: 'call', colorBg: '#FBE2E2', colorFg: '#C62828', target: 'contact', targetUrl: null },
+];
+
+export const DEFAULT_BOTTOM_TABS: LayoutItem[] = [
+  { label: 'Home', icon: 'home', colorBg: null, colorFg: null, target: 'home', targetUrl: null },
+  { label: 'Events', icon: 'calendar', colorBg: null, colorFg: null, target: 'events', targetUrl: null },
+  { label: 'Gallery', icon: 'images', colorBg: null, colorFg: null, target: 'gallery', targetUrl: null },
+  { label: 'More', icon: 'menu', colorBg: null, colorFg: null, target: 'more', targetUrl: null },
+];
+
+function parseLayoutItems(
+  raw: Array<{ label: string; icon: string; color_bg: string | null; color_fg: string | null; target: string; target_url: string | null }> | undefined,
+  fallback: LayoutItem[]
+): LayoutItem[] {
+  if (!raw || raw.length === 0) return fallback;
+  return raw.map((r) => ({
+    label: r.label,
+    icon: r.icon,
+    colorBg: r.color_bg,
+    colorFg: r.color_fg,
+    target: r.target as LayoutTarget,
+    targetUrl: r.target_url,
+  }));
 }
 
 interface ApiEnvelope<T> {
@@ -77,6 +112,8 @@ export async function fetchAppStatus(): Promise<AppStatus> {
     app_logo_url?: string | null;
     primary_color?: string | null;
     accent_color?: string | null;
+    home_tiles?: Array<{ label: string; icon: string; color_bg: string | null; color_fg: string | null; target: string; target_url: string | null }>;
+    bottom_tabs?: Array<{ label: string; icon: string; color_bg: string | null; color_fg: string | null; target: string; target_url: string | null }>;
   }>;
 
   if (!json.status || !json.data) {
@@ -98,6 +135,8 @@ export async function fetchAppStatus(): Promise<AppStatus> {
     appLogoUrl: json.data.app_logo_url ?? null,
     primaryColor: json.data.primary_color ?? null,
     accentColor: json.data.accent_color ?? null,
+    homeTiles: parseLayoutItems(json.data.home_tiles, DEFAULT_HOME_TILES),
+    bottomTabs: parseLayoutItems(json.data.bottom_tabs, DEFAULT_BOTTOM_TABS),
   };
 }
 

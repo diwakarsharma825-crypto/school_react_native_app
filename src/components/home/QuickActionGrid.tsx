@@ -1,52 +1,50 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, View } from 'react-native';
 
 import { Radius, Spacing, TileColors } from '@/constants/theme';
-import { SectionKey, useSections } from '@/hooks/use-sections';
+import { useLayout } from '@/hooks/use-layout';
+import { useSections } from '@/hooks/use-sections';
 import { useTheme } from '@/hooks/use-theme';
+import { TARGET_ROUTES, TARGET_SECTION_KEY } from '@/lib/layout';
 import { Card } from '../ui/Card';
 import { ThemedText } from '../ui/ThemedText';
 
-interface QuickAction {
-  key: string;
-  label: string;
-  icon: keyof typeof Ionicons.glyphMap;
-  colors: { bg: string; fg: string };
-  href: '/result' | '/notices' | '/disclosure' | '/contact';
-  /** null = always shown (not an admin-togglable section). */
-  section: SectionKey | null;
-}
-
-const ACTIONS: QuickAction[] = [
-  { key: 'result', label: 'Result', icon: 'document-text', colors: TileColors.orange, href: '/result', section: 'result' },
-  { key: 'notices', label: 'Notices', icon: 'megaphone', colors: TileColors.blue, href: '/notices', section: 'notices' },
-  { key: 'disclosure', label: 'Disclosure', icon: 'shield-checkmark', colors: TileColors.green, href: '/disclosure', section: 'disclosure' },
-  { key: 'contact', label: 'Contact', icon: 'call', colors: TileColors.red, href: '/contact', section: null },
-];
-
-// Tiles are always shown (even when the admin has turned the section off) so
-// the app doesn't feel like features vanished — tapping a disabled one just
-// opens its "Coming Soon" state (SectionUnavailable) instead of the real
-// screen; a small lock badge previews that before the tap.
+// Tiles come from App Control → App Layout (admin-configured) and are always
+// shown, even when the tile's target section is turned off — the app
+// shouldn't feel like features vanished. Tapping a disabled one just opens
+// its "Coming Soon" state instead of the real screen; a small lock badge
+// previews that before the tap.
 export function QuickActionGrid() {
   const sections = useSections();
   const theme = useTheme();
+  const { homeTiles } = useLayout();
+
+  if (homeTiles.length === 0) return null;
 
   return (
     <View style={styles.grid}>
-      {ACTIONS.map((action) => {
-        const enabled = action.section === null || sections[action.section];
+      {homeTiles.map((tile) => {
+        const sectionKey = TARGET_SECTION_KEY[tile.target];
+        const enabled = !sectionKey || sections[sectionKey];
+        const bg = tile.colorBg ?? TileColors.blue.bg;
+        const fg = tile.colorFg ?? TileColors.blue.fg;
         return (
           <Pressable
-            key={action.key}
-            style={[styles.tileWrap, { width: `${100 / ACTIONS.length - 2}%` }]}
-            onPress={() => router.push(action.href)}
+            key={`${tile.target}-${tile.label}`}
+            style={[styles.tileWrap, { width: `${100 / homeTiles.length - 2}%` }]}
+            onPress={() => {
+              if (tile.target === 'url' && tile.targetUrl) {
+                Linking.openURL(tile.targetUrl);
+              } else if (tile.target !== 'url') {
+                router.push(TARGET_ROUTES[tile.target]);
+              }
+            }}
           >
             <Card style={styles.tile}>
-              <View style={[styles.iconCircle, { backgroundColor: action.colors.bg }]}>
-                <Ionicons name={action.icon} size={22} color={action.colors.fg} />
+              <View style={[styles.iconCircle, { backgroundColor: bg }]}>
+                <Ionicons name={tile.icon as keyof typeof Ionicons.glyphMap} size={22} color={fg} />
               </View>
               {!enabled ? (
                 <View style={[styles.lockBadge, { backgroundColor: theme.surface, borderColor: theme.border }]}>
@@ -60,7 +58,7 @@ export function QuickActionGrid() {
                 adjustsFontSizeToFit
                 minimumFontScale={0.8}
               >
-                {action.label}
+                {tile.label}
               </ThemedText>
             </Card>
           </Pressable>

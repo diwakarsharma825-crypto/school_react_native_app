@@ -10,11 +10,12 @@ export default function TabsLayout() {
   const theme = useTheme();
 
   return (
+    // The native tab bar is hidden — DynamicBottomBar (rendered once at the
+    // app root) replaces it so bottom-tab slots can point at ANY screen,
+    // not just these four files. Tabs itself is kept only for routing.
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: theme.tint,
-        tabBarInactiveTintColor: theme.textSecondary,
-        tabBarStyle: { backgroundColor: theme.surface, borderTopColor: theme.border },
+        tabBarStyle: { display: 'none' },
       }}
     >
       <Tabs.Screen

@@ -3,14 +3,24 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useNetworkState } from 'expo-network';
 import React, { useCallback, useEffect, useState } from 'react';
+import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { OfflineScreen } from '@/components/ui/OfflineScreen';
 import { LaunchScreen } from '@/components/ui/LaunchScreen';
+import { DynamicBottomBar } from '@/components/ui/DynamicBottomBar';
 
 import { useTheme } from '@/hooks/use-theme';
 import { BrandProvider } from '@/hooks/use-brand';
+import { LayoutProvider } from '@/hooks/use-layout';
 import { ThemeModeProvider } from '@/hooks/use-theme-mode';
-import { ALL_SECTIONS_ENABLED, AppStatus, fetchAppStatus, registerDevice } from '@/data/app-status';
+import {
+  ALL_SECTIONS_ENABLED,
+  AppStatus,
+  DEFAULT_BOTTOM_TABS,
+  DEFAULT_HOME_TILES,
+  fetchAppStatus,
+  registerDevice,
+} from '@/data/app-status';
 import { getAppVersion } from '@/lib/device';
 import { isOnboardingComplete } from '@/lib/onboarding';
 import { configureNotificationHandler, ensureNotificationChannel, getFcmPushToken } from '@/lib/notifications';
@@ -38,6 +48,8 @@ const FAIL_OPEN_STATUS: AppStatus = {
   appLogoUrl: null,
   primaryColor: null,
   accentColor: null,
+  homeTiles: DEFAULT_HOME_TILES,
+  bottomTabs: DEFAULT_BOTTOM_TABS,
 };
 
 function RootLayoutInner() {
@@ -130,30 +142,40 @@ function RootLayoutInner() {
           accentColor: status?.accentColor ?? null,
         }}
       >
+      <LayoutProvider
+        value={{
+          homeTiles: status?.homeTiles ?? DEFAULT_HOME_TILES,
+          bottomTabs: status?.bottomTabs ?? DEFAULT_BOTTOM_TABS,
+        }}
+      >
       <SectionsProvider value={status?.enabledSections ?? ALL_SECTIONS_ENABLED}>
         <StatusBar style="light" />
-        <Stack
-          screenOptions={{
-            header: () => <DetailHeader title="" />,
-            contentStyle: { backgroundColor: theme.background },
-          }}
-        >
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="event/[id]" options={{ header: () => <DetailHeader title="Event" /> }} />
-          <Stack.Screen name="news/[id]" options={{ header: () => <DetailHeader title="News" /> }} />
-          <Stack.Screen name="news/index" options={{ header: () => <DetailHeader title="Latest News" /> }} />
-          <Stack.Screen name="announcements" options={{ headerShown: false }} />
-          <Stack.Screen name="notices" options={{ header: () => <DetailHeader title="Announcements" /> }} />
-          <Stack.Screen name="result" options={{ header: () => <DetailHeader title="Result / Report Card" /> }} />
-          <Stack.Screen name="contact" options={{ header: () => <DetailHeader title="Contact Us" /> }} />
-          <Stack.Screen name="about" options={{ header: () => <DetailHeader title="About Us" /> }} />
-          <Stack.Screen name="teachers" options={{ header: () => <DetailHeader title="Our Teachers" /> }} />
-          <Stack.Screen name="top-students" options={{ header: () => <DetailHeader title="Top Students" /> }} />
-          <Stack.Screen name="disclosure" options={{ header: () => <DetailHeader title="Mandatory Disclosure" /> }} />
-          <Stack.Screen name="notifications" options={{ header: () => <DetailHeader title="Notifications" /> }} />
-          <Stack.Screen name="gallery/[id]" options={{ header: () => <DetailHeader title="Album" /> }} />
-        </Stack>
+        <View style={{ flex: 1, backgroundColor: theme.background }}>
+          <Stack
+            screenOptions={{
+              header: () => <DetailHeader title="" />,
+              contentStyle: { backgroundColor: theme.background },
+            }}
+          >
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="event/[id]" options={{ header: () => <DetailHeader title="Event" /> }} />
+            <Stack.Screen name="news/[id]" options={{ header: () => <DetailHeader title="News" /> }} />
+            <Stack.Screen name="news/index" options={{ header: () => <DetailHeader title="Latest News" /> }} />
+            <Stack.Screen name="announcements" options={{ headerShown: false }} />
+            <Stack.Screen name="notices" options={{ header: () => <DetailHeader title="Announcements" /> }} />
+            <Stack.Screen name="result" options={{ header: () => <DetailHeader title="Result / Report Card" /> }} />
+            <Stack.Screen name="contact" options={{ header: () => <DetailHeader title="Contact Us" /> }} />
+            <Stack.Screen name="about" options={{ header: () => <DetailHeader title="About Us" /> }} />
+            <Stack.Screen name="teachers" options={{ header: () => <DetailHeader title="Our Teachers" /> }} />
+            <Stack.Screen name="top-students" options={{ header: () => <DetailHeader title="Top Students" /> }} />
+            <Stack.Screen name="disclosure" options={{ header: () => <DetailHeader title="Mandatory Disclosure" /> }} />
+            <Stack.Screen name="notifications" options={{ header: () => <DetailHeader title="Notifications" /> }} />
+            <Stack.Screen name="gallery/[id]" options={{ header: () => <DetailHeader title="Album" /> }} />
+          </Stack>
+          <DynamicBottomBar />
+        </View>
       </SectionsProvider>
+      </LayoutProvider>
       </BrandProvider>
     </SafeAreaProvider>
   );
