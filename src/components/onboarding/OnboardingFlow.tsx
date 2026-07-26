@@ -21,10 +21,16 @@ type UserType = 'student' | 'teacher' | 'other';
 
 const TOTAL_STEPS = 4;
 
-const CLASS_OPTIONS = Array.from({ length: 12 }, (_, i) => {
-  const n = String(i + 1);
-  return { label: `Class ${n}`, value: n };
-});
+const CLASS_OPTIONS = [
+  { label: 'Pre-Nursery', value: 'Pre-Nursery' },
+  { label: 'Nursery', value: 'Nursery' },
+  { label: 'LKG', value: 'LKG' },
+  { label: 'UKG', value: 'UKG' },
+  ...Array.from({ length: 12 }, (_, i) => {
+    const n = String(i + 1);
+    return { label: `Class ${n}`, value: n };
+  }),
+];
 
 const STREAM_OPTIONS = [
   { label: 'Arts', value: 'Arts' },

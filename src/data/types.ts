@@ -41,6 +41,18 @@ export interface Stats {
   total_events: number;
 }
 
+/** Real, admin-managed achiever from App Control → Top Achievers — replaces
+ * the placeholder static data the app originally shipped with. */
+export interface ApiAchiever {
+  name: string;
+  class_label: string;
+  position_label: string;
+  score: number;
+  total: number;
+  percent: number;
+  photo_url: string | null;
+}
+
 export interface NewsItem {
   id: number | string;
   title: string;

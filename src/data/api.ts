@@ -1,4 +1,5 @@
 import {
+  ApiAchiever,
   DynamicPage,
   EventItem,
   GalleryAlbum,
@@ -87,6 +88,10 @@ export async function fetchSettings(): Promise<Settings> {
 
 export async function fetchStats(): Promise<Stats> {
   return getJson<Stats>('/stats');
+}
+
+export async function fetchTopAchievers(): Promise<ApiAchiever[]> {
+  return getJson<ApiAchiever[]>('/top_achievers');
 }
 
 export async function fetchSliders(): Promise<Slider[]> {

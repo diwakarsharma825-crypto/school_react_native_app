@@ -1,7 +1,5 @@
-// NOTE: the backend has no dedicated top-students/ranking endpoint (the
-// /students list carries no score/position field) — this is the same
-// static achiever content the original app shipped with, shared between
-// the Home screen spotlight and the full Top Students screen.
+import type { ApiAchiever } from './types';
+
 export interface Achiever {
   name: string;
   classLabel: string;
@@ -9,9 +7,17 @@ export interface Achiever {
   score: number;
   total: number;
   percent: number;
+  photoUrl: string | null;
 }
 
-export const ACHIEVERS: Achiever[] = [
-  { name: 'Akhsay', classLabel: '12th', position: 'Second Position', score: 475, total: 500, percent: 95 },
-  { name: 'Ruby', classLabel: '12th', position: 'Third Position', score: 470, total: 500, percent: 94 },
-];
+export function toAchiever(a: ApiAchiever): Achiever {
+  return {
+    name: a.name,
+    classLabel: a.class_label,
+    position: a.position_label,
+    score: a.score,
+    total: a.total,
+    percent: a.percent,
+    photoUrl: a.photo_url,
+  };
+}

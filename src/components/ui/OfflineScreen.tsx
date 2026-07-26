@@ -23,8 +23,8 @@ export function OfflineScreen({ onRetry, retrying }: OfflineScreenProps) {
         No Internet Connection
       </ThemedText>
       <ThemedText type="default" themeColor="textOnBrand" style={styles.message}>
-        Saarthak GIMSSS needs an internet connection to show live updates. Please check your
-        Wi-Fi or mobile data and try again.
+        This app needs an internet connection to show live updates. Please check your Wi-Fi
+        or mobile data and try again.
       </ThemedText>
       <Pressable onPress={onRetry} style={styles.retryButton} disabled={retrying}>
         <Ionicons name="refresh" size={18} color={Brand.blue} />

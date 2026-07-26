@@ -24,19 +24,25 @@ export function AppHeader() {
   const theme = useTheme();
   const brand = useBrand();
   const { data: settings } = useFetch(fetchSettings);
-  const schoolName = settings?.school_name ?? 'Saarthak GIMSSS';
-  const address = settings?.address ?? 'Sector 12-A, Panchkula, Haryana';
+  // No hardcoded fallback — showing "Saarthak GIMSSS" while /settings is
+  // still loading, then swapping to the real school name, reads as a bug.
+  const schoolName = settings?.school_name;
+  const address = settings?.address;
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + Spacing.two, backgroundColor: theme.tint }]}>
       <Image source={brand.logoUrl ? { uri: brand.logoUrl } : logoSource} style={styles.logo} contentFit="cover" />
       <View style={styles.textWrap}>
-        <ThemedText type="smallBold" themeColor="textOnBrand" numberOfLines={1} style={styles.name}>
-          {schoolName}
-        </ThemedText>
-        <ThemedText type="small" themeColor="textOnBrand" numberOfLines={1} style={styles.address}>
-          {address}
-        </ThemedText>
+        {schoolName ? (
+          <ThemedText type="smallBold" themeColor="textOnBrand" numberOfLines={1} style={styles.name}>
+            {schoolName}
+          </ThemedText>
+        ) : null}
+        {address ? (
+          <ThemedText type="small" themeColor="textOnBrand" numberOfLines={1} style={styles.address}>
+            {address}
+          </ThemedText>
+        ) : null}
       </View>
       <View style={styles.actions}>
         <ThemeToggle />

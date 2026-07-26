@@ -8,6 +8,7 @@ import { Brand, Radius, Spacing } from '@/constants/theme';
 import { Card } from '@/components/ui/Card';
 import { Screen } from '@/components/ui/Screen';
 import { ThemedText } from '@/components/ui/ThemedText';
+import { useBrand } from '@/hooks/use-brand';
 import { useTheme } from '@/hooks/use-theme';
 import { fetchSettings } from '@/data/api';
 import { useFetch } from '@/hooks/use-fetch';
@@ -57,6 +58,7 @@ function RowList({ rows }: { rows: Row[] }) {
 export default function MoreScreen() {
   const { data: settings } = useFetch(fetchSettings);
   const sections = useSections();
+  const brand = useBrand();
 
   const exploreRows: Row[] = [
     { label: 'Notifications', icon: 'notifications-outline', onPress: () => router.push('/notifications') },
@@ -115,19 +117,26 @@ export default function MoreScreen() {
     },
   ];
 
-  const schoolName = settings?.school_name ?? 'Saarthak GIMSSS';
-  const address = settings?.address ?? 'Sector 12-A, Panchkula, Haryana';
+  // No hardcoded fallback name here on purpose — showing "Saarthak GIMSSS"
+  // while /settings is still loading, then swapping to the real school name,
+  // reads as a bug (flash of wrong content). Just wait for the real data.
+  const schoolName = settings?.school_name;
+  const address = settings?.address;
 
   return (
     <Screen>
       <View style={styles.brandCard}>
-        <Image source={logoSource} style={styles.logo} contentFit="cover" />
-        <ThemedText type="subtitle" themeColor="textOnBrand" style={styles.brandName}>
-          {schoolName}
-        </ThemedText>
-        <ThemedText type="small" themeColor="textOnBrand" style={styles.brandAddress}>
-          {address}
-        </ThemedText>
+        <Image source={brand.logoUrl ? { uri: brand.logoUrl } : logoSource} style={styles.logo} contentFit="cover" />
+        {schoolName ? (
+          <ThemedText type="subtitle" themeColor="textOnBrand" style={styles.brandName}>
+            {schoolName}
+          </ThemedText>
+        ) : null}
+        {address ? (
+          <ThemedText type="small" themeColor="textOnBrand" style={styles.brandAddress}>
+            {address}
+          </ThemedText>
+        ) : null}
       </View>
 
       <ThemedText type="smallBold" themeColor="textSecondary" style={styles.sectionTitle}>
@@ -146,9 +155,11 @@ export default function MoreScreen() {
       <RowList rows={followRows} />
 
       <View style={styles.footer}>
-        <ThemedText type="small" themeColor="textSecondary" style={styles.footerText}>
-          {schoolName} · {address}
-        </ThemedText>
+        {schoolName ? (
+          <ThemedText type="small" themeColor="textSecondary" style={styles.footerText}>
+            {schoolName} {address ? `· ${address}` : ''}
+          </ThemedText>
+        ) : null}
         <ThemedText type="small" themeColor="textSecondary" style={styles.footerText}>
           Vedic Culture · Scientific Approach · Communication
         </ThemedText>

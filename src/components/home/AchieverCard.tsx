@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -16,16 +17,20 @@ interface AchieverCardProps {
 export function AchieverCard({ achiever, paletteIndex, width }: AchieverCardProps) {
   return (
     <Card style={[styles.card, width ? { width, marginRight: Spacing.three } : undefined]}>
-      <View style={[styles.photo, { backgroundColor: AvatarPalette[paletteIndex % AvatarPalette.length] }]}>
-        <Ionicons name="person" size={34} color={AvatarFgPalette[paletteIndex % AvatarFgPalette.length]} />
-        <View style={styles.classBadge}>
-          <ThemedText type="small" style={styles.classBadgeLabel}>
-            {achiever.classLabel}
-          </ThemedText>
+      {achiever.photoUrl ? (
+        <Image source={{ uri: achiever.photoUrl }} style={styles.photo} contentFit="cover" />
+      ) : (
+        <View style={[styles.photo, { backgroundColor: AvatarPalette[paletteIndex % AvatarPalette.length] }]}>
+          <Ionicons name="person" size={34} color={AvatarFgPalette[paletteIndex % AvatarFgPalette.length]} />
         </View>
-        <View style={styles.trophyBadge}>
-          <ThemedText type="default">🏆</ThemedText>
-        </View>
+      )}
+      <View style={styles.classBadge}>
+        <ThemedText type="small" style={styles.classBadgeLabel}>
+          {achiever.classLabel}
+        </ThemedText>
+      </View>
+      <View style={styles.trophyBadge}>
+        <ThemedText type="default">🏆</ThemedText>
       </View>
       <View style={styles.body}>
         <ThemedText type="smallBold">{achiever.name}</ThemedText>

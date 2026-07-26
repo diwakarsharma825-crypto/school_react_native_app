@@ -12,8 +12,8 @@ import { Screen } from '@/components/ui/Screen';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { EmptyState, ErrorState, Loading } from '@/components/ui/states';
 import { Spacing } from '@/constants/theme';
-import { ACHIEVERS } from '@/data/achievers';
-import { fetchHome, fetchSettings } from '@/data/api';
+import { toAchiever } from '@/data/achievers';
+import { fetchHome, fetchSettings, fetchTopAchievers } from '@/data/api';
 import { useFetch } from '@/hooks/use-fetch';
 import { useSectionEnabled } from '@/hooks/use-sections';
 import { stripHtml } from '@/lib/format';
@@ -21,13 +21,15 @@ import { stripHtml } from '@/lib/format';
 export default function HomeScreen() {
   const home = useFetch(fetchHome);
   const settings = useFetch(fetchSettings);
+  const achievers = useFetch(fetchTopAchievers);
   const eventsEnabled = useSectionEnabled('events');
   const topStudentsEnabled = useSectionEnabled('top_students');
 
   const refreshAll = useCallback(() => {
     home.refetch();
     settings.refetch();
-  }, [home, settings]);
+    achievers.refetch();
+  }, [home, settings, achievers]);
 
   const initialLoading = home.loading && !home.data;
   const refreshing = !initialLoading && (home.loading || settings.loading);
@@ -90,12 +92,12 @@ export default function HomeScreen() {
             </>
           ) : null}
 
-          {topStudentsEnabled ? (
+          {topStudentsEnabled && (achievers.data ?? []).length > 0 ? (
             <>
               <SectionHeader title="Top Achievers" onSeeAll={() => router.push('/top-students')} />
               <View style={{ marginBottom: Spacing.four }}>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                  {ACHIEVERS.map((a, i) => (
+                  {(achievers.data ?? []).map(toAchiever).map((a, i) => (
                     <AchieverCard key={a.name} achiever={a} paletteIndex={i} width={190} />
                   ))}
                 </ScrollView>
