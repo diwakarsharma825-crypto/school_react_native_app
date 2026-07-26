@@ -39,3 +39,23 @@ export async function fetchHomeworkForDate(
   const qs = `class=${encodeURIComponent(className)}${section ? `&section=${encodeURIComponent(section)}` : ''}&date=${date}`;
   return getJson<HomeworkEntry[]>(`/student_homework?${qs}`);
 }
+
+export interface StudentLoginResult {
+  name: string;
+  srn: string;
+  class: string;
+  section: string;
+}
+
+/** Real, server-verified student login against `result_students` (SRN or
+ * phone + md5 password) — replaces the earlier unverified local-only form.
+ * Class/section come back from the DB record itself, not picked manually. */
+export async function studentLogin(identifier: string, password: string): Promise<StudentLoginResult> {
+  const body = new FormData();
+  body.append('identifier', identifier);
+  body.append('password', password);
+  const response = await fetch(`${BASE_URL}/student_login`, { method: 'POST', body });
+  const json = (await response.json()) as ApiEnvelope<StudentLoginResult>;
+  if (!json.status) throw new Error(json.message || 'Login failed');
+  return json.data;
+}

@@ -122,7 +122,11 @@ export default function AboutScreen() {
           <ThemedText type="subtitle" style={styles.sectionTitle}>
             Principal&apos;s Message
           </ThemedText>
-          <PrincipalCard photoUrl={data.principle_image_url ?? null} message={stripHtml(data.principle_text)} />
+          <PrincipalCard
+            photoUrl={data.principle_image_url ?? null}
+            message={stripHtml(data.principle_text)}
+            name={data.principal_name}
+          />
         </>
       ) : null}
 

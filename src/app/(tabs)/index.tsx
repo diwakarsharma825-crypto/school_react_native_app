@@ -61,6 +61,7 @@ export default function HomeScreen() {
             <PrincipalCard
               photoUrl={settings.data.principle_image_url ?? null}
               message={stripHtml(settings.data.principle_text)}
+              name={settings.data.principal_name}
             />
           ) : (
             <EmptyState message="Message unavailable." />

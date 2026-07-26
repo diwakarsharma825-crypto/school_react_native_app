@@ -24,6 +24,10 @@ export interface Settings {
   course_image_url?: string | null;
   principle_text?: string | null;
   principle_image_url?: string | null;
+  /** The actual principal's name — this school treats the ADMIN-role user
+   * as "the Principal" server-side; see 07-backend.md if this ever needs
+   * revisiting for a school with a separate structure. */
+  principal_name?: string | null;
   footer?: string | null;
   facebook_url?: string | null;
   twitter_url?: string | null;

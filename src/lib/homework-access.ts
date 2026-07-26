@@ -2,18 +2,15 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const STORAGE_KEY = 'saarthak.homework_access';
 
-/** What the student enters once to view Homework — class + section + phone
- * + a password field. NOTE: there is no student-account system on the
- * backend (students aren't authenticated users in this ERP), so this
- * "password" is captured and stored locally only — it identifies the
- * student for their own record, it is NOT verified against any server-side
- * credential. Saved to AsyncStorage, so it persists until the app is
- * uninstalled, matching what was asked for. */
+/** What's saved locally once a student logs in via /student_login — the
+ * server-verified class/section from `result_students`, not a manually
+ * picked value. Persists until the app is uninstalled, matching what was
+ * asked for; there's no separate "session" concept, this IS the session. */
 export interface HomeworkAccess {
+  name: string;
+  srn: string;
   className: string;
   section: string;
-  phone: string;
-  password: string;
 }
 
 export async function getHomeworkAccess(): Promise<HomeworkAccess | null> {

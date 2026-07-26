@@ -6,23 +6,11 @@ import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { Brand, Radius, Spacing } from '@/constants/theme';
 import { Card } from '@/components/ui/Card';
 import { Screen } from '@/components/ui/Screen';
-import { SelectField } from '@/components/ui/SelectField';
 import { EmptyState, ErrorState, Loading } from '@/components/ui/states';
 import { ThemedText } from '@/components/ui/ThemedText';
-import { fetchHomeworkDates, fetchHomeworkForDate, HomeworkEntry } from '@/data/homework-api';
-import { getHomeworkAccess, HomeworkAccess, saveHomeworkAccess } from '@/lib/homework-access';
+import { fetchHomeworkDates, fetchHomeworkForDate, HomeworkEntry, studentLogin } from '@/data/homework-api';
+import { clearHomeworkAccess, getHomeworkAccess, HomeworkAccess, saveHomeworkAccess } from '@/lib/homework-access';
 import { useTheme } from '@/hooks/use-theme';
-
-const CLASS_OPTIONS = [
-  { label: 'Pre-Nursery', value: 'Pre-Nursery' },
-  { label: 'Nursery', value: 'Nursery' },
-  { label: 'LKG', value: 'LKG' },
-  { label: 'UKG', value: 'UKG' },
-  ...Array.from({ length: 12 }, (_, i) => {
-    const n = String(i + 1);
-    return { label: `Class ${n}`, value: n };
-  }),
-];
 
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -36,52 +24,53 @@ function pad(n: number) {
 
 function AccessForm({ onDone }: { onDone: (access: HomeworkAccess) => void }) {
   const theme = useTheme();
-  const [className, setClassName] = useState<string | null>(null);
-  const [section, setSection] = useState('');
-  const [phone, setPhone] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  async function handleContinue() {
-    if (!className || phone.trim().length !== 10 || !password) {
-      setError('Please fill in your class, a 10-digit phone number, and a password.');
+  async function handleLogin() {
+    if (!identifier.trim() || !password) {
+      setError('Please enter your SRN or mobile number, and your password.');
       return;
     }
-    const access: HomeworkAccess = { className, section: section.trim(), phone: phone.trim(), password };
-    await saveHomeworkAccess(access);
-    onDone(access);
+    setSubmitting(true);
+    setError(null);
+    try {
+      const result = await studentLogin(identifier.trim(), password);
+      const access: HomeworkAccess = {
+        name: result.name,
+        srn: result.srn,
+        className: result.class,
+        section: result.section,
+      };
+      await saveHomeworkAccess(access);
+      onDone(access);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Login failed.');
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
     <Card>
       <ThemedText type="subtitle" style={styles.formTitle}>
-        A few details
+        Student Login
       </ThemedText>
       <ThemedText type="small" themeColor="textSecondary" style={styles.formSubtitle}>
-        Saved on this device so you only need to do this once — until the app is uninstalled.
+        Use your SRN or mobile number and the password your school gave you. Saved on this
+        device so you only need to do this once — until the app is uninstalled.
       </ThemedText>
-
-      <SelectField label="Class" placeholder="Select class" value={className} options={CLASS_OPTIONS} onChange={setClassName} />
 
       <ThemedText type="smallBold" style={styles.fieldLabel}>
-        Section
+        SRN or Mobile Number
       </ThemedText>
       <TextInput
-        value={section}
-        onChangeText={setSection}
-        placeholder="e.g. A (optional)"
-        placeholderTextColor={theme.textSecondary}
-        style={[styles.input, { borderColor: theme.border, color: theme.text }]}
-      />
-
-      <ThemedText type="smallBold" style={styles.fieldLabel}>
-        Mobile Number
-      </ThemedText>
-      <TextInput
-        value={phone}
-        onChangeText={(v) => setPhone(v.replace(/\D/g, '').slice(0, 10))}
-        keyboardType="number-pad"
-        placeholder="10-digit mobile number"
+        value={identifier}
+        onChangeText={setIdentifier}
+        autoCapitalize="none"
+        placeholder="SRN or mobile number"
         placeholderTextColor={theme.textSecondary}
         style={[styles.input, { borderColor: theme.border, color: theme.text }]}
       />
@@ -93,7 +82,7 @@ function AccessForm({ onDone }: { onDone: (access: HomeworkAccess) => void }) {
         value={password}
         onChangeText={setPassword}
         secureTextEntry
-        placeholder="Choose a password"
+        placeholder="Password"
         placeholderTextColor={theme.textSecondary}
         style={[styles.input, { borderColor: theme.border, color: theme.text }]}
       />
@@ -104,16 +93,20 @@ function AccessForm({ onDone }: { onDone: (access: HomeworkAccess) => void }) {
         </ThemedText>
       ) : null}
 
-      <Pressable onPress={handleContinue} style={[styles.button, { backgroundColor: theme.tint }]}>
+      <Pressable
+        onPress={handleLogin}
+        disabled={submitting}
+        style={[styles.button, { backgroundColor: theme.tint, opacity: submitting ? 0.6 : 1 }]}
+      >
         <ThemedText type="smallBold" style={styles.buttonLabel}>
-          Continue
+          {submitting ? 'Logging in…' : 'Log In'}
         </ThemedText>
       </Pressable>
     </Card>
   );
 }
 
-function HomeworkCalendar({ access }: { access: HomeworkAccess }) {
+function HomeworkCalendar({ access, onLogout }: { access: HomeworkAccess; onLogout: () => void }) {
   const theme = useTheme();
   const today = new Date();
   const [viewYear, setViewYear] = useState(today.getFullYear());
@@ -166,6 +159,21 @@ function HomeworkCalendar({ access }: { access: HomeworkAccess }) {
 
   return (
     <>
+      <View style={styles.studentHeader}>
+        <View>
+          <ThemedText type="smallBold">{access.name}</ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            Class {access.className}
+            {access.section ? ` - ${access.section}` : ''} · SRN {access.srn}
+          </ThemedText>
+        </View>
+        <Pressable onPress={onLogout} hitSlop={8}>
+          <ThemedText type="small" themeColor="tint">
+            Log out
+          </ThemedText>
+        </Pressable>
+      </View>
+
       <Card style={styles.calendarCard}>
         <View style={styles.calendarHeader}>
           <Pressable onPress={() => changeMonth(-1)} hitSlop={8}>
@@ -253,10 +261,30 @@ export default function HomeworkScreen() {
     );
   }
 
-  return <Screen>{access ? <HomeworkCalendar access={access} /> : <AccessForm onDone={setAccess} />}</Screen>;
+  return (
+    <Screen>
+      {access ? (
+        <HomeworkCalendar
+          access={access}
+          onLogout={() => {
+            clearHomeworkAccess();
+            setAccess(null);
+          }}
+        />
+      ) : (
+        <AccessForm onDone={setAccess} />
+      )}
+    </Screen>
+  );
 }
 
 const styles = StyleSheet.create({
+  studentHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.three,
+  },
   formTitle: {
     marginBottom: Spacing.one,
   },

@@ -11,11 +11,12 @@ import { ThemedText } from '../ui/ThemedText';
 interface PrincipalCardProps {
   photoUrl: string | null;
   message: string;
+  name?: string | null;
 }
 
 const TRUNCATE_LENGTH = 180;
 
-export function PrincipalCard({ photoUrl, message }: PrincipalCardProps) {
+export function PrincipalCard({ photoUrl, message, name }: PrincipalCardProps) {
   const theme = useTheme();
   const [expanded, setExpanded] = useState(false);
   const isLong = message.length > TRUNCATE_LENGTH;
@@ -32,7 +33,10 @@ export function PrincipalCard({ photoUrl, message }: PrincipalCardProps) {
           </View>
         )}
         <View style={styles.headerText}>
-          <ThemedText type="smallBold">From the Principal&apos;s Desk</ThemedText>
+          {name ? <ThemedText type="smallBold">{name}</ThemedText> : null}
+          <ThemedText type={name ? 'small' : 'smallBold'} themeColor={name ? 'textSecondary' : 'text'}>
+            From the Principal&apos;s Desk
+          </ThemedText>
         </View>
       </View>
       <View style={styles.quoteRow}>
