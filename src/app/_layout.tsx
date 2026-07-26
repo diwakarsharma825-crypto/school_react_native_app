@@ -170,6 +170,7 @@ function RootLayoutInner() {
             <Stack.Screen name="top-students" options={{ header: () => <DetailHeader title="Top Students" /> }} />
             <Stack.Screen name="disclosure" options={{ header: () => <DetailHeader title="Mandatory Disclosure" /> }} />
             <Stack.Screen name="notifications" options={{ header: () => <DetailHeader title="Notifications" /> }} />
+            <Stack.Screen name="homework" options={{ header: () => <DetailHeader title="Homework" /> }} />
             <Stack.Screen name="gallery/[id]" options={{ header: () => <DetailHeader title="Album" /> }} />
           </Stack>
           <DynamicBottomBar />
