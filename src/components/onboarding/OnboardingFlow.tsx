@@ -5,7 +5,9 @@ import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { registerDevice } from '@/data/app-status';
+import { fetchSettings } from '@/data/api';
 import { Brand, Radius, Shadow, Spacing } from '@/constants/theme';
+import { useFetch } from '@/hooks/use-fetch';
 import { markOnboardingComplete } from '@/lib/onboarding';
 import { requestOnboardingPermissions } from '@/lib/permissions';
 import { getFcmPushToken } from '@/lib/notifications';
@@ -52,6 +54,9 @@ interface OnboardingFlowProps {
 
 export function OnboardingFlow({ onDone }: OnboardingFlowProps) {
   const theme = useTheme();
+  const { data: settings } = useFetch(fetchSettings);
+  const schoolName = settings?.school_name ?? 'our school';
+  const address = settings?.address ?? '';
   const [step, setStep] = useState(0);
   const [belonging, setBelonging] = useState<Belonging | null>(null);
   const [userType, setUserType] = useState<UserType | null>(null);
@@ -120,8 +125,10 @@ export function OnboardingFlow({ onDone }: OnboardingFlowProps) {
       <StepDots total={TOTAL_STEPS} current={step} />
 
       <View style={styles.body}>
-        {step === 0 ? <WelcomeStep /> : null}
-        {step === 1 ? <BelongingStep value={belonging} onChange={setBelonging} /> : null}
+        {step === 0 ? <WelcomeStep schoolName={schoolName} /> : null}
+        {step === 1 ? (
+          <BelongingStep value={belonging} onChange={setBelonging} schoolName={schoolName} address={address} />
+        ) : null}
         {step === 2 ? <UserTypeStep value={userType} onChange={setUserType} /> : null}
         {step === 3 ? (
           <DetailsStep
@@ -183,12 +190,12 @@ function StepDots({ total, current }: { total: number; current: number }) {
   );
 }
 
-function WelcomeStep() {
+function WelcomeStep({ schoolName }: { schoolName: string }) {
   return (
     <View style={styles.welcomeWrap}>
       <Image source={logoSource} style={styles.logo} contentFit="cover" />
       <ThemedText type="title" style={styles.centerText}>
-        Welcome to Saarthak GIMSSS
+        Welcome to {schoolName}
       </ThemedText>
       <ThemedText type="default" themeColor="textSecondary" style={[styles.centerText, styles.welcomeSubtitle]}>
         Let&apos;s personalise your app in a few quick steps so you get the right updates and results.
@@ -251,7 +258,17 @@ function RadioOption({
   );
 }
 
-function BelongingStep({ value, onChange }: { value: Belonging | null; onChange: (v: Belonging) => void }) {
+function BelongingStep({
+  value,
+  onChange,
+  schoolName,
+  address,
+}: {
+  value: Belonging | null;
+  onChange: (v: Belonging) => void;
+  schoolName: string;
+  address: string;
+}) {
   return (
     <View>
       <ThemedText type="title" style={styles.stepTitle}>
@@ -262,8 +279,8 @@ function BelongingStep({ value, onChange }: { value: Belonging | null; onChange:
       </ThemedText>
       <RadioOption
         icon="school"
-        title="Saarthak GIMSSS"
-        description="I'm a part of Saarthak GIMSSS, Panchkula."
+        title={schoolName}
+        description={address ? `I'm a part of ${schoolName}, ${address}.` : `I'm a part of ${schoolName}.`}
         selected={value === 'saarthak'}
         onPress={() => onChange('saarthak')}
       />

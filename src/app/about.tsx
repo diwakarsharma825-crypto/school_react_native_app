@@ -99,7 +99,7 @@ export default function AboutScreen() {
         Our Values
       </ThemedText>
       <ThemedText type="small" themeColor="textSecondary" style={styles.sectionSubtitle}>
-        The pillars of a Saarthak education
+        The pillars of a {data.school_name} education
       </ThemedText>
       {VALUES.map((v) => (
         <Card key={v.title} style={[styles.valueCard, { borderLeftColor: v.color, borderLeftWidth: 4 }]}>

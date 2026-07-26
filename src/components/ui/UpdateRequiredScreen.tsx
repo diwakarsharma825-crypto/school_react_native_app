@@ -27,7 +27,7 @@ export function UpdateRequiredScreen({ storeUrl }: UpdateRequiredScreenProps) {
           Update Required
         </ThemedText>
         <ThemedText type="default" themeColor="textOnBrand" style={styles.message}>
-          A new version of this app is available. Please update to continue using Saarthak GIMSSS.
+          A new version of this app is available. Please update to continue.
         </ThemedText>
         <Button
           label="Update Now"

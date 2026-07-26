@@ -30,7 +30,7 @@ export function configureNotificationHandler() {
 export async function ensureNotificationChannel() {
   if (Platform.OS !== 'android') return;
   await Notifications.setNotificationChannelAsync('default', {
-    name: 'Saarthak GIMSSS',
+    name: 'General',
     importance: Notifications.AndroidImportance.MAX,
     sound: CHANNEL_SOUND,
     vibrationPattern: [0, 250, 250, 250],
