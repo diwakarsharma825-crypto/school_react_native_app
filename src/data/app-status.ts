@@ -59,8 +59,8 @@ export const DEFAULT_HOME_TILES: LayoutItem[] = [
 export const DEFAULT_BOTTOM_TABS: LayoutItem[] = [
   { label: 'Home', icon: 'home', colorBg: null, colorFg: null, target: 'home', targetUrl: null },
   { label: 'Events', icon: 'calendar', colorBg: null, colorFg: null, target: 'events', targetUrl: null },
-  { label: 'Gallery', icon: 'images', colorBg: null, colorFg: null, target: 'gallery', targetUrl: null },
   { label: 'Login', icon: 'log-in', colorBg: null, colorFg: null, target: 'login', targetUrl: null },
+  { label: 'Gallery', icon: 'images', colorBg: null, colorFg: null, target: 'gallery', targetUrl: null },
   { label: 'More', icon: 'menu', colorBg: null, colorFg: null, target: 'more', targetUrl: null },
 ];
 
@@ -94,7 +94,17 @@ export async function fetchAppStatus(): Promise<AppStatus> {
   const deviceId = await getDeviceId();
   const url = `${BASE_URL}/app_status?device_id=${encodeURIComponent(deviceId)}`;
 
-  const response = await fetch(url);
+  // A hung DNS/network request (not just a fast failure) used to leave the
+  // app stuck on LaunchScreen indefinitely, since fetch() has no default
+  // timeout. Bail out after 10s so checkStatus()'s catch can fail open.
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+  let response: Response;
+  try {
+    response = await fetch(url, { signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
   if (!response.ok) {
     throw new Error(`app_status request failed with status ${response.status}`);
   }
