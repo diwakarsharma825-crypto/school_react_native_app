@@ -60,6 +60,7 @@ export const DEFAULT_BOTTOM_TABS: LayoutItem[] = [
   { label: 'Home', icon: 'home', colorBg: null, colorFg: null, target: 'home', targetUrl: null },
   { label: 'Events', icon: 'calendar', colorBg: null, colorFg: null, target: 'events', targetUrl: null },
   { label: 'Gallery', icon: 'images', colorBg: null, colorFg: null, target: 'gallery', targetUrl: null },
+  { label: 'Login', icon: 'log-in', colorBg: null, colorFg: null, target: 'login', targetUrl: null },
   { label: 'More', icon: 'menu', colorBg: null, colorFg: null, target: 'more', targetUrl: null },
 ];
 

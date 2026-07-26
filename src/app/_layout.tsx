@@ -12,6 +12,7 @@ import { DynamicBottomBar } from '@/components/ui/DynamicBottomBar';
 import { useTheme } from '@/hooks/use-theme';
 import { BrandProvider } from '@/hooks/use-brand';
 import { LayoutProvider } from '@/hooks/use-layout';
+import { TeacherAuthProvider } from '@/hooks/use-teacher-auth';
 import { ThemeModeProvider } from '@/hooks/use-theme-mode';
 import {
   ALL_SECTIONS_ENABLED,
@@ -171,6 +172,12 @@ function RootLayoutInner() {
             <Stack.Screen name="disclosure" options={{ header: () => <DetailHeader title="Mandatory Disclosure" /> }} />
             <Stack.Screen name="notifications" options={{ header: () => <DetailHeader title="Notifications" /> }} />
             <Stack.Screen name="homework" options={{ header: () => <DetailHeader title="Homework" /> }} />
+            <Stack.Screen name="login" options={{ header: () => <DetailHeader title="Login" /> }} />
+            <Stack.Screen name="teacher-login" options={{ header: () => <DetailHeader title="Teacher Login" /> }} />
+            <Stack.Screen name="teacher-profile-setup" options={{ header: () => <DetailHeader title="Complete Your Profile" /> }} />
+            <Stack.Screen name="teacher-dashboard" options={{ header: () => <DetailHeader title="Dashboard" /> }} />
+            <Stack.Screen name="teacher-homework" options={{ header: () => <DetailHeader title="Homework" /> }} />
+            <Stack.Screen name="teacher-homework-add" options={{ header: () => <DetailHeader title="Add Homework" /> }} />
             <Stack.Screen name="gallery/[id]" options={{ header: () => <DetailHeader title="Album" /> }} />
           </Stack>
           <DynamicBottomBar />
@@ -185,7 +192,9 @@ function RootLayoutInner() {
 export default function RootLayout() {
   return (
     <ThemeModeProvider>
-      <RootLayoutInner />
+      <TeacherAuthProvider>
+        <RootLayoutInner />
+      </TeacherAuthProvider>
     </ThemeModeProvider>
   );
 }

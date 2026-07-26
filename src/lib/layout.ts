@@ -18,6 +18,7 @@ export type LayoutTarget =
   | 'top_students'
   | 'notifications'
   | 'homework'
+  | 'login'
   | 'url';
 
 export const TARGET_ROUTES: Record<Exclude<LayoutTarget, 'url'>, Href> = {
@@ -34,6 +35,7 @@ export const TARGET_ROUTES: Record<Exclude<LayoutTarget, 'url'>, Href> = {
   top_students: '/top-students',
   notifications: '/notifications',
   homework: '/homework',
+  login: '/login',
 };
 
 /** Only some targets correspond to an admin-togglable section (see
