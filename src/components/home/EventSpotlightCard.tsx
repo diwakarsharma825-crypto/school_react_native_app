@@ -1,11 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Brand, Radius, Spacing } from '@/constants/theme';
+import type { EventMediaItem } from '@/data/types';
 import { formatDateShort } from '@/lib/format';
+import { EventMediaCarousel } from '../ui/EventMediaCarousel';
 import { ThemedText } from '../ui/ThemedText';
 
 interface EventSpotlightCardProps {
@@ -13,6 +14,8 @@ interface EventSpotlightCardProps {
   date: string;
   place?: string | null;
   imageUrl: string;
+  coverMedia?: EventMediaItem | null;
+  images?: string[];
   onPress?: () => void;
   width?: number;
 }
@@ -20,10 +23,10 @@ interface EventSpotlightCardProps {
 /** Bigger, image-forward card for the Home screen's Events row — a
  * gradient-overlaid hero tile rather than a plain list card, so events read
  * as a highlight rather than an afterthought next to the slider. */
-export function EventSpotlightCard({ title, date, place, imageUrl, onPress, width = 260 }: EventSpotlightCardProps) {
+export function EventSpotlightCard({ title, date, place, imageUrl, coverMedia, images, onPress, width = 260 }: EventSpotlightCardProps) {
   return (
     <Pressable onPress={onPress} style={[styles.card, { width }]}>
-      <Image source={{ uri: imageUrl }} style={styles.image} contentFit="cover" />
+      <EventMediaCarousel coverMedia={coverMedia} images={images} fallbackUrl={imageUrl} style={styles.image} />
       <LinearGradient colors={['transparent', 'rgba(0,0,0,0.85)']} style={styles.gradient}>
         <View style={styles.dateBadge}>
           <Ionicons name="calendar" size={12} color={Brand.white} />

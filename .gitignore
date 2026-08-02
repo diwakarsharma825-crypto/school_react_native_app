@@ -42,4 +42,5 @@ example
 /ios
 /android
 .git.broken-backup-*/
-Saarthak-GIMSSS-*.apk
+*.apk
+*.aab

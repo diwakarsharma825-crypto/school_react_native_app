@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import React from 'react';
-import { Linking, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Linking, Pressable, StyleSheet, View } from 'react-native';
 
 import { Brand, Radius, Spacing } from '@/constants/theme';
 import { Card } from '@/components/ui/Card';
@@ -11,8 +11,12 @@ import { ThemedText } from '@/components/ui/ThemedText';
 import { useBrand } from '@/hooks/use-brand';
 import { useTheme } from '@/hooks/use-theme';
 import { fetchSettings } from '@/data/api';
+import { teacherLogout } from '@/data/teacher-api';
 import { useFetch } from '@/hooks/use-fetch';
 import { useSections } from '@/hooks/use-sections';
+import { useStudentAuth } from '@/hooks/use-student-auth';
+import { useTeacherAuth } from '@/hooks/use-teacher-auth';
+import { clearHomeworkAccess } from '@/lib/homework-access';
 
 const logoSource = require('../../../assets/images/icon.png');
 
@@ -23,6 +27,7 @@ interface Row {
   /** Section is admin-disabled — row still shows, but tapping it lands on
    * the Coming Soon state rather than real content. */
   locked?: boolean;
+  destructive?: boolean;
 }
 
 function RowList({ rows }: { rows: Row[] }) {
@@ -41,9 +46,11 @@ function RowList({ rows }: { rows: Row[] }) {
         >
           <View style={styles.rowLeft}>
             <View style={[styles.rowIconWrap, { backgroundColor: theme.backgroundElement }]}>
-              <Ionicons name={item.icon} size={18} color={theme.tint} />
+              <Ionicons name={item.icon} size={18} color={item.destructive ? '#C62828' : theme.tint} />
             </View>
-            <ThemedText type="default">{item.label}</ThemedText>
+            <ThemedText type="default" style={item.destructive ? { color: '#C62828' } : undefined}>
+              {item.label}
+            </ThemedText>
             {item.locked ? (
               <Ionicons name="hourglass-outline" size={13} color={theme.textSecondary} style={styles.lockIcon} />
             ) : null}
@@ -59,6 +66,49 @@ export default function MoreScreen() {
   const { data: settings } = useFetch(fetchSettings);
   const sections = useSections();
   const brand = useBrand();
+  const { loggedIn: teacherLoggedIn, setLoggedIn: setTeacherLoggedIn } = useTeacherAuth();
+  const { loggedIn: studentLoggedIn, setAccess: setStudentAccess } = useStudentAuth();
+
+  function confirmLogout(onConfirm: () => void) {
+    Alert.alert('Log out?', 'You can log back in anytime.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Log out', style: 'destructive', onPress: onConfirm },
+    ]);
+  }
+
+  const loggedIn = teacherLoggedIn || studentLoggedIn;
+
+  const accountRows: Row[] = teacherLoggedIn
+    ? [
+        { label: 'Profile', icon: 'person-circle-outline', onPress: () => router.push('/teacher-profile-setup') },
+        {
+          label: 'Change Password',
+          icon: 'key-outline',
+          onPress: () => router.push({ pathname: '/change-password', params: { role: 'teacher' } } as any),
+        },
+        { label: 'My Storage', icon: 'server-outline', onPress: () => router.push('/teacher-storage' as any) },
+      ]
+    : studentLoggedIn
+      ? [
+          {
+            label: 'Change Password',
+            icon: 'key-outline',
+            onPress: () => router.push({ pathname: '/change-password', params: { role: 'student' } } as any),
+          },
+        ]
+      : [];
+
+  function handleLogout() {
+    confirmLogout(async () => {
+      if (teacherLoggedIn) {
+        await teacherLogout();
+        setTeacherLoggedIn(false);
+      } else {
+        await clearHomeworkAccess();
+        setStudentAccess(null);
+      }
+    });
+  }
 
   const exploreRows: Row[] = [
     { label: 'Notifications', icon: 'notifications-outline', onPress: () => router.push('/notifications') },
@@ -97,6 +147,12 @@ export default function MoreScreen() {
       onPress: () => router.push('/disclosure'),
       locked: !sections.disclosure,
     },
+    // Storage shows the whole school's upload usage — only worth showing
+    // (and only meant to be seen) once a student/teacher from this school
+    // is actually logged in, not to anyone who opens the app.
+    ...(loggedIn
+      ? [{ label: 'Storage', icon: 'server-outline' as const, onPress: () => router.push('/storage-usage' as any) }]
+      : []),
   ];
 
   const followRows: Row[] = [
@@ -139,6 +195,15 @@ export default function MoreScreen() {
         ) : null}
       </View>
 
+      {accountRows.length > 0 ? (
+        <>
+          <ThemedText type="smallBold" themeColor="textSecondary" style={styles.sectionTitle}>
+            ACCOUNT
+          </ThemedText>
+          <RowList rows={accountRows} />
+        </>
+      ) : null}
+
       <ThemedText type="smallBold" themeColor="textSecondary" style={styles.sectionTitle}>
         EXPLORE
       </ThemedText>
@@ -153,6 +218,15 @@ export default function MoreScreen() {
         FOLLOW US
       </ThemedText>
       <RowList rows={followRows} />
+
+      {loggedIn ? (
+        <Pressable onPress={handleLogout} style={[styles.logoutButton, { borderColor: '#C62828' }]}>
+          <Ionicons name="log-out-outline" size={18} color="#C62828" />
+          <ThemedText type="smallBold" style={styles.logoutLabel}>
+            Log out
+          </ThemedText>
+        </Pressable>
+      ) : null}
 
       <View style={styles.footer}>
         {schoolName ? (
@@ -221,6 +295,19 @@ const styles = StyleSheet.create({
   },
   lockIcon: {
     marginLeft: Spacing.two,
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.two,
+    borderWidth: 1,
+    borderRadius: Radius.pill,
+    paddingVertical: Spacing.three,
+    marginBottom: Spacing.four,
+  },
+  logoutLabel: {
+    color: '#C62828',
   },
   footer: {
     alignItems: 'center',

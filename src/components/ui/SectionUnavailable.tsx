@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, StyleSheet, View } from 'react-native';
@@ -7,6 +8,8 @@ import { Brand, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { Screen } from './Screen';
 import { ThemedText } from './ThemedText';
+
+const logoSource = require('../../../assets/images/icon.png');
 
 /** Shown when a section the admin has turned off is opened — the nav tile
  * for it stays visible (so the app doesn't feel like features vanished),
@@ -41,7 +44,7 @@ export function SectionUnavailable() {
           />
           <LinearGradient colors={[theme.tint, Brand.blueLight]} style={styles.badgeRing}>
             <View style={[styles.iconCircle, { backgroundColor: theme.surface }]}>
-              <Ionicons name="rocket-outline" size={40} color={theme.tint} />
+              <Image source={logoSource} style={styles.logo} contentFit="cover" />
             </View>
           </LinearGradient>
         </View>
@@ -102,6 +105,11 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  logo: {
+    width: 96,
+    height: 96,
+    borderRadius: Radius.pill,
   },
   pill: {
     flexDirection: 'row',

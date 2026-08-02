@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as FileSystem from 'expo-file-system';
 
 import { BASE_URL } from './api';
 
@@ -59,6 +60,28 @@ export async function teacherLogout(): Promise<void> {
   await setTeacherToken(null);
 }
 
+/** Step 1 of forgot-password — emails a 6-digit OTP to the teacher's own
+ * address. Always resolves (never reveals whether the email matched an
+ * account), matching the backend's response. */
+export async function requestTeacherPasswordReset(email: string): Promise<void> {
+  const body = new FormData();
+  body.append('email', email);
+  const response = await fetch(`${BASE_URL}/teacher_forgot_password`, { method: 'POST', body });
+  const json = (await response.json()) as ApiEnvelope<{ sent: boolean }>;
+  if (!json.status) throw new Error(json.message || 'Could not send reset code.');
+}
+
+/** Step 2 — verify the OTP and set the new password in one call. */
+export async function resetTeacherPassword(email: string, otp: string, newPassword: string): Promise<void> {
+  const body = new FormData();
+  body.append('email', email);
+  body.append('otp', otp);
+  body.append('new_password', newPassword);
+  const response = await fetch(`${BASE_URL}/teacher_reset_password`, { method: 'POST', body });
+  const json = (await response.json()) as ApiEnvelope<{ reset: boolean }>;
+  if (!json.status) throw new Error(json.message || 'Could not reset password.');
+}
+
 export interface TeacherProfileClass {
   class_id: number;
   class_name: string;
@@ -67,10 +90,28 @@ export interface TeacherProfileClass {
   stream: string | null;
 }
 
+export type TeacherPermissionKey =
+  | 'events'
+  | 'gallery'
+  | 'notices'
+  | 'alerts'
+  | 'homework'
+  | 'attendance'
+  | 'leave'
+  | 'fees'
+  | 'result';
+
 export interface TeacherProfile {
+  name: string | null;
+  email: string | null;
   signature_url: string | null;
   completed: boolean;
   classes: TeacherProfileClass[];
+  can_edit_classes: boolean;
+  /** Which app sections this teacher is allowed to see — admin/principal
+   * grants these individually per teacher. Defaults to everything true
+   * until an admin explicitly restricts something. */
+  permissions: Record<TeacherPermissionKey, boolean>;
 }
 
 export async function fetchTeacherProfile(): Promise<TeacherProfile> {
@@ -81,6 +122,19 @@ export interface ClassPickerItem {
   id: number;
   name: string;
   sections: { id: number; name: string }[];
+}
+
+export interface SubjectCatalogItem {
+  id: number;
+  name: string;
+}
+
+export async function fetchSubjectsCatalog(classId: number, search?: string): Promise<SubjectCatalogItem[]> {
+  const qs = `class_id=${classId}${search ? `&q=${encodeURIComponent(search)}` : ''}`;
+  const response = await fetch(`${BASE_URL}/teacher_subjects_catalog?${qs}`);
+  const json = (await response.json()) as ApiEnvelope<SubjectCatalogItem[]>;
+  if (!json.status) throw new Error(json.message);
+  return json.data;
 }
 
 export async function fetchClassesCatalog(): Promise<ClassPickerItem[]> {
@@ -109,7 +163,10 @@ export async function saveTeacherProfile(
   );
   body.append('signature_url_prev', previousSignatureUrl ?? '');
   if (signatureUri) {
-    body.append('signature', { uri: signatureUri, name: 'signature.jpg', type: 'image/jpeg' } as unknown as Blob);
+    // Expo's fetch (SDK 57+) requires a real Blob/File on the FormData part —
+    // the classic RN {uri,name,type} object throws "Unsupported FormDataPart
+    // implementation" since it isn't a Blob and has no .bytes() method.
+    body.append('signature', new FileSystem.File(signatureUri) as unknown as Blob);
   }
   const response = await fetch(`${BASE_URL}/teacher_save_profile`, {
     method: 'POST',
@@ -141,6 +198,66 @@ export async function fetchTeacherDashboard(classId: number, sectionId?: number)
   return authedRequest<TeacherDashboard>(`/teacher_dashboard?${qs}`);
 }
 
+export interface RosterStudent {
+  /** A self-registered student (from `result_students`) gets a "reg-"
+   * prefixed string id instead of a numeric one, since it's a separate
+   * table from the official enrollments-based roster with no shared ID
+   * space — only used as a React key, never sent back to the server. */
+  id: number | string;
+  name: string;
+  /** Only present for self-registered/teacher-added students (the "reg-"
+   * prefixed ids) — officially-enrolled students have no SRN in this
+   * system. Fees, Leave, and Result all key off SRN, so any UI that needs
+   * to act on one of those must filter to students who have it. */
+  srn?: string | null;
+  father_name: string | null;
+  mother_name?: string | null;
+  phone: string | null;
+  roll_no: string | null;
+  section_name: string | null;
+  photo_url: string | null;
+  enrollment_status: number;
+  /** Only present for self-registered/teacher-added students, same
+   * reasoning as srn above. */
+  gender?: string | null;
+}
+
+export async function fetchTeacherStudents(classId: number, sectionId?: number): Promise<RosterStudent[]> {
+  const qs = `class_id=${classId}${sectionId ? `&section_id=${sectionId}` : ''}`;
+  return authedRequest<RosterStudent[]>(`/teacher_students?${qs}`);
+}
+
+export interface PendingRegistration {
+  id: number;
+  name: string;
+  phone: string | null;
+  class: string;
+  section: string | null;
+  srn: string;
+  roll_no: string | null;
+  father_name: string | null;
+  mother_name: string | null;
+  photo_url: string | null;
+  account_status: number;
+  gender?: string | null;
+}
+
+export async function fetchPendingRegistrations(classId: number, sectionId?: number): Promise<PendingRegistration[]> {
+  const qs = `class_id=${classId}${sectionId ? `&section_id=${sectionId}` : ''}`;
+  return authedRequest<PendingRegistration[]>(`/teacher_pending_students?${qs}`);
+}
+
+export async function activateStudent(id: number): Promise<void> {
+  await authedRequest('/teacher_activate_student', {
+    method: 'POST',
+    body: (() => {
+      const body = new FormData();
+      body.append('id', String(id));
+      return body;
+    })(),
+  });
+}
+
 export async function fetchHomeworkDates(
   classId: number,
   sectionId: number | undefined,
@@ -157,6 +274,7 @@ export interface HomeworkEntry {
   homework_date: string;
   description: string | null;
   attachments: { photo_url: string }[];
+  teacher_name: string | null;
 }
 
 export async function fetchHomeworkForDate(
@@ -183,8 +301,8 @@ export async function saveHomework(params: {
   body.append('subject', params.subject);
   body.append('date', params.date);
   body.append('description', params.description);
-  params.photoUris.forEach((uri, i) => {
-    body.append('photos[]', { uri, name: `photo-${i}.jpg`, type: 'image/jpeg' } as unknown as Blob);
+  params.photoUris.forEach((uri) => {
+    body.append('photos[]', new FileSystem.File(uri) as unknown as Blob);
   });
   const response = await fetch(`${BASE_URL}/teacher_save_homework`, {
     method: 'POST',
@@ -205,4 +323,685 @@ export async function deleteHomework(id: number): Promise<void> {
       return body;
     })(),
   });
+}
+
+export async function updateHomework(params: {
+  id: number;
+  subject: string;
+  description: string;
+  photoUris?: string[];
+}): Promise<void> {
+  const token = await getTeacherToken();
+  const body = new FormData();
+  body.append('id', String(params.id));
+  body.append('subject', params.subject);
+  body.append('description', params.description);
+  if (params.photoUris) {
+    params.photoUris.forEach((uri) => {
+      body.append('photos[]', new FileSystem.File(uri) as unknown as Blob);
+    });
+  }
+  const response = await fetch(`${BASE_URL}/teacher_update_homework`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    body,
+  });
+  const json = (await response.json()) as ApiEnvelope<{ updated: boolean }>;
+  if (!json.status) throw new Error(json.message);
+}
+
+export async function changeTeacherPassword(oldPassword: string, newPassword: string): Promise<void> {
+  await authedRequest('/teacher_change_password', {
+    method: 'POST',
+    body: (() => {
+      const body = new FormData();
+      body.append('old_password', oldPassword);
+      body.append('new_password', newPassword);
+      return body;
+    })(),
+  });
+}
+
+export async function registerTeacherPushToken(pushToken: string): Promise<void> {
+  await authedRequest('/teacher_register_push_token', {
+    method: 'POST',
+    body: (() => {
+      const body = new FormData();
+      body.append('push_token', pushToken);
+      return body;
+    })(),
+  }).catch(() => {});
+}
+
+export async function reviewStudent(params: {
+  id: number;
+  name?: string;
+  srn?: string;
+  phone?: string;
+  gender?: string;
+  /** Optional — only send when the teacher actually wants to reset this
+   * student's login password. Requires a phone number on file (or being
+   * set in this same call), same rule as the initial Add Student flow. */
+  password?: string;
+  rollNo?: string;
+  fatherName?: string;
+  motherName?: string;
+  active?: boolean;
+  photoUri?: string;
+}): Promise<void> {
+  const token = await getTeacherToken();
+  const body = new FormData();
+  body.append('id', String(params.id));
+  if (params.name !== undefined) body.append('name', params.name);
+  if (params.srn !== undefined) body.append('srn', params.srn);
+  if (params.phone !== undefined) body.append('phone', params.phone);
+  if (params.gender !== undefined) body.append('gender', params.gender);
+  if (params.password) body.append('password', params.password);
+  if (params.rollNo !== undefined) body.append('roll_no', params.rollNo);
+  if (params.fatherName !== undefined) body.append('father_name', params.fatherName);
+  if (params.motherName !== undefined) body.append('mother_name', params.motherName);
+  if (params.active !== undefined) body.append('account_status', params.active ? '1' : '0');
+  if (params.photoUri) {
+    body.append('photo', new FileSystem.File(params.photoUri) as unknown as Blob);
+  }
+  const response = await fetch(`${BASE_URL}/teacher_review_student`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    body,
+  });
+  const json = (await response.json()) as ApiEnvelope<{ updated: boolean }>;
+  if (!json.status) throw new Error(json.message);
+}
+
+export interface TeacherEventMediaItem {
+  uri: string;
+  type: 'image' | 'video';
+  /** From the picker's asset — used to derive a real filename/extension so
+   * the backend can tell what kind of file it is. A raw content:// URI
+   * (common for videos on Android) often has no usable extension of its
+   * own, which silently dropped every video before this was added. */
+  fileName?: string | null;
+  mimeType?: string | null;
+}
+
+const EXTENSION_BY_MIME: Record<string, string> = {
+  'video/mp4': 'mp4',
+  'video/quicktime': 'mov',
+  'video/3gpp': '3gp',
+  'video/webm': 'webm',
+  'video/x-m4v': 'm4v',
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/gif': 'gif',
+};
+
+function extensionFor(m: TeacherEventMediaItem): string {
+  if (m.fileName && m.fileName.includes('.')) {
+    return m.fileName.split('.').pop()!.toLowerCase();
+  }
+  if (m.mimeType && EXTENSION_BY_MIME[m.mimeType]) {
+    return EXTENSION_BY_MIME[m.mimeType];
+  }
+  return m.type === 'video' ? 'mp4' : 'jpg';
+}
+
+export interface TeacherEventParams {
+  classId: number;
+  sectionId?: number;
+  title: string;
+  eventPlace?: string;
+  eventFrom: string;
+  eventTo: string;
+  note?: string;
+  media: TeacherEventMediaItem[];
+}
+
+export interface AddTeacherEventResult {
+  id: number;
+  skipped: { name: string | null; reason: string }[];
+}
+
+export async function addTeacherEvent(params: TeacherEventParams): Promise<AddTeacherEventResult> {
+  const token = await getTeacherToken();
+  const body = new FormData();
+  body.append('class_id', String(params.classId));
+  if (params.sectionId) body.append('section_id', String(params.sectionId));
+  body.append('title', params.title);
+  body.append('event_place', params.eventPlace ?? '');
+  body.append('event_from', params.eventFrom);
+  body.append('event_to', params.eventTo);
+  body.append('note', params.note ?? '');
+  params.media.forEach((m, i) => {
+    const filename = `media-${i}.${extensionFor(m)}`;
+    body.append('media[]', new FileSystem.File(m.uri) as unknown as Blob, filename);
+  });
+  const response = await fetch(`${BASE_URL}/teacher_add_event`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    body,
+  });
+  const json = (await response.json()) as ApiEnvelope<AddTeacherEventResult>;
+  if (!json.status) throw new Error(json.message);
+  return { id: json.data.id, skipped: json.data.skipped ?? [] };
+}
+
+export interface TeacherEvent {
+  id: number;
+  title: string;
+  event_place: string | null;
+  event_from: string;
+  event_to: string;
+  note: string | null;
+  image_url: string | null;
+  class_label: string | null;
+  is_view_on_web: number | string;
+  media: { id: number; type: 'image' | 'video'; url: string }[];
+}
+
+export async function fetchTeacherEvents(): Promise<TeacherEvent[]> {
+  return authedRequest<TeacherEvent[]>('/teacher_events');
+}
+
+export async function deleteTeacherEvent(id: number): Promise<void> {
+  await authedRequest('/teacher_delete_event', {
+    method: 'POST',
+    body: (() => {
+      const body = new FormData();
+      body.append('id', String(id));
+      return body;
+    })(),
+  });
+}
+
+export interface UpdateTeacherEventParams {
+  id: number;
+  title: string;
+  eventPlace?: string;
+  eventFrom: string;
+  eventTo: string;
+  note?: string;
+  media?: TeacherEventMediaItem[];
+}
+
+export async function updateTeacherEvent(params: UpdateTeacherEventParams): Promise<{ skipped: { name: string | null; reason: string }[] }> {
+  const token = await getTeacherToken();
+  const body = new FormData();
+  body.append('id', String(params.id));
+  body.append('title', params.title);
+  body.append('event_place', params.eventPlace ?? '');
+  body.append('event_from', params.eventFrom);
+  body.append('event_to', params.eventTo);
+  body.append('note', params.note ?? '');
+  (params.media ?? []).forEach((m, i) => {
+    const filename = `media-${i}.${extensionFor(m)}`;
+    body.append('media[]', new FileSystem.File(m.uri) as unknown as Blob, filename);
+  });
+  const response = await fetch(`${BASE_URL}/teacher_update_event`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    body,
+  });
+  const json = (await response.json()) as ApiEnvelope<{ updated: boolean; skipped: { name: string | null; reason: string }[] }>;
+  if (!json.status) throw new Error(json.message);
+  return { skipped: json.data.skipped ?? [] };
+}
+
+export async function deleteTeacherEventMedia(mediaId: number): Promise<void> {
+  await authedRequest('/teacher_delete_event_media', {
+    method: 'POST',
+    body: (() => {
+      const body = new FormData();
+      body.append('media_id', String(mediaId));
+      return body;
+    })(),
+  });
+}
+
+export interface TeacherNoticeParams {
+  title: string;
+  body: string;
+  classId: number;
+  sectionId?: number;
+}
+
+export async function addTeacherNotice(params: TeacherNoticeParams): Promise<void> {
+  await authedRequest('/teacher_add_notice', {
+    method: 'POST',
+    body: (() => {
+      const body = new FormData();
+      body.append('title', params.title);
+      body.append('body', params.body);
+      body.append('class_id', String(params.classId));
+      if (params.sectionId) body.append('section_id', String(params.sectionId));
+      return body;
+    })(),
+  });
+}
+
+export interface TeacherNotice {
+  id: number;
+  title: string;
+  notice: string;
+  date: string;
+  is_view_on_web: number | string;
+}
+
+export async function fetchTeacherNotices(): Promise<TeacherNotice[]> {
+  return authedRequest<TeacherNotice[]>('/teacher_notices');
+}
+
+export async function updateTeacherNotice(id: number, title: string, body: string): Promise<void> {
+  await authedRequest('/teacher_update_notice', {
+    method: 'POST',
+    body: (() => {
+      const b = new FormData();
+      b.append('id', String(id));
+      b.append('title', title);
+      b.append('body', body);
+      return b;
+    })(),
+  });
+}
+
+export async function deleteTeacherNotice(id: number): Promise<void> {
+  await authedRequest('/teacher_delete_notice', {
+    method: 'POST',
+    body: (() => {
+      const body = new FormData();
+      body.append('id', String(id));
+      return body;
+    })(),
+  });
+}
+
+export async function toggleTeacherNotice(id: number, active: boolean): Promise<void> {
+  await authedRequest('/teacher_toggle_notice', {
+    method: 'POST',
+    body: (() => {
+      const body = new FormData();
+      body.append('id', String(id));
+      body.append('active', active ? '1' : '0');
+      return body;
+    })(),
+  });
+}
+
+export async function toggleTeacherEvent(id: number, active: boolean): Promise<void> {
+  await authedRequest('/teacher_toggle_event', {
+    method: 'POST',
+    body: (() => {
+      const body = new FormData();
+      body.append('id', String(id));
+      body.append('active', active ? '1' : '0');
+      return body;
+    })(),
+  });
+}
+
+export interface AddStudentParams {
+  classId: number;
+  sectionId?: number;
+  name: string;
+  rollNo: string;
+  srn: string;
+  gender?: string;
+  fatherName?: string;
+  motherName?: string;
+  phone?: string;
+  password?: string;
+  photoUri?: string;
+}
+
+/** `srn` is the child's real, school-assigned SRN — required so siblings
+ * sharing one parent phone don't collide on identity (phone is no longer a
+ * uniqueness check, only `roll_no` per class and `srn` overall are). */
+export async function addTeacherStudent(params: AddStudentParams): Promise<{ id: number }> {
+  const token = await getTeacherToken();
+  const body = new FormData();
+  body.append('class_id', String(params.classId));
+  if (params.sectionId) body.append('section_id', String(params.sectionId));
+  body.append('name', params.name);
+  body.append('roll_no', params.rollNo);
+  body.append('srn', params.srn);
+  if (params.gender) body.append('gender', params.gender);
+  if (params.fatherName) body.append('father_name', params.fatherName);
+  if (params.motherName) body.append('mother_name', params.motherName);
+  if (params.phone) body.append('phone', params.phone);
+  if (params.password) body.append('password', params.password);
+  if (params.photoUri) {
+    body.append('photo', new FileSystem.File(params.photoUri) as unknown as Blob);
+  }
+  const response = await fetch(`${BASE_URL}/teacher_add_student`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    body,
+  });
+  const json = (await response.json()) as ApiEnvelope<{ id: number }>;
+  if (!json.status) throw new Error(json.message);
+  return json.data;
+}
+
+export type AttendanceStatus = 'P' | 'A' | 'L';
+
+export interface AttendanceStudent {
+  id: string;
+  name: string;
+  roll_no: string | null;
+  photo_url: string | null;
+  status: AttendanceStatus | null;
+  remarks: string | null;
+}
+
+export async function fetchAttendance(classId: number, sectionId: number | undefined, date: string): Promise<AttendanceStudent[]> {
+  const qs = `class_id=${classId}${sectionId ? `&section_id=${sectionId}` : ''}&date=${date}`;
+  return authedRequest<AttendanceStudent[]>(`/teacher_get_attendance?${qs}`);
+}
+
+export interface AttendanceRecord {
+  studentRef: string;
+  status: AttendanceStatus;
+  remarks?: string;
+}
+
+export async function saveAttendance(
+  classId: number,
+  sectionId: number | undefined,
+  date: string,
+  records: AttendanceRecord[]
+): Promise<void> {
+  await authedRequest('/teacher_save_attendance', {
+    method: 'POST',
+    body: (() => {
+      const body = new FormData();
+      body.append('class_id', String(classId));
+      if (sectionId) body.append('section_id', String(sectionId));
+      body.append('date', date);
+      body.append(
+        'records',
+        JSON.stringify(records.map((r) => ({ student_ref: r.studentRef, status: r.status, remarks: r.remarks ?? '' })))
+      );
+      return body;
+    })(),
+  });
+}
+
+export interface ExportParams {
+  classId: number;
+  sectionId?: number;
+  dateFrom: string;
+  dateTo: string;
+  format: 'pdf' | 'csv';
+}
+
+/** Downloads an export (homework or attendance) to a local file and
+ * returns its uri + a display filename — the caller hands this to
+ * expo-sharing to open the share sheet. Binary PDFs come back from fetch()
+ * as a Blob; FileReader turns that into a base64 string FileSystem.File
+ * can write, since there's no direct Blob-to-disk API on this SDK. */
+async function downloadTeacherExport(path: string, params: ExportParams, baseName: string): Promise<{ uri: string; filename: string }> {
+  const token = await getTeacherToken();
+  const qs = new URLSearchParams({
+    class_id: String(params.classId),
+    ...(params.sectionId ? { section_id: String(params.sectionId) } : {}),
+    date_from: params.dateFrom,
+    date_to: params.dateTo,
+    format: params.format,
+  }).toString();
+
+  const response = await fetch(`${BASE_URL}${path}?${qs}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  });
+  if (!response.ok) {
+    let message = `Export failed (${response.status}).`;
+    try {
+      const json = await response.json();
+      if (json?.message) message = json.message;
+    } catch {
+      // response wasn't JSON (a real file) — keep the generic message
+    }
+    throw new Error(message);
+  }
+
+  const blob = await response.blob();
+  const base64: string = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Could not read the downloaded file.'));
+    reader.onload = () => resolve((reader.result as string).split(',')[1] ?? '');
+    reader.readAsDataURL(blob);
+  });
+
+  const extension = params.format === 'csv' ? 'csv' : 'pdf';
+  const filename = `${baseName}-${params.dateFrom}-to-${params.dateTo}.${extension}`;
+  const file = new FileSystem.File(FileSystem.Paths.cache, filename);
+  file.write(base64, { encoding: 'base64' });
+  return { uri: file.uri, filename };
+}
+
+export async function exportHomework(params: ExportParams) {
+  return downloadTeacherExport('/teacher_export_homework', params, 'homework');
+}
+
+export async function exportAttendance(params: ExportParams) {
+  return downloadTeacherExport('/teacher_export_attendance', params, 'attendance');
+}
+
+export async function sendTeacherNotification(params: {
+  classId: number;
+  sectionId?: number;
+  studentRef?: string;
+  title: string;
+  body: string;
+}): Promise<{ sentTo: number }> {
+  const data = await authedRequest<{ sent_to: number }>('/teacher_send_notification', {
+    method: 'POST',
+    body: (() => {
+      const body = new FormData();
+      body.append('class_id', String(params.classId));
+      if (params.sectionId) body.append('section_id', String(params.sectionId));
+      if (params.studentRef) body.append('student_ref', params.studentRef);
+      body.append('title', params.title);
+      body.append('body', params.body);
+      return body;
+    })(),
+  });
+  return { sentTo: data.sent_to };
+}
+
+/** Uploads a result sheet (.csv/.xlsx) for the teacher's own class, matching
+ * the admin panel's "Import Result" feature and its column template. */
+/** Downloads a ready-to-fill result sheet matching exactly what
+ * importTeacherResult() expects — generated server-side from the real
+ * parser's column layout and the teacher's real roster, not a guessed
+ * format. Class 11/12 aren't supported yet (server returns a clear error). */
+export async function downloadResultTemplate(section?: string): Promise<{ uri: string; filename: string }> {
+  const token = await getTeacherToken();
+  const qs = section ? `?section=${encodeURIComponent(section)}` : '';
+  const response = await fetch(`${BASE_URL}/teacher_result_template${qs}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  });
+  if (!response.ok) {
+    let message = `Could not download the template (${response.status}).`;
+    try {
+      const json = await response.json();
+      if (json?.message) message = json.message;
+    } catch {
+      // response wasn't JSON (a real file) — keep the generic message
+    }
+    throw new Error(message);
+  }
+
+  const blob = await response.blob();
+  const base64: string = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Could not read the downloaded file.'));
+    reader.onload = () => resolve((reader.result as string).split(',')[1] ?? '');
+    reader.readAsDataURL(blob);
+  });
+
+  const filename = 'result-import-template.xlsx';
+  const file = new FileSystem.File(FileSystem.Paths.cache, filename);
+  file.write(base64, { encoding: 'base64' });
+  return { uri: file.uri, filename };
+}
+
+export async function importTeacherResult(file: { uri: string; name: string; mimeType?: string | null }): Promise<{ message: string }> {
+  const body = new FormData();
+  body.append('fileURL', {
+    uri: file.uri,
+    name: file.name,
+    type: file.mimeType || 'application/octet-stream',
+  } as unknown as Blob);
+  const data = await authedRequest<{ message: string }>('/teacher_import_result', {
+    method: 'POST',
+    body,
+  });
+  return data;
+}
+
+export type LeaveStatus = 'pending' | 'approved' | 'rejected';
+
+export interface TeacherLeaveApplication {
+  id: number;
+  student_name: string;
+  student_srn: string;
+  leave_type: string;
+  date_from: string;
+  date_to: string;
+  reason: string | null;
+  status: LeaveStatus;
+  review_note: string | null;
+}
+
+export async function fetchTeacherLeaveApplications(classId: number, sectionId?: number, status?: LeaveStatus): Promise<TeacherLeaveApplication[]> {
+  const qs = new URLSearchParams({
+    class_id: String(classId),
+    ...(sectionId ? { section_id: String(sectionId) } : {}),
+    ...(status ? { status } : {}),
+  }).toString();
+  return authedRequest<TeacherLeaveApplication[]>(`/teacher_leave_applications?${qs}`);
+}
+
+export async function reviewLeaveApplication(id: number, status: 'approved' | 'rejected', note?: string): Promise<void> {
+  const body = new FormData();
+  body.append('id', String(id));
+  body.append('status', status);
+  if (note) body.append('note', note);
+  await authedRequest<{ updated: boolean }>('/teacher_review_leave', { method: 'POST', body });
+}
+
+export type FeeType = 'monthly' | 'bus' | 'fine' | 'other';
+export type FeeStatus = 'due' | 'paid';
+
+export interface TeacherFeeInvoice {
+  id: number;
+  fee_type: FeeType;
+  title: string;
+  amount: string;
+  due_date: string | null;
+  status: FeeStatus;
+  file_url: string | null;
+  file_type: 'image' | 'pdf' | null;
+  student_name: string | null;
+  student_roll_no: string | null;
+  student_srn: string | null;
+}
+
+/** `srn` identifies the student — unique, unlike phone. */
+export async function addFeeInvoice(params: {
+  srn: string;
+  feeType: FeeType;
+  title: string;
+  amount: number;
+  dueDate?: string;
+  fileUri?: string;
+  fileMimeType?: string | null;
+}): Promise<{ id: number }> {
+  const token = await getTeacherToken();
+  const body = new FormData();
+  body.append('srn', params.srn);
+  body.append('fee_type', params.feeType);
+  body.append('title', params.title);
+  body.append('amount', String(params.amount));
+  if (params.dueDate) body.append('due_date', params.dueDate);
+  if (params.fileUri) {
+    // Expo's fetch (SDK 57+) requires a real Blob/File on the FormData part —
+    // the classic RN {uri,name,type} object throws "Unsupported FormDataPart
+    // implementation" — same fix as every other upload in this file.
+    body.append('invoice', new FileSystem.File(params.fileUri) as unknown as Blob);
+  }
+  const response = await fetch(`${BASE_URL}/teacher_add_fee_invoice`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    body,
+  });
+  const json = (await response.json()) as ApiEnvelope<{ id: number }>;
+  if (!json.status) throw new Error(json.message);
+  return json.data;
+}
+
+export async function fetchTeacherFeeInvoices(
+  classId: number,
+  sectionId?: number,
+  status?: FeeStatus,
+  studentSrn?: string,
+  dateFrom?: string,
+  dateTo?: string
+): Promise<TeacherFeeInvoice[]> {
+  const qs = new URLSearchParams({
+    class_id: String(classId),
+    ...(sectionId ? { section_id: String(sectionId) } : {}),
+    ...(status ? { status } : {}),
+    ...(studentSrn ? { student_srn: studentSrn } : {}),
+    ...(dateFrom ? { date_from: dateFrom } : {}),
+    ...(dateTo ? { date_to: dateTo } : {}),
+  }).toString();
+  return authedRequest<TeacherFeeInvoice[]>(`/teacher_fee_invoices?${qs}`);
+}
+
+export async function updateFeeInvoiceStatus(id: number, status: FeeStatus): Promise<void> {
+  const body = new FormData();
+  body.append('id', String(id));
+  body.append('status', status);
+  await authedRequest<{ updated: boolean }>('/teacher_update_fee_invoice_status', { method: 'POST', body });
+}
+
+export type StorageCategory = 'homework' | 'events' | 'student_photos';
+
+export interface StorageCategorySummary {
+  count: number;
+  bytes: number;
+}
+
+export interface TeacherStorageSummary {
+  homework: StorageCategorySummary;
+  events: StorageCategorySummary;
+  student_photos: StorageCategorySummary;
+  total_bytes: number;
+}
+
+export interface StorageItem {
+  id: number;
+  url: string;
+  label: string;
+  created_at: string;
+  media_type: 'image' | 'video';
+}
+
+/** What THIS teacher personally uploaded — across every class they teach,
+ * not scoped to one class. */
+export async function fetchTeacherStorageSummary(): Promise<TeacherStorageSummary> {
+  return authedRequest<TeacherStorageSummary>('/teacher_storage_summary');
+}
+
+export async function fetchTeacherStorageItems(type: StorageCategory): Promise<StorageItem[]> {
+  return authedRequest<StorageItem[]>(`/teacher_storage_items?type=${type}`);
+}
+
+/** Deletes from disk AND removes the DB reference — irreversible.
+ * Server re-verifies every id belongs to this teacher. */
+export async function deleteTeacherStorageItems(type: StorageCategory, ids: number[]): Promise<{ deleted: number }> {
+  const body = new FormData();
+  body.append('type', type);
+  body.append('ids', JSON.stringify(ids));
+  return authedRequest<{ deleted: number }>('/teacher_delete_storage_items', { method: 'POST', body });
 }

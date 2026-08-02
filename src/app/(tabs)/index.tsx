@@ -82,6 +82,8 @@ export default function HomeScreen() {
                         date={e.event_from}
                         place={e.event_place}
                         imageUrl={e.image_url}
+                        coverMedia={e.cover_media}
+                        images={e.images}
                         onPress={() => router.push(`/event/${e.id}`)}
                       />
                     ))}

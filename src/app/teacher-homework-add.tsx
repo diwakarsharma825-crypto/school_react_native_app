@@ -2,26 +2,52 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { Brand, Radius, Spacing } from '@/constants/theme';
 import { Card } from '@/components/ui/Card';
 import { Screen } from '@/components/ui/Screen';
+import { SelectField } from '@/components/ui/SelectField';
 import { ThemedText } from '@/components/ui/ThemedText';
-import { saveHomework } from '@/data/teacher-api';
+import { fetchSubjectsCatalog, saveHomework, updateHomework } from '@/data/teacher-api';
 import { useTheme } from '@/hooks/use-theme';
 
 export default function TeacherHomeworkAddScreen() {
   const theme = useTheme();
   const router = useRouter();
-  const { classId, sectionId, date } = useLocalSearchParams<{ classId: string; sectionId?: string; date: string }>();
+  const {
+    classId,
+    sectionId,
+    date,
+    homeworkId,
+    initialSubject,
+    initialDescription,
+    existingPhotos,
+  } = useLocalSearchParams<{
+    classId: string;
+    sectionId?: string;
+    date: string;
+    homeworkId?: string;
+    initialSubject?: string;
+    initialDescription?: string;
+    existingPhotos?: string;
+  }>();
+  const isEditing = !!homeworkId;
+  const existingPhotoUrls = existingPhotos ? existingPhotos.split('|').filter(Boolean) : [];
 
-  const [subject, setSubject] = useState('');
-  const [description, setDescription] = useState('');
+  const [subject, setSubject] = useState(initialSubject ?? '');
+  const [description, setDescription] = useState(initialDescription ?? '');
   const [photos, setPhotos] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [subjectOptions, setSubjectOptions] = useState<{ label: string; value: string }[]>([]);
+
+  useEffect(() => {
+    fetchSubjectsCatalog(Number(classId))
+      .then((subjects) => setSubjectOptions(subjects.map((s) => ({ label: s.name, value: s.name }))))
+      .catch(() => setSubjectOptions([]));
+  }, [classId]);
 
   async function addPhoto() {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -44,14 +70,23 @@ export default function TeacherHomeworkAddScreen() {
     setSubmitting(true);
     setError(null);
     try {
-      await saveHomework({
-        classId: Number(classId),
-        sectionId: sectionId ? Number(sectionId) : undefined,
-        subject: subject.trim(),
-        date,
-        description: description.trim(),
-        photoUris: photos,
-      });
+      if (isEditing) {
+        await updateHomework({
+          id: Number(homeworkId),
+          subject: subject.trim(),
+          description: description.trim(),
+          photoUris: photos.length > 0 ? photos : undefined,
+        });
+      } else {
+        await saveHomework({
+          classId: Number(classId),
+          sectionId: sectionId ? Number(sectionId) : undefined,
+          subject: subject.trim(),
+          date,
+          description: description.trim(),
+          photoUris: photos,
+        });
+      }
       router.back();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not save homework.');
@@ -67,16 +102,29 @@ export default function TeacherHomeworkAddScreen() {
       </ThemedText>
 
       <Card>
-        <ThemedText type="smallBold" style={styles.fieldLabel}>
-          Subject
-        </ThemedText>
-        <TextInput
-          value={subject}
-          onChangeText={setSubject}
-          placeholder="e.g. Mathematics"
-          placeholderTextColor={theme.textSecondary}
-          style={[styles.input, { borderColor: theme.border, color: theme.text }]}
-        />
+        {subjectOptions.length > 0 ? (
+          <SelectField
+            label="Subject"
+            placeholder="Select subject"
+            value={subject || null}
+            options={subjectOptions}
+            onChange={setSubject}
+            searchable
+          />
+        ) : (
+          <>
+            <ThemedText type="smallBold" style={styles.fieldLabel}>
+              Subject
+            </ThemedText>
+            <TextInput
+              value={subject}
+              onChangeText={setSubject}
+              placeholder="e.g. Mathematics"
+              placeholderTextColor={theme.textSecondary}
+              style={[styles.input, { borderColor: theme.border, color: theme.text }]}
+            />
+          </>
+        )}
 
         <ThemedText type="smallBold" style={styles.fieldLabel}>
           Details
@@ -93,6 +141,21 @@ export default function TeacherHomeworkAddScreen() {
 
         <ThemedText type="smallBold" style={styles.fieldLabel}>
           Photos
+        </ThemedText>
+        {existingPhotoUrls.length > 0 ? (
+          <>
+            <ThemedText type="small" themeColor="textSecondary" style={styles.existingLabel}>
+              Already attached
+            </ThemedText>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photoRow}>
+              {existingPhotoUrls.map((uri) => (
+                <Image key={uri} source={{ uri }} style={[styles.photoThumb, styles.existingThumbSpacing]} contentFit="cover" />
+              ))}
+            </ScrollView>
+          </>
+        ) : null}
+        <ThemedText type="small" themeColor="textSecondary" style={styles.existingLabel}>
+          {isEditing ? 'Add more photos' : 'Add photos'}
         </ThemedText>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photoRow}>
           {photos.map((uri) => (
@@ -120,7 +183,7 @@ export default function TeacherHomeworkAddScreen() {
           style={[styles.button, { backgroundColor: theme.tint, opacity: submitting ? 0.6 : 1 }]}
         >
           <ThemedText type="smallBold" style={styles.buttonLabel}>
-            {submitting ? 'Saving…' : 'Save Homework'}
+            {submitting ? 'Saving…' : isEditing ? 'Save Changes' : 'Save Homework'}
           </ThemedText>
         </Pressable>
       </Card>
@@ -136,6 +199,9 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.one,
     marginTop: Spacing.three,
   },
+  existingLabel: {
+    marginBottom: Spacing.two,
+  },
   input: {
     borderWidth: 1,
     borderRadius: Radius.sm,
@@ -149,6 +215,10 @@ const styles = StyleSheet.create({
   },
   photoRow: {
     flexDirection: 'row',
+    marginBottom: Spacing.three,
+  },
+  existingThumbSpacing: {
+    marginRight: Spacing.two,
   },
   photoWrap: {
     position: 'relative',

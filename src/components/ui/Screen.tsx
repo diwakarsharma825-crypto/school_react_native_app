@@ -26,7 +26,12 @@ export function Screen({ children, refreshing = false, onRefresh, scroll = true,
 
   const body = (
     <View style={styles.centerWrap}>
-      <View style={[styles.maxWidth, contentStyle]}>{children}</View>
+      {/* Non-scrolling screens (Loading/ErrorState/SectionUnavailable, etc.)
+          often want to vertically center their content with flex:1 — that
+          only works if this box actually fills the available height. In the
+          scrolling case ScrollView's own contentContainerStyle handles
+          sizing, so this stays auto-height there. */}
+      <View style={[styles.maxWidth, !scroll && styles.maxWidthFill, contentStyle]}>{children}</View>
     </View>
   );
 
@@ -67,5 +72,8 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: MAX_CONTENT_WIDTH,
     padding: Spacing.three,
+  },
+  maxWidthFill: {
+    flex: 1,
   },
 });

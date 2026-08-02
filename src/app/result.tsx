@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Linking, Modal, Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { Brand, Radius, Spacing } from '@/constants/theme';
@@ -10,15 +10,17 @@ import { ErrorState } from '@/components/ui/states';
 import { SectionUnavailable } from '@/components/ui/SectionUnavailable';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { useTheme } from '@/hooks/use-theme';
-import { checkResult, fetchResultSessions } from '@/data/api';
+import { checkResult, checkResultBySrn, fetchResultSessions } from '@/data/api';
 import { useFetch } from '@/hooks/use-fetch';
 import { useSectionEnabled } from '@/hooks/use-sections';
+import { useStudentAuth } from '@/hooks/use-student-auth';
 import { ResultCheckResponse } from '@/data/types';
 
 export default function ResultScreen() {
   const theme = useTheme();
   const enabled = useSectionEnabled('result');
   const sessions = useFetch(fetchResultSessions);
+  const { checking: checkingStudent, loggedIn: studentLoggedIn, access: studentAccess } = useStudentAuth();
   const [sessionId, setSessionId] = useState<string | undefined>(undefined);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [srn, setSrn] = useState('');
@@ -26,8 +28,27 @@ export default function ResultScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | undefined>(undefined);
   const [result, setResult] = useState<ResultCheckResponse | undefined>(undefined);
+  const [autoChecked, setAutoChecked] = useState(false);
 
   const activeSession = sessions.data?.find((s) => String(s.id) === sessionId);
+
+  useEffect(() => {
+    if (!sessionId && sessions.data && sessions.data.length > 0) {
+      setSessionId(String(sessions.data[0].id));
+    }
+  }, [sessionId, sessions.data]);
+
+  // Already logged in via Homework — skip the manual SRN+DOB form entirely.
+  useEffect(() => {
+    if (autoChecked || checkingStudent || !studentLoggedIn || !studentAccess?.srn || !activeSession) return;
+    setAutoChecked(true);
+    setLoading(true);
+    setError(undefined);
+    checkResultBySrn(String(activeSession.id), studentAccess.srn)
+      .then((record) => setResult(record))
+      .catch((err) => setError(err instanceof Error ? err.message : 'No result found for your account yet.'))
+      .finally(() => setLoading(false));
+  }, [autoChecked, checkingStudent, studentLoggedIn, studentAccess, activeSession]);
 
   if (!enabled) return <SectionUnavailable />;
 
@@ -70,49 +91,58 @@ export default function ResultScreen() {
         </View>
       </View>
 
-      <Card style={styles.formCard}>
-        <ThemedText type="smallBold" style={styles.label}>
-          Session
-        </ThemedText>
-        <Pressable
-          onPress={() => sessions.data && sessions.data.length > 0 && setPickerOpen(true)}
-          style={[styles.select, { borderColor: theme.border }]}
-        >
-          <ThemedText type="default" themeColor={activeSession ? 'text' : 'textSecondary'}>
-            {activeSession ? activeSession.label : 'Select session'}
+      {studentLoggedIn && studentAccess?.srn ? (
+        <View style={styles.disclaimerRow}>
+          <Ionicons name="checkmark-circle-outline" size={16} color={theme.textSecondary} style={styles.disclaimerIcon} />
+          <ThemedText type="small" themeColor="textSecondary" style={styles.disclaimerText}>
+            Loading your report card automatically — you're already logged in as {studentAccess.name}.
           </ThemedText>
-          <Ionicons name="chevron-down" size={18} color={theme.textSecondary} />
-        </Pressable>
+        </View>
+      ) : (
+        <Card style={styles.formCard}>
+          <ThemedText type="smallBold" style={styles.label}>
+            Session
+          </ThemedText>
+          <Pressable
+            onPress={() => sessions.data && sessions.data.length > 0 && setPickerOpen(true)}
+            style={[styles.select, { borderColor: theme.border }]}
+          >
+            <ThemedText type="default" themeColor={activeSession ? 'text' : 'textSecondary'}>
+              {activeSession ? activeSession.label : 'Select session'}
+            </ThemedText>
+            <Ionicons name="chevron-down" size={18} color={theme.textSecondary} />
+          </Pressable>
 
-        <ThemedText type="smallBold" style={styles.label}>
-          SRN
-        </ThemedText>
-        <TextInput
-          value={srn}
-          onChangeText={setSrn}
-          placeholder="Enter your SRN"
-          placeholderTextColor={theme.textSecondary}
-          style={[styles.input, { borderColor: theme.border, color: theme.text }]}
-        />
+          <ThemedText type="smallBold" style={styles.label}>
+            SRN
+          </ThemedText>
+          <TextInput
+            value={srn}
+            onChangeText={setSrn}
+            placeholder="Enter your SRN"
+            placeholderTextColor={theme.textSecondary}
+            style={[styles.input, { borderColor: theme.border, color: theme.text }]}
+          />
 
-        <ThemedText type="smallBold" style={styles.label}>
-          Date of Birth
-        </ThemedText>
-        <TextInput
-          value={dob}
-          onChangeText={(v) => setDob(v.replace(/\D/g, ''))}
-          placeholder="DDMMYYYY"
-          placeholderTextColor={theme.textSecondary}
-          keyboardType="number-pad"
-          maxLength={8}
-          style={[styles.input, { borderColor: theme.border, color: theme.text }]}
-        />
-        <ThemedText type="small" themeColor="textSecondary" style={styles.helper}>
-          Enter as day, month, year with no slash or hyphen — DDMMYYYY.
-        </ThemedText>
+          <ThemedText type="smallBold" style={styles.label}>
+            Date of Birth
+          </ThemedText>
+          <TextInput
+            value={dob}
+            onChangeText={(v) => setDob(v.replace(/\D/g, ''))}
+            placeholder="DDMMYYYY"
+            placeholderTextColor={theme.textSecondary}
+            keyboardType="number-pad"
+            maxLength={8}
+            style={[styles.input, { borderColor: theme.border, color: theme.text }]}
+          />
+          <ThemedText type="small" themeColor="textSecondary" style={styles.helper}>
+            Enter as day, month, year with no slash or hyphen — DDMMYYYY.
+          </ThemedText>
 
-        <Button label="View Report Card" variant="primary" icon="search" onPress={handleSearch} loading={loading} />
-      </Card>
+          <Button label="View Report Card" variant="primary" icon="search" onPress={handleSearch} loading={loading} />
+        </Card>
+      )}
 
       <View style={styles.disclaimerRow}>
         <Ionicons name="lock-closed-outline" size={16} color={theme.textSecondary} style={styles.disclaimerIcon} />

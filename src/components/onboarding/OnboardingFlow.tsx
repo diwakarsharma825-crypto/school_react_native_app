@@ -1,18 +1,25 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import React, { useState } from 'react';
-import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import * as Location from 'expo-location';
+import * as Notifications from 'expo-notifications';
+import React, { useEffect, useState } from 'react';
+import { Alert, Linking, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { registerDevice } from '@/data/app-status';
 import { fetchSettings } from '@/data/api';
+import { registerStudentPushToken, studentLogin, studentRegister } from '@/data/homework-api';
+import { ClassPickerItem, fetchClassesCatalog, teacherLogout } from '@/data/teacher-api';
 import { Brand, Radius, Shadow, Spacing } from '@/constants/theme';
 import { useFetch } from '@/hooks/use-fetch';
+import { useStudentAuth } from '@/hooks/use-student-auth';
+import { useTeacherAuth } from '@/hooks/use-teacher-auth';
+import { HomeworkAccess, saveHomeworkChildren } from '@/lib/homework-access';
 import { markOnboardingComplete } from '@/lib/onboarding';
-import { requestOnboardingPermissions } from '@/lib/permissions';
 import { getFcmPushToken } from '@/lib/notifications';
 import { useTheme } from '@/hooks/use-theme';
 import { Button } from '@/components/ui/Button';
+import { PasswordInput } from '@/components/ui/PasswordInput';
 import { SelectField } from '@/components/ui/SelectField';
 import { ThemedText } from '@/components/ui/ThemedText';
 
@@ -21,23 +28,14 @@ const logoSource = require('../../../assets/images/icon.png');
 type Belonging = 'saarthak' | 'other';
 type UserType = 'student' | 'teacher' | 'other';
 
-const TOTAL_STEPS = 4;
-
-const CLASS_OPTIONS = [
-  { label: 'Pre-Nursery', value: 'Pre-Nursery' },
-  { label: 'Nursery', value: 'Nursery' },
-  { label: 'LKG', value: 'LKG' },
-  { label: 'UKG', value: 'UKG' },
-  ...Array.from({ length: 12 }, (_, i) => {
-    const n = String(i + 1);
-    return { label: `Class ${n}`, value: n };
-  }),
-];
+// Welcome, Belonging, User type, Details, mandatory Permissions gate.
+const TOTAL_STEPS = 5;
 
 const STREAM_OPTIONS = [
   { label: 'Arts', value: 'Arts' },
   { label: 'Non-Medical', value: 'Non-Medical' },
   { label: 'Medical', value: 'Medical' },
+  { label: 'Commerce', value: 'Commerce' },
 ];
 
 const DESIGNATION_OPTIONS = [
@@ -46,7 +44,11 @@ const DESIGNATION_OPTIONS = [
   { label: 'PGT (Post Graduate Teacher)', value: 'PGT' },
 ];
 
-const STREAM_ELIGIBLE_CLASSES = ['11', '12'];
+// A class name containing "11" or "12" (whatever the admin's exact naming
+// is — "Class 11th", "11", etc.) is eligible for a stream — same keyword
+// check the teacher profile screen already uses, so it's not hardcoded to
+// one exact string that can drift out of sync with real class names.
+const STREAM_ELIGIBLE_KEYWORDS = ['11', '12'];
 
 interface OnboardingFlowProps {
   onDone: () => void;
@@ -54,6 +56,8 @@ interface OnboardingFlowProps {
 
 export function OnboardingFlow({ onDone }: OnboardingFlowProps) {
   const theme = useTheme();
+  const { refresh: refreshStudentAuth } = useStudentAuth();
+  const { setLoggedIn: setTeacherLoggedIn } = useTeacherAuth();
   const { data: settings } = useFetch(fetchSettings);
   const schoolName = settings?.school_name ?? 'our school';
   const address = settings?.address ?? '';
@@ -66,11 +70,39 @@ export function OnboardingFlow({ onDone }: OnboardingFlowProps) {
   const [stream, setStream] = useState<string | null>(null);
   const [designation, setDesignation] = useState<string | null>(null);
   const [mobile, setMobile] = useState('');
+  const [password, setPassword] = useState('');
+  const [srn, setSrn] = useState('');
+  const [gender, setGender] = useState<string | null>(null);
   const [nameError, setNameError] = useState<string | null>(null);
   const [mobileError, setMobileError] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [srnError, setSrnError] = useState<string | null>(null);
   const [finishing, setFinishing] = useState(false);
+  const [classCatalog, setClassCatalog] = useState<ClassPickerItem[]>([]);
 
-  async function finish() {
+  // Fetched live from the CMS's real `classes`/`sections` tables — a
+  // hardcoded list here previously drifted out of sync with real class
+  // names ("1" vs "Class 1st"), silently breaking homework/roster matching
+  // for anyone who registered through it.
+  useEffect(() => {
+    fetchClassesCatalog()
+      .then(setClassCatalog)
+      .catch(() => setClassCatalog([]));
+  }, []);
+
+  const classOptions = classCatalog.map((c) => ({ label: c.name, value: c.name }));
+  function sectionOptionsFor(className: string | null) {
+    const cls = classCatalog.find((c) => c.name === className);
+    return (cls?.sections ?? []).map((s) => ({ label: s.name, value: s.name }));
+  }
+
+  // Password is only asked for — and only means anything for — a student
+  // from this school, since it verifies against `result_students` via the
+  // same student_login the Homework tab uses. Everyone else just registers
+  // the device, no server-side account to check against.
+  const needsPassword = belonging === 'saarthak' && userType === 'student';
+
+  function validateDetails(): boolean {
     const trimmedName = fullName.trim();
     const trimmedMobile = mobile.trim();
     let hasError = false;
@@ -86,9 +118,83 @@ export function OnboardingFlow({ onDone }: OnboardingFlowProps) {
     } else {
       setMobileError(null);
     }
-    if (hasError) return;
+    if (needsPassword && !password) {
+      setPasswordError('Please enter the password your school gave you.');
+      hasError = true;
+    } else {
+      setPasswordError(null);
+    }
+    if (userType === 'student' && !srn.trim()) {
+      setSrnError('Please enter your SRN (roll/registration number).');
+      hasError = true;
+    } else {
+      setSrnError(null);
+    }
+    return !hasError;
+  }
 
+  function goToPermissions() {
+    if (validateDetails()) setStep(4);
+  }
+
+  // Only reached once notifications + location are both confirmed granted —
+  // the permissions gate below never calls this otherwise.
+  async function completeOnboarding() {
+    const trimmedName = fullName.trim();
+    const trimmedMobile = mobile.trim();
     setFinishing(true);
+    // Only one identity is "active" on this device at a time — same
+    // reasoning as the teacher/student login screens.
+    await teacherLogout().catch(() => {});
+    setTeacherLoggedIn(false);
+
+    if (needsPassword) {
+      try {
+        // One phone can be the login for several sibling children — save
+        // every one returned, the app defaults to the first.
+        const results = await studentLogin(trimmedMobile, password);
+        const children: HomeworkAccess[] = results.map((result) => ({
+          name: result.name,
+          srn: result.srn,
+          className: result.class,
+          section: result.section,
+          phone: result.phone,
+          gender: result.gender,
+          photoUrl: result.photo_url,
+        }));
+        await saveHomeworkChildren(children);
+        await refreshStudentAuth();
+      } catch (loginError) {
+        // No account exists yet for this phone — this is a first-time
+        // student, so register them as pending instead. If an account DOES
+        // already exist under this exact SRN (just a wrong password),
+        // register_student() detects the collision server-side and returns
+        // a clear error instead of silently creating a duplicate.
+        try {
+          await studentRegister({
+            name: trimmedName,
+            className: studentClass ?? '',
+            section: section.trim() || undefined,
+            phone: trimmedMobile,
+            password,
+            srn: srn.trim(),
+            gender: gender ?? undefined,
+          });
+          setTimeout(() => {
+            Alert.alert(
+              'Registered!',
+              "Your class teacher needs to verify your account before you can view homework. You'll be able to log in once that's done."
+            );
+          }, 400);
+        } catch (registerError) {
+          setFinishing(false);
+          setPasswordError(registerError instanceof Error ? registerError.message : 'Could not verify your password.');
+          setStep(3);
+          return;
+        }
+      }
+    }
+
     await markOnboardingComplete();
     await registerDevice({
       userType: userType ?? undefined,
@@ -100,16 +206,14 @@ export function OnboardingFlow({ onDone }: OnboardingFlowProps) {
       designation: userType === 'teacher' ? designation ?? undefined : undefined,
       phone: `+91${trimmedMobile}`,
     }).catch(() => {});
-    onDone();
-    await requestOnboardingPermissions();
-    // Permission was just granted (or denied) above — try once more to pick
-    // up a push token now that we know. No-ops silently if denied.
+    // Permissions are already confirmed granted by this point (the gate
+    // below only calls completeOnboarding() once both are) — just pick up
+    // the push token now that notifications are actually allowed.
     const pushToken = await getFcmPushToken();
-    if (pushToken) registerDevice({ pushToken }).catch(() => {});
-  }
-
-  async function skip() {
-    await markOnboardingComplete();
+    if (pushToken) {
+      registerDevice({ pushToken }).catch(() => {});
+      if (needsPassword) registerStudentPushToken(trimmedMobile, pushToken).catch(() => {});
+    }
     onDone();
   }
 
@@ -136,8 +240,13 @@ export function OnboardingFlow({ onDone }: OnboardingFlowProps) {
             fullName={fullName}
             onFullName={setFullName}
             nameError={nameError}
+            classOptions={classOptions}
             studentClass={studentClass}
-            onClass={setStudentClass}
+            onClass={(v) => {
+              setStudentClass(v);
+              setSection('');
+            }}
+            sectionOptions={sectionOptionsFor(studentClass)}
             section={section}
             onSection={setSection}
             stream={stream}
@@ -147,28 +256,33 @@ export function OnboardingFlow({ onDone }: OnboardingFlowProps) {
             mobile={mobile}
             onMobile={setMobile}
             mobileError={mobileError}
+            needsPassword={needsPassword}
+            password={password}
+            onPassword={setPassword}
+            passwordError={passwordError}
+            srn={srn}
+            onSrn={setSrn}
+            srnError={srnError}
+            gender={gender}
+            onGender={setGender}
           />
         ) : null}
+        {step === 4 ? <PermissionsStep onGranted={completeOnboarding} busy={finishing} /> : null}
       </View>
 
-      <View style={styles.footer}>
-        {step === 0 ? (
-          <>
+      {step < 4 ? (
+        <View style={styles.footer}>
+          {step === 0 ? (
             <Button label="Get Started" variant="primary" onPress={() => setStep(1)} />
-            <Pressable onPress={skip} hitSlop={8} style={styles.skipLink}>
-              <ThemedText type="default" themeColor="textSecondary">
-                Skip for now
-              </ThemedText>
-            </Pressable>
-          </>
-        ) : step === 1 ? (
-          <Button label="Continue" variant="primary" onPress={() => setStep(2)} disabled={!belonging} />
-        ) : step === 2 ? (
-          <Button label="Continue" variant="primary" onPress={() => setStep(3)} disabled={!userType} />
-        ) : (
-          <Button label="Finish" variant="primary" onPress={finish} loading={finishing} />
-        )}
-      </View>
+          ) : step === 1 ? (
+            <Button label="Continue" variant="primary" onPress={() => setStep(2)} disabled={!belonging} />
+          ) : step === 2 ? (
+            <Button label="Continue" variant="primary" onPress={() => setStep(3)} disabled={!userType} />
+          ) : (
+            <Button label="Continue" variant="primary" onPress={goToPermissions} />
+          )}
+        </View>
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -334,8 +448,10 @@ interface DetailsStepProps {
   fullName: string;
   onFullName: (v: string) => void;
   nameError: string | null;
+  classOptions: { label: string; value: string }[];
   studentClass: string | null;
   onClass: (v: string) => void;
+  sectionOptions: { label: string; value: string }[];
   section: string;
   onSection: (v: string) => void;
   stream: string | null;
@@ -345,15 +461,32 @@ interface DetailsStepProps {
   mobile: string;
   onMobile: (v: string) => void;
   mobileError: string | null;
+  needsPassword: boolean;
+  password: string;
+  onPassword: (v: string) => void;
+  passwordError: string | null;
+  srn: string;
+  onSrn: (v: string) => void;
+  srnError: string | null;
+  gender: string | null;
+  onGender: (v: string) => void;
 }
+
+const GENDER_OPTIONS = [
+  { label: 'Male', value: 'Male' },
+  { label: 'Female', value: 'Female' },
+  { label: 'Other', value: 'Other' },
+];
 
 function DetailsStep({
   userType,
   fullName,
   onFullName,
   nameError,
+  classOptions,
   studentClass,
   onClass,
+  sectionOptions,
   section,
   onSection,
   stream,
@@ -363,9 +496,19 @@ function DetailsStep({
   mobile,
   onMobile,
   mobileError,
+  needsPassword,
+  password,
+  onPassword,
+  passwordError,
+  srn,
+  onSrn,
+  srnError,
+  gender,
+  onGender,
 }: DetailsStepProps) {
   const theme = useTheme();
-  const showStream = userType === 'student' && studentClass !== null && STREAM_ELIGIBLE_CLASSES.includes(studentClass);
+  const showStream =
+    userType === 'student' && studentClass !== null && STREAM_ELIGIBLE_KEYWORDS.some((k) => studentClass.includes(k));
 
   return (
     <View>
@@ -384,8 +527,13 @@ function DetailsStep({
         onChangeText={onFullName}
         placeholder="Your name"
         placeholderTextColor={theme.textSecondary}
+        keyboardType="default"
+        autoComplete="off"
+        textContentType="none"
         style={[styles.input, { borderColor: theme.border, color: theme.text }]}
       />
+
+      <SelectField label="Gender" placeholder="Select gender" value={gender} options={GENDER_OPTIONS} onChange={onGender} />
 
       {userType === 'student' ? (
         <>
@@ -395,23 +543,44 @@ function DetailsStep({
                 label="Class"
                 placeholder="Select class"
                 value={studentClass}
-                options={CLASS_OPTIONS}
+                options={classOptions}
                 onChange={onClass}
               />
             </View>
             <View style={styles.rowItem}>
-              <ThemedText type="smallBold" style={styles.fieldLabel}>
-                Section
-              </ThemedText>
-              <TextInput
-                value={section}
-                onChangeText={onSection}
-                placeholder="e.g. A"
-                placeholderTextColor={theme.textSecondary}
-                style={[styles.input, { borderColor: theme.border, color: theme.text }]}
+              <SelectField
+                label="Section"
+                placeholder={studentClass ? 'Select section' : 'Pick a class first'}
+                value={section || null}
+                options={sectionOptions}
+                onChange={onSection}
               />
             </View>
           </View>
+
+          <ThemedText type="smallBold" style={styles.fieldLabel}>
+            SRN
+          </ThemedText>
+          <TextInput
+            value={srn}
+            onChangeText={onSrn}
+            placeholder="Your school-assigned SRN"
+            placeholderTextColor={theme.textSecondary}
+            keyboardType="default"
+            autoComplete="off"
+            textContentType="none"
+            style={[styles.input, { borderColor: theme.border, color: theme.text }]}
+          />
+          {srnError ? (
+            <ThemedText type="small" style={{ color: Brand.red }}>
+              {srnError}
+            </ThemedText>
+          ) : null}
+          <ThemedText type="small" themeColor="textSecondary" style={styles.fieldHint}>
+            If you have a sibling already using this app, use the same mobile number below —
+            you&apos;ll be able to switch between both after logging in.
+          </ThemedText>
+
           {showStream ? (
             <SelectField
               label="Stream"
@@ -445,23 +614,120 @@ function DetailsStep({
           placeholder="10-digit mobile number"
           placeholderTextColor={theme.textSecondary}
           keyboardType="number-pad"
+          autoComplete="tel"
+          textContentType="telephoneNumber"
           maxLength={10}
           style={[styles.phoneInput, { color: theme.text }]}
         />
       </View>
 
+      {needsPassword ? (
+        <>
+          <ThemedText type="smallBold" style={styles.fieldLabel}>
+            Password
+          </ThemedText>
+          <PasswordInput value={password} onChangeText={onPassword} placeholder="Password given by your school" />
+          <ThemedText type="small" themeColor="textSecondary" style={styles.fieldHint}>
+            Verified against your school record — same login used on the Homework tab.
+          </ThemedText>
+        </>
+      ) : null}
+
       <ThemedText type="small" themeColor="textSecondary" style={styles.permissionNote}>
-        On finishing, we&apos;ll ask for notification &amp; location permission to keep you updated. You&apos;re
-        always in control.
+        Next, we&apos;ll need notification &amp; location permission — both are required to use the app.
       </ThemedText>
 
-      {nameError || mobileError ? (
+      {nameError || mobileError || passwordError ? (
         <View style={styles.errorRow}>
           <Ionicons name="alert-circle" size={16} color={Brand.red} style={styles.errorIcon} />
           <ThemedText type="default" style={{ color: Brand.red }}>
-            {nameError || mobileError}
+            {nameError || mobileError || passwordError}
           </ThemedText>
         </View>
+      ) : null}
+    </View>
+  );
+}
+
+function PermissionsStep({ onGranted, busy }: { onGranted: () => void; busy: boolean }) {
+  const theme = useTheme();
+  const [notifStatus, setNotifStatus] = useState<'unknown' | 'granted' | 'denied'>('unknown');
+  const [locationStatus, setLocationStatus] = useState<'unknown' | 'granted' | 'denied'>('unknown');
+  const [requesting, setRequesting] = useState(false);
+
+  const bothGranted = notifStatus === 'granted' && locationStatus === 'granted';
+  const anyDenied = notifStatus === 'denied' || locationStatus === 'denied';
+
+  async function requestBoth() {
+    setRequesting(true);
+    const notif = await Notifications.requestPermissionsAsync().catch(() => null);
+    const loc = await Location.requestForegroundPermissionsAsync().catch(() => null);
+    const notifOk = notif?.granted ?? false;
+    const locOk = loc?.granted ?? false;
+    setNotifStatus(notifOk ? 'granted' : 'denied');
+    setLocationStatus(locOk ? 'granted' : 'denied');
+    setRequesting(false);
+    if (notifOk && locOk) onGranted();
+  }
+
+  return (
+    <View>
+      <View style={styles.permissionsIconWrap}>
+        <Ionicons name="shield-checkmark" size={40} color={theme.tint} />
+      </View>
+      <ThemedText type="title" style={[styles.stepTitle, styles.centerText]}>
+        Two permissions needed
+      </ThemedText>
+      <ThemedText type="default" themeColor="textSecondary" style={[styles.stepSubtitle, styles.centerText]}>
+        Both are required to use the app — you can change them later in your phone&apos;s Settings.
+      </ThemedText>
+
+      <View style={[styles.permissionRow, { backgroundColor: theme.surface }]}>
+        <Ionicons name="notifications" size={22} color={theme.tint} />
+        <View style={styles.permissionRowText}>
+          <ThemedText type="smallBold">Notifications</ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            Results, homework and school announcements
+          </ThemedText>
+        </View>
+        {notifStatus === 'granted' ? <Ionicons name="checkmark-circle" size={22} color="#2E7D32" /> : null}
+      </View>
+
+      <View style={[styles.permissionRow, { backgroundColor: theme.surface }]}>
+        <Ionicons name="location" size={22} color={theme.tint} />
+        <View style={styles.permissionRowText}>
+          <ThemedText type="smallBold">Location</ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            Helps confirm you&apos;re reachable for school updates
+          </ThemedText>
+        </View>
+        {locationStatus === 'granted' ? <Ionicons name="checkmark-circle" size={22} color="#2E7D32" /> : null}
+      </View>
+
+      {anyDenied && !bothGranted ? (
+        <View style={styles.errorRow}>
+          <Ionicons name="alert-circle" size={16} color={Brand.red} style={styles.errorIcon} />
+          <ThemedText type="default" style={{ color: Brand.red, flex: 1 }}>
+            Both permissions are required. If you denied one permanently, open Settings to enable it, then come back
+            and try again.
+          </ThemedText>
+        </View>
+      ) : null}
+
+      <Button
+        label={requesting || busy ? 'Please wait…' : 'Allow & Continue'}
+        variant="primary"
+        onPress={requestBoth}
+        disabled={requesting || busy}
+        loading={requesting || busy}
+      />
+
+      {anyDenied ? (
+        <Pressable onPress={() => Linking.openSettings()} hitSlop={8} style={styles.settingsLink}>
+          <ThemedText type="default" themeColor="tint">
+            Open Settings
+          </ThemedText>
+        </Pressable>
       ) : null}
     </View>
   );
@@ -508,9 +774,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.four,
     paddingBottom: Spacing.four,
   },
-  skipLink: {
+  settingsLink: {
     alignItems: 'center',
     marginTop: Spacing.three,
+  },
+  permissionsIconWrap: {
+    alignItems: 'center',
+    marginBottom: Spacing.three,
+  },
+  permissionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.three,
+    borderRadius: Radius.lg,
+    padding: Spacing.three,
+    marginBottom: Spacing.three,
+    ...Shadow.card,
+  },
+  permissionRowText: {
+    flex: 1,
+    gap: 2,
   },
   welcomeWrap: {
     alignItems: 'center',
@@ -617,6 +900,9 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: Spacing.two,
     paddingHorizontal: Spacing.two,
+  },
+  fieldHint: {
+    marginTop: Spacing.one,
   },
   permissionNote: {
     marginTop: Spacing.three,

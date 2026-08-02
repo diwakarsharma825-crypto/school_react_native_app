@@ -1,0 +1,180 @@
+import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback, useState } from 'react';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
+
+import { Brand, Radius, Spacing } from '@/constants/theme';
+import { Card } from '@/components/ui/Card';
+import { Screen } from '@/components/ui/Screen';
+import { EmptyState, ErrorState, Loading } from '@/components/ui/states';
+import { ThemedText } from '@/components/ui/ThemedText';
+import { deleteTeacherNotice, fetchTeacherNotices, TeacherNotice, toggleTeacherNotice } from '@/data/teacher-api';
+import { TeacherGuard } from '@/components/ui/TeacherGuard';
+import { useTheme } from '@/hooks/use-theme';
+
+export default function TeacherNoticesScreen() {
+  const theme = useTheme();
+  const router = useRouter();
+  const [notices, setNotices] = useState<TeacherNotice[] | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  function load() {
+    setLoading(true);
+    setError(false);
+    fetchTeacherNotices()
+      .then(setNotices)
+      .catch(() => setError(true))
+      .finally(() => setLoading(false));
+  }
+
+  // Reload every time this screen regains focus — coming back from
+  // add/edit shouldn't require a manual pull-to-refresh to see the change.
+  useFocusEffect(useCallback(load, []));
+
+  function confirmDelete(notice: TeacherNotice) {
+    Alert.alert('Delete notice?', `"${notice.title}" will be permanently removed.`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => {
+          deleteTeacherNotice(notice.id)
+            .then(load)
+            .catch((e) => Alert.alert('Could not delete', e instanceof Error ? e.message : 'Please try again.'));
+        },
+      },
+    ]);
+  }
+
+  function toggleActive(n: TeacherNotice, active: boolean) {
+    toggleTeacherNotice(n.id, active)
+      .then(load)
+      .catch((e) => Alert.alert('Could not update', e instanceof Error ? e.message : 'Please try again.'));
+  }
+
+  return (
+    <TeacherGuard>
+    <Screen>
+      <Pressable
+        onPress={() => router.push('/teacher-add-notice' as any)}
+        style={[styles.addButton, { backgroundColor: theme.tint }]}
+      >
+        <Ionicons name="add" size={18} color={Brand.white} />
+        <ThemedText type="smallBold" style={styles.addButtonLabel}>
+          New Notice
+        </ThemedText>
+      </Pressable>
+
+      {loading ? (
+        <Loading label="Loading notices…" />
+      ) : error ? (
+        <ErrorState message="Could not load notices." onRetry={load} />
+      ) : !notices || notices.length === 0 ? (
+        <EmptyState message="No notices posted yet." icon="megaphone-outline" />
+      ) : (
+        notices.map((n) => {
+          const active = Number(n.is_view_on_web) === 1;
+          return (
+            <Card key={n.id} style={[styles.card, !active && styles.cardInactive]}>
+              <View style={styles.cardHeader}>
+                <ThemedText type="smallBold" style={styles.cardTitle} numberOfLines={1}>
+                  {n.title}
+                </ThemedText>
+                <View style={[styles.statusTag, { backgroundColor: active ? '#DFF1E1' : '#F1E9D9' }]}>
+                  <ThemedText type="small" style={{ color: active ? '#2E7D32' : '#9A7B2E' }}>
+                    {active ? 'Active' : 'Inactive'}
+                  </ThemedText>
+                </View>
+              </View>
+              <ThemedText type="small" themeColor="textSecondary">
+                {n.date}
+              </ThemedText>
+              <ThemedText type="small" themeColor="textSecondary" numberOfLines={3} style={styles.cardBody}>
+                {n.notice}
+              </ThemedText>
+              <View style={styles.actionsRow}>
+                <Pressable
+                  onPress={() =>
+                    router.push({
+                      pathname: '/teacher-add-notice',
+                      params: { id: String(n.id), initialTitle: n.title, initialBody: n.notice },
+                    } as any)
+                  }
+                  style={styles.actionButton}
+                >
+                  <Ionicons name="create-outline" size={16} color={theme.tint} />
+                  <ThemedText type="small" themeColor="tint">
+                    Edit
+                  </ThemedText>
+                </Pressable>
+                <Pressable onPress={() => toggleActive(n, !active)} style={styles.actionButton}>
+                  <Ionicons name={active ? 'eye-off-outline' : 'eye-outline'} size={16} color={theme.textSecondary} />
+                  <ThemedText type="small" themeColor="textSecondary">
+                    {active ? 'Deactivate' : 'Activate'}
+                  </ThemedText>
+                </Pressable>
+                <Pressable onPress={() => confirmDelete(n)} style={styles.actionButton}>
+                  <Ionicons name="trash-outline" size={16} color={Brand.red} />
+                  <ThemedText type="small" style={{ color: Brand.red }}>
+                    Delete
+                  </ThemedText>
+                </Pressable>
+              </View>
+            </Card>
+          );
+        })
+      )}
+    </Screen>
+    </TeacherGuard>
+  );
+}
+
+const styles = StyleSheet.create({
+  addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.one,
+    paddingVertical: Spacing.three,
+    borderRadius: Radius.pill,
+    marginBottom: Spacing.four,
+  },
+  addButtonLabel: {
+    color: Brand.white,
+  },
+  card: {
+    marginBottom: Spacing.three,
+  },
+  cardInactive: {
+    opacity: 0.65,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: Spacing.two,
+    marginBottom: Spacing.one,
+  },
+  statusTag: {
+    paddingHorizontal: Spacing.two,
+    paddingVertical: 2,
+    borderRadius: Radius.sm,
+  },
+  cardTitle: {
+    flex: 1,
+  },
+  cardBody: {
+    lineHeight: 18,
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    gap: Spacing.four,
+    marginTop: Spacing.three,
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+});

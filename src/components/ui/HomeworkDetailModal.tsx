@@ -1,0 +1,155 @@
+import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
+import React, { useState } from 'react';
+import { Dimensions, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+
+import { Radius, Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
+import { FullScreenGallery } from './FullScreenGallery';
+import { ThemedText } from './ThemedText';
+
+// A percentage width ('48%') can resolve to 0 for a ScrollView's direct
+// children in some layout passes, silently collapsing the photo grid — use
+// a pixel size computed from the screen instead.
+const SHEET_PADDING = Spacing.four * 2;
+const PHOTO_GAP = Spacing.two;
+const PHOTO_SIZE = (Dimensions.get('window').width - SHEET_PADDING - PHOTO_GAP) / 2;
+
+interface HomeworkDetailModalProps {
+  visible: boolean;
+  onClose: () => void;
+  subject: string;
+  date: string;
+  description: string | null;
+  photoUrls: string[];
+  teacherName?: string | null;
+}
+
+/** Full-detail view for one homework entry — subject, date, complete
+ * description text, and every attached photo at a readable size, opened by
+ * tapping an entry in either the teacher or student calendar list. */
+export function HomeworkDetailModal({ visible, onClose, subject, date, description, photoUrls, teacherName }: HomeworkDetailModalProps) {
+  const theme = useTheme();
+  const [galleryIndex, setGalleryIndex] = useState<number | null>(null);
+
+  return (
+    <Modal visible={visible} animationType="slide" onRequestClose={onClose} transparent>
+      <View style={styles.backdrop}>
+        <View style={[styles.sheet, { backgroundColor: theme.background }]}>
+          <View style={styles.handleWrap}>
+            <View style={[styles.handle, { backgroundColor: theme.border }]} />
+          </View>
+          <View style={styles.header}>
+            <View style={styles.headerText}>
+              <ThemedText type="title">{subject}</ThemedText>
+              <ThemedText type="small" themeColor="textSecondary">
+                {date}
+              </ThemedText>
+              {teacherName ? (
+                <ThemedText type="small" themeColor="textSecondary">
+                  Assigned by {teacherName}
+                </ThemedText>
+              ) : null}
+            </View>
+            <Pressable onPress={onClose} hitSlop={10}>
+              <Ionicons name="close" size={24} color={theme.text} />
+            </Pressable>
+          </View>
+
+          <ScrollView showsVerticalScrollIndicator={false} style={styles.body}>
+            {description ? (
+              <ThemedText type="default" style={styles.description}>
+                {description}
+              </ThemedText>
+            ) : (
+              <ThemedText type="default" themeColor="textSecondary" style={styles.description}>
+                No description added.
+              </ThemedText>
+            )}
+
+            {photoUrls.length > 0 ? (
+              <>
+                <ThemedText type="smallBold" themeColor="textSecondary" style={styles.photosLabel}>
+                  ATTACHMENTS
+                </ThemedText>
+                <View style={styles.photoGrid}>
+                  {photoUrls.map((uri, i) => (
+                    <Pressable key={i} onPress={() => setGalleryIndex(i)}>
+                      <Image source={{ uri }} style={styles.photo} contentFit="cover" />
+                    </Pressable>
+                  ))}
+                </View>
+              </>
+            ) : null}
+          </ScrollView>
+        </View>
+      </View>
+
+      {galleryIndex !== null ? (
+        <FullScreenGallery
+          visible
+          photoUrls={photoUrls}
+          initialIndex={galleryIndex}
+          onClose={() => setGalleryIndex(null)}
+        />
+      ) : null}
+    </Modal>
+  );
+}
+
+const styles = StyleSheet.create({
+  backdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  sheet: {
+    maxHeight: '85%',
+    borderTopLeftRadius: Radius.lg,
+    borderTopRightRadius: Radius.lg,
+    paddingHorizontal: Spacing.four,
+    paddingBottom: Spacing.five,
+  },
+  handleWrap: {
+    alignItems: 'center',
+    paddingVertical: Spacing.two,
+  },
+  handle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.three,
+  },
+  headerText: {
+    flex: 1,
+    gap: 2,
+    marginRight: Spacing.two,
+  },
+  body: {
+    marginBottom: Spacing.two,
+  },
+  description: {
+    lineHeight: 22,
+    marginBottom: Spacing.four,
+  },
+  photosLabel: {
+    marginBottom: Spacing.two,
+    letterSpacing: 0.5,
+  },
+  photoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.two,
+    paddingBottom: Spacing.four,
+  },
+  photo: {
+    width: PHOTO_SIZE,
+    height: PHOTO_SIZE,
+    borderRadius: Radius.sm,
+  },
+});

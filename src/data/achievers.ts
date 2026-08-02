@@ -7,6 +7,7 @@ export interface Achiever {
   score: number;
   total: number;
   percent: number;
+  grade: string;
   photoUrl: string | null;
 }
 
@@ -18,6 +19,7 @@ export function toAchiever(a: ApiAchiever): Achiever {
     score: a.score,
     total: a.total,
     percent: a.percent,
+    grade: a.grade,
     photoUrl: a.photo_url,
   };
 }

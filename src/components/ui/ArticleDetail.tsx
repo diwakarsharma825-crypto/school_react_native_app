@@ -1,27 +1,30 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { Radius, Spacing } from '@/constants/theme';
+import type { EventMediaItem } from '@/data/types';
 import { useTheme } from '@/hooks/use-theme';
 import { formatDate, stripHtml } from '@/lib/format';
+import { EventMediaCarousel } from './EventMediaCarousel';
 import { ThemedText } from './ThemedText';
 
 interface ArticleDetailProps {
   title: string;
   date: string;
   imageUrl: string;
+  coverMedia?: EventMediaItem | null;
+  images?: string[];
   body: string;
   location?: string | null;
 }
 
-export function ArticleDetail({ title, date, imageUrl, body, location }: ArticleDetailProps) {
+export function ArticleDetail({ title, date, imageUrl, coverMedia, images, body, location }: ArticleDetailProps) {
   const theme = useTheme();
 
   return (
     <View>
-      <Image source={{ uri: imageUrl }} style={styles.hero} contentFit="cover" />
+      <EventMediaCarousel coverMedia={coverMedia} images={images} fallbackUrl={imageUrl} style={styles.hero} />
       <ThemedText type="title" style={styles.title}>
         {title}
       </ThemedText>

@@ -5,12 +5,23 @@ import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { Brand, Radius, Spacing } from '@/constants/theme';
 import { Card } from '@/components/ui/Card';
+import { HomeworkDetailModal } from '@/components/ui/HomeworkDetailModal';
+import { PasswordInput } from '@/components/ui/PasswordInput';
+import { ProfileHeaderBar } from '@/components/ui/ProfileHeaderBar';
+import { ChildSwitcherCard } from '@/components/ui/ChildSwitcherCard';
 import { Screen } from '@/components/ui/Screen';
 import { EmptyState, ErrorState, Loading } from '@/components/ui/states';
 import { ThemedText } from '@/components/ui/ThemedText';
-import { fetchHomeworkDates, fetchHomeworkForDate, HomeworkEntry, studentLogin } from '@/data/homework-api';
-import { clearHomeworkAccess, getHomeworkAccess, HomeworkAccess, saveHomeworkAccess } from '@/lib/homework-access';
+import { fetchCurrentAcademicYear } from '@/data/api';
+import { fetchHomeworkDates, fetchHomeworkForDate, HomeworkEntry, registerStudentPushToken, studentLogin } from '@/data/homework-api';
+import { teacherLogout } from '@/data/teacher-api';
+import { useStudentAuth } from '@/hooks/use-student-auth';
+import { useTeacherAuth } from '@/hooks/use-teacher-auth';
+import { getFcmPushToken } from '@/lib/notifications';
+import { clearHomeworkAccess, HomeworkAccess, saveHomeworkChildren } from '@/lib/homework-access';
 import { useTheme } from '@/hooks/use-theme';
+import { useSectionEnabled } from '@/hooks/use-sections';
+import { SectionUnavailable } from '@/components/ui/SectionUnavailable';
 
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -22,8 +33,9 @@ function pad(n: number) {
   return n < 10 ? `0${n}` : String(n);
 }
 
-function AccessForm({ onDone }: { onDone: (access: HomeworkAccess) => void }) {
+function AccessForm({ onDone }: { onDone: () => void }) {
   const theme = useTheme();
+  const { setLoggedIn: setTeacherLoggedIn } = useTeacherAuth();
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -37,15 +49,28 @@ function AccessForm({ onDone }: { onDone: (access: HomeworkAccess) => void }) {
     setSubmitting(true);
     setError(null);
     try {
-      const result = await studentLogin(identifier.trim(), password);
-      const access: HomeworkAccess = {
+      // One login can return several sibling children sharing this
+      // phone+password — all get saved, the app defaults to the first and
+      // lets the parent/student switch later without re-entering anything.
+      const results = await studentLogin(identifier.trim(), password);
+      const children: HomeworkAccess[] = results.map((result) => ({
         name: result.name,
         srn: result.srn,
         className: result.class,
         section: result.section,
-      };
-      await saveHomeworkAccess(access);
-      onDone(access);
+        phone: result.phone,
+        gender: result.gender,
+        photoUrl: result.photo_url,
+      }));
+      // Only one identity is "active" on this device at a time — logging
+      // in as a student clears any teacher session, same reasoning as the
+      // reverse on the teacher login screen.
+      await teacherLogout().catch(() => {});
+      setTeacherLoggedIn(false);
+      await saveHomeworkChildren(children);
+      onDone();
+      const pushToken = await getFcmPushToken();
+      if (pushToken) registerStudentPushToken(identifier.trim(), pushToken).catch(() => {});
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Login failed.');
     } finally {
@@ -78,14 +103,7 @@ function AccessForm({ onDone }: { onDone: (access: HomeworkAccess) => void }) {
       <ThemedText type="smallBold" style={styles.fieldLabel}>
         Password
       </ThemedText>
-      <TextInput
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-        placeholder="Password"
-        placeholderTextColor={theme.textSecondary}
-        style={[styles.input, { borderColor: theme.border, color: theme.text }]}
-      />
+      <PasswordInput value={password} onChangeText={setPassword} placeholder="Password" />
 
       {error ? (
         <ThemedText type="small" style={styles.error}>
@@ -108,6 +126,7 @@ function AccessForm({ onDone }: { onDone: (access: HomeworkAccess) => void }) {
 
 function HomeworkCalendar({ access, onLogout }: { access: HomeworkAccess; onLogout: () => void }) {
   const theme = useTheme();
+  const { allChildren, switchChild } = useStudentAuth();
   const today = new Date();
   const [viewYear, setViewYear] = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth() + 1);
@@ -118,6 +137,14 @@ function HomeworkCalendar({ access, onLogout }: { access: HomeworkAccess; onLogo
   const [entries, setEntries] = useState<HomeworkEntry[]>([]);
   const [loadingEntries, setLoadingEntries] = useState(true);
   const [error, setError] = useState(false);
+  const [detailEntry, setDetailEntry] = useState<HomeworkEntry | null>(null);
+  const [sessionLabel, setSessionLabel] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    fetchCurrentAcademicYear()
+      .then((r) => setSessionLabel(r.label))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     fetchHomeworkDates(access.className, access.section || undefined, viewYear, viewMonth)
@@ -159,20 +186,23 @@ function HomeworkCalendar({ access, onLogout }: { access: HomeworkAccess; onLogo
 
   return (
     <>
-      <View style={styles.studentHeader}>
-        <View>
-          <ThemedText type="smallBold">{access.name}</ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">
-            Class {access.className}
-            {access.section ? ` - ${access.section}` : ''} · SRN {access.srn}
-          </ThemedText>
-        </View>
-        <Pressable onPress={onLogout} hitSlop={8}>
-          <ThemedText type="small" themeColor="tint">
-            Log out
-          </ThemedText>
-        </Pressable>
-      </View>
+      {/* No menu here — Change Password/Log out now live under the More
+          tab's Account section, so a second menu here was redundant. */}
+      {allChildren.length > 1 ? (
+        <ChildSwitcherCard siblings={allChildren} activeSrn={access.srn} onSwitch={switchChild} sessionLabel={sessionLabel} />
+      ) : (
+        <ProfileHeaderBar
+          icon="school"
+          name={access.name}
+          photoUrl={access.photoUrl}
+          contact={access.phone || undefined}
+          subtitle={`${/\bclass\b/i.test(access.className) ? access.className : `Class ${access.className}`}${
+            access.section ? ` - ${access.section}` : ''
+          } · SRN ${access.srn}`}
+          sessionLabel={sessionLabel}
+          menu={[]}
+        />
+      )}
 
       <Card style={styles.calendarCard}>
         <View style={styles.calendarHeader}>
@@ -225,35 +255,53 @@ function HomeworkCalendar({ access, onLogout }: { access: HomeworkAccess; onLogo
         <EmptyState message="No homework for this date." icon="book-outline" />
       ) : (
         entries.map((entry) => (
-          <Card key={entry.id} style={styles.entryCard}>
-            <ThemedText type="smallBold">{entry.subject}</ThemedText>
-            {entry.description ? (
-              <ThemedText type="small" themeColor="textSecondary" style={styles.entryDescription}>
-                {entry.description}
-              </ThemedText>
-            ) : null}
-            {entry.attachments.length > 0 ? (
-              <View style={styles.attachmentRow}>
-                {entry.attachments.map((att, i) => (
-                  <Image key={i} source={{ uri: att.photo_url }} style={styles.attachmentThumb} contentFit="cover" />
-                ))}
-              </View>
-            ) : null}
-          </Card>
+          <Pressable key={entry.id} onPress={() => setDetailEntry(entry)}>
+            <Card style={styles.entryCard}>
+              <ThemedText type="smallBold">{entry.subject}</ThemedText>
+              {entry.teacher_name ? (
+                <ThemedText type="small" themeColor="textSecondary" style={styles.entryTeacher}>
+                  Assigned by {entry.teacher_name}
+                </ThemedText>
+              ) : null}
+              {entry.description ? (
+                <ThemedText type="small" themeColor="textSecondary" style={styles.entryDescription} numberOfLines={2}>
+                  {entry.description}
+                </ThemedText>
+              ) : null}
+              {entry.attachments.length > 0 ? (
+                <View style={styles.attachmentRow}>
+                  {entry.attachments.map((att, i) => (
+                    <Image key={i} source={{ uri: att.photo_url }} style={styles.attachmentThumb} contentFit="cover" />
+                  ))}
+                </View>
+              ) : null}
+            </Card>
+          </Pressable>
         ))
       )}
+
+      {detailEntry ? (
+        <HomeworkDetailModal
+          visible
+          onClose={() => setDetailEntry(null)}
+          subject={detailEntry.subject}
+          date={detailEntry.homework_date}
+          description={detailEntry.description}
+          photoUrls={detailEntry.attachments.map((a) => a.photo_url)}
+          teacherName={detailEntry.teacher_name}
+        />
+      ) : null}
     </>
   );
 }
 
 export default function HomeworkScreen() {
-  const [access, setAccess] = useState<HomeworkAccess | null | undefined>(undefined);
+  const { checking, access, setAccess, refresh } = useStudentAuth();
+  const enabled = useSectionEnabled('homework');
 
-  useEffect(() => {
-    getHomeworkAccess().then(setAccess);
-  }, []);
+  if (!enabled) return <SectionUnavailable />;
 
-  if (access === undefined) {
+  if (checking) {
     return (
       <Screen scroll={false}>
         <Loading label="Loading…" />
@@ -272,19 +320,13 @@ export default function HomeworkScreen() {
           }}
         />
       ) : (
-        <AccessForm onDone={setAccess} />
+        <AccessForm onDone={refresh} />
       )}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  studentHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: Spacing.three,
-  },
   formTitle: {
     marginBottom: Spacing.one,
   },
@@ -359,6 +401,9 @@ const styles = StyleSheet.create({
   },
   entryCard: {
     marginBottom: Spacing.three,
+  },
+  entryTeacher: {
+    marginTop: 2,
   },
   entryDescription: {
     marginTop: Spacing.one,

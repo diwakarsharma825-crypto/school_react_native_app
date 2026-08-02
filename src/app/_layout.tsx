@@ -8,10 +8,12 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { OfflineScreen } from '@/components/ui/OfflineScreen';
 import { LaunchScreen } from '@/components/ui/LaunchScreen';
 import { DynamicBottomBar } from '@/components/ui/DynamicBottomBar';
+import { TrialBanner } from '@/components/ui/TrialBanner';
 
 import { useTheme } from '@/hooks/use-theme';
 import { BrandProvider } from '@/hooks/use-brand';
 import { LayoutProvider } from '@/hooks/use-layout';
+import { StudentAuthProvider } from '@/hooks/use-student-auth';
 import { TeacherAuthProvider } from '@/hooks/use-teacher-auth';
 import { ThemeModeProvider } from '@/hooks/use-theme-mode';
 import {
@@ -22,6 +24,7 @@ import {
   fetchAppStatus,
   registerDevice,
 } from '@/data/app-status';
+import { BASE_URL } from '@/data/api';
 import { getAppVersion } from '@/lib/device';
 import { isOnboardingComplete } from '@/lib/onboarding';
 import { configureNotificationHandler, ensureNotificationChannel, getFcmPushToken } from '@/lib/notifications';
@@ -51,6 +54,8 @@ const FAIL_OPEN_STATUS: AppStatus = {
   accentColor: null,
   homeTiles: DEFAULT_HOME_TILES,
   bottomTabs: DEFAULT_BOTTOM_TABS,
+  achieversDisplay: 'marks',
+  trial: { startDate: '', totalDays: 7, remainingDays: 7, ended: false, features: [] },
 };
 
 function RootLayoutInner() {
@@ -58,7 +63,23 @@ function RootLayoutInner() {
   const [status, setStatus] = useState<AppStatus | null>(null);
   const [checking, setChecking] = useState(true);
   const [onboarded, setOnboarded] = useState<boolean | null>(null);
+  const [offline, setOffline] = useState(false);
   const networkState = useNetworkState();
+
+  // expo-network's isConnected can report stale/incorrect state (especially
+  // right after app resume on Android), so never trust it alone to show a
+  // full-screen takeover — confirm with a real network request first.
+  const probeConnectivity = useCallback(async () => {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 6000);
+      await fetch(`${BASE_URL}/app_status`, { method: 'HEAD', signal: controller.signal });
+      clearTimeout(timeout);
+      return true;
+    } catch {
+      return false;
+    }
+  }, []);
 
   const checkStatus = useCallback(async () => {
     setChecking(true);
@@ -94,11 +115,39 @@ function RootLayoutInner() {
   }, [theme.background]);
 
   // Explicit false only — undefined means "not resolved yet", not "offline".
-  if (networkState.isConnected === false) {
+  // The hook alone is unreliable, so confirm with a real probe before
+  // showing the takeover, and clear it immediately once we're back online
+  // (the hook flipping true, or our own probe succeeding on retry).
+  useEffect(() => {
+    if (networkState.isConnected === false) {
+      let cancelled = false;
+      probeConnectivity().then((reachable) => {
+        if (!cancelled) setOffline(!reachable);
+      });
+      return () => {
+        cancelled = true;
+      };
+    }
+    if (networkState.isConnected === true) {
+      setOffline(false);
+    }
+  }, [networkState.isConnected, probeConnectivity]);
+
+  const handleOfflineRetry = useCallback(async () => {
+    setChecking(true);
+    const reachable = await probeConnectivity();
+    if (reachable) {
+      setOffline(false);
+      await checkStatus();
+    }
+    setChecking(false);
+  }, [probeConnectivity, checkStatus]);
+
+  if (offline) {
     return (
       <SafeAreaProvider>
         <StatusBar style="light" />
-        <OfflineScreen onRetry={checkStatus} retrying={checking} />
+        <OfflineScreen onRetry={handleOfflineRetry} retrying={checking} />
       </SafeAreaProvider>
     );
   }
@@ -141,6 +190,7 @@ function RootLayoutInner() {
           logoUrl: status?.appLogoUrl ?? null,
           primaryColor: status?.primaryColor ?? null,
           accentColor: status?.accentColor ?? null,
+          achieversDisplay: status?.achieversDisplay ?? 'marks',
         }}
       >
       <LayoutProvider
@@ -169,19 +219,39 @@ function RootLayoutInner() {
             <Stack.Screen name="about" options={{ header: () => <DetailHeader title="About Us" /> }} />
             <Stack.Screen name="teachers" options={{ header: () => <DetailHeader title="Our Teachers" /> }} />
             <Stack.Screen name="top-students" options={{ header: () => <DetailHeader title="Top Students" /> }} />
+            <Stack.Screen name="achiever-detail" options={{ headerShown: false, animation: 'fade' }} />
             <Stack.Screen name="disclosure" options={{ header: () => <DetailHeader title="Mandatory Disclosure" /> }} />
             <Stack.Screen name="notifications" options={{ header: () => <DetailHeader title="Notifications" /> }} />
             <Stack.Screen name="homework" options={{ header: () => <DetailHeader title="Homework" /> }} />
             <Stack.Screen name="login" options={{ header: () => <DetailHeader title="Login" /> }} />
+            <Stack.Screen name="profile" options={{ header: () => <DetailHeader title="Profile" /> }} />
             <Stack.Screen name="teacher-login" options={{ header: () => <DetailHeader title="Teacher Login" /> }} />
+            <Stack.Screen name="teacher-forgot-password" options={{ header: () => <DetailHeader title="Reset Password" /> }} />
             <Stack.Screen name="teacher-profile-setup" options={{ header: () => <DetailHeader title="Complete Your Profile" /> }} />
             <Stack.Screen name="teacher-dashboard" options={{ header: () => <DetailHeader title="Dashboard" /> }} />
+            <Stack.Screen name="student-dashboard" options={{ header: () => <DetailHeader title="Dashboard" /> }} />
             <Stack.Screen name="teacher-homework" options={{ header: () => <DetailHeader title="Homework" /> }} />
             <Stack.Screen name="teacher-homework-add" options={{ header: () => <DetailHeader title="Add Homework" /> }} />
+            <Stack.Screen name="teacher-event-add" options={{ header: () => <DetailHeader title="Event" /> }} />
+            <Stack.Screen name="teacher-events" options={{ header: () => <DetailHeader title="Manage Events" /> }} />
+            <Stack.Screen name="teacher-add-notice" options={{ header: () => <DetailHeader title="Notice" /> }} />
+            <Stack.Screen name="teacher-notices" options={{ header: () => <DetailHeader title="Manage Notices" /> }} />
+            <Stack.Screen name="teacher-add-student" options={{ header: () => <DetailHeader title="Add Student" /> }} />
+            <Stack.Screen name="teacher-attendance" options={{ header: () => <DetailHeader title="Attendance" /> }} />
+            <Stack.Screen name="teacher-export" options={{ header: () => <DetailHeader title="Export Reports" /> }} />
+            <Stack.Screen name="teacher-leaves" options={{ header: () => <DetailHeader title="Leave Requests" /> }} />
+            <Stack.Screen name="apply-leave" options={{ header: () => <DetailHeader title="Apply for Leave" /> }} />
+            <Stack.Screen name="teacher-fees" options={{ header: () => <DetailHeader title="Fee Dues" /> }} />
+            <Stack.Screen name="fees" options={{ header: () => <DetailHeader title="Fees" /> }} />
+            <Stack.Screen name="teacher-storage" options={{ header: () => <DetailHeader title="My Storage" /> }} />
+            <Stack.Screen name="student-attendance" options={{ header: () => <DetailHeader title="My Attendance" /> }} />
+            <Stack.Screen name="storage-usage" options={{ header: () => <DetailHeader title="Storage" /> }} />
+            <Stack.Screen name="change-password" options={{ header: () => <DetailHeader title="Change Password" /> }} />
             <Stack.Screen name="gallery/[id]" options={{ header: () => <DetailHeader title="Album" /> }} />
           </Stack>
           <DynamicBottomBar />
         </View>
+        {status?.trial ? <TrialBanner trial={status.trial} /> : null}
       </SectionsProvider>
       </LayoutProvider>
       </BrandProvider>
@@ -193,7 +263,9 @@ export default function RootLayout() {
   return (
     <ThemeModeProvider>
       <TeacherAuthProvider>
-        <RootLayoutInner />
+        <StudentAuthProvider>
+          <RootLayoutInner />
+        </StudentAuthProvider>
       </TeacherAuthProvider>
     </ThemeModeProvider>
   );

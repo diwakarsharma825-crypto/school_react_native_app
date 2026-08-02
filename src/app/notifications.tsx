@@ -1,18 +1,20 @@
 import { Image } from 'expo-image';
-import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import React, { useState } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Radius, Spacing } from '@/constants/theme';
 import { Card } from '@/components/ui/Card';
+import { NotificationDetailModal } from '@/components/ui/NotificationDetailModal';
 import { Screen } from '@/components/ui/Screen';
 import { EmptyState, ErrorState, Loading } from '@/components/ui/states';
 import { ThemedText } from '@/components/ui/ThemedText';
-import { fetchNotifications } from '@/data/api';
+import { AppNotification, fetchNotifications } from '@/data/api';
 import { useFetch } from '@/hooks/use-fetch';
 import { formatDate, stripHtml } from '@/lib/format';
 
 export default function NotificationsScreen() {
   const { data, loading, error, refetch } = useFetch(fetchNotifications);
+  const [selected, setSelected] = useState<AppNotification | null>(null);
 
   if (loading && !data) {
     return (
@@ -29,19 +31,34 @@ export default function NotificationsScreen() {
       ) : data && data.length > 0 ? (
         <View>
           {data.map((n) => (
-            <Card key={n.id} style={styles.card}>
-              {n.image_url ? <Image source={{ uri: n.image_url }} style={styles.image} contentFit="cover" /> : null}
-              <ThemedText type="smallBold">{n.title}</ThemedText>
-              <ThemedText type="small" themeColor="textSecondary" style={styles.date}>
-                {formatDate(n.created_at)}
-              </ThemedText>
-              <ThemedText type="small">{stripHtml(n.body)}</ThemedText>
-            </Card>
+            <Pressable key={n.id} onPress={() => setSelected(n)}>
+              <Card style={styles.card}>
+                {n.image_url ? <Image source={{ uri: n.image_url }} style={styles.image} contentFit="cover" /> : null}
+                <ThemedText type="smallBold">{n.title}</ThemedText>
+                <ThemedText type="small" themeColor="textSecondary" style={styles.date}>
+                  {formatDate(n.created_at)}
+                </ThemedText>
+                <ThemedText type="small" numberOfLines={2}>
+                  {stripHtml(n.body)}
+                </ThemedText>
+              </Card>
+            </Pressable>
           ))}
         </View>
       ) : (
         <EmptyState message="No notifications yet." icon="notifications-outline" />
       )}
+
+      {selected ? (
+        <NotificationDetailModal
+          visible
+          onClose={() => setSelected(null)}
+          title={selected.title}
+          date={formatDate(selected.created_at)}
+          body={stripHtml(selected.body)}
+          imageUrl={selected.image_url}
+        />
+      ) : null}
     </Screen>
   );
 }

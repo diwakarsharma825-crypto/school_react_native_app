@@ -54,6 +54,7 @@ export interface ApiAchiever {
   score: number;
   total: number;
   percent: number;
+  grade: string;
   photo_url: string | null;
 }
 
@@ -67,6 +68,11 @@ export interface NewsItem {
   image_url: string;
 }
 
+export interface EventMediaItem {
+  type: 'image' | 'video';
+  url: string;
+}
+
 export interface EventItem {
   id: number | string;
   title: string;
@@ -77,6 +83,17 @@ export interface EventItem {
   event_place?: string | null;
   image?: string;
   image_url: string;
+  /** Extra photos/videos beyond the cover image — only present on the
+   * single-event detail fetch, not the list. */
+  media?: EventMediaItem[];
+  /** The one media item every card shows — a video if this event has one
+   * (plays muted/autoplay there), else the cover image, else the first
+   * extra photo. Present on the list, home spotlight, and detail. */
+  cover_media?: EventMediaItem | null;
+  /** Every image for this event (cover + extras, no videos), cover-first —
+   * when there's no video, the card swipes through these instead of
+   * showing just one. */
+  images?: string[];
 }
 
 export interface Notice {

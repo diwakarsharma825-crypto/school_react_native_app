@@ -11,7 +11,11 @@ export type SectionKey =
   | 'result'
   | 'teachers'
   | 'top_students'
-  | 'disclosure';
+  | 'disclosure'
+  | 'homework'
+  | 'attendance'
+  | 'leave'
+  | 'fees';
 
 /** Admin-controlled section visibility. Defaults to all-true so nothing
  * flickers hidden while the first app_status check is still in flight. */
@@ -25,11 +29,15 @@ export const ALL_SECTIONS_ENABLED: EnabledSections = {
   teachers: true,
   top_students: true,
   disclosure: true,
+  homework: true,
+  attendance: true,
+  leave: true,
+  fees: true,
 };
 
 export interface AppStatus {
   enabled: boolean;
-  reason: 'device_blocked' | 'app_disabled' | null;
+  reason: 'device_blocked' | 'app_disabled' | 'not_allowed' | null;
   title: string | null;
   message: string | null;
   devName: string | null;
@@ -44,7 +52,27 @@ export interface AppStatus {
   accentColor: string | null;
   homeTiles: LayoutItem[];
   bottomTabs: LayoutItem[];
+  /** Admin-toggled — whether Top Achiever cards show a CBSE-style grade
+   * (A1, A2, ...) or the raw marks (475/500). */
+  achieversDisplay: 'marks' | 'grade';
+  trial: TrialStatus;
 }
+
+export interface TrialStatus {
+  startDate: string;
+  totalDays: number;
+  remainingDays: number;
+  ended: boolean;
+  features: string[];
+}
+
+const FAIL_OPEN_TRIAL: TrialStatus = {
+  startDate: '',
+  totalDays: 7,
+  remainingDays: 7,
+  ended: false,
+  features: [],
+};
 
 /** Matches what the backend seeds app_layout_items with — used as a
  * fail-open fallback if the API doesn't return layout arrays (older
@@ -110,7 +138,7 @@ export async function fetchAppStatus(): Promise<AppStatus> {
   }
   const json = (await response.json()) as ApiEnvelope<{
     enabled: boolean;
-    reason: 'device_blocked' | 'app_disabled' | null;
+    reason: 'device_blocked' | 'app_disabled' | 'not_allowed' | null;
     title: string | null;
     message: string | null;
     dev_name: string | null;
@@ -125,6 +153,14 @@ export async function fetchAppStatus(): Promise<AppStatus> {
     accent_color?: string | null;
     home_tiles?: Array<{ label: string; icon: string; color_bg: string | null; color_fg: string | null; target: string; target_url: string | null }>;
     bottom_tabs?: Array<{ label: string; icon: string; color_bg: string | null; color_fg: string | null; target: string; target_url: string | null }>;
+    achievers_display?: 'marks' | 'grade';
+    trial?: {
+      start_date: string;
+      total_days: number;
+      remaining_days: number;
+      ended: boolean;
+      features: string[];
+    };
   }>;
 
   if (!json.status || !json.data) {
@@ -148,6 +184,16 @@ export async function fetchAppStatus(): Promise<AppStatus> {
     accentColor: json.data.accent_color ?? null,
     homeTiles: parseLayoutItems(json.data.home_tiles, DEFAULT_HOME_TILES),
     bottomTabs: parseLayoutItems(json.data.bottom_tabs, DEFAULT_BOTTOM_TABS),
+    achieversDisplay: json.data.achievers_display === 'grade' ? 'grade' : 'marks',
+    trial: json.data.trial
+      ? {
+          startDate: json.data.trial.start_date,
+          totalDays: json.data.trial.total_days,
+          remainingDays: json.data.trial.remaining_days,
+          ended: json.data.trial.ended,
+          features: json.data.trial.features ?? [],
+        }
+      : FAIL_OPEN_TRIAL,
   };
 }
 

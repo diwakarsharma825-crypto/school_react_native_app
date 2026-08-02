@@ -1,15 +1,17 @@
 {
   "expo": {
-    "name": "Global Private School",
+    "name": "Global Public School",
     "slug": "saarthak-app",
-    "version": "1.0.0",
+    "version": "1.9.3",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "saarthakapp",
     "userInterfaceStyle": "automatic",
     "backgroundColor": "#F5F7FA",
     "ios": {
-      "icon": "./assets/images/icon.png"
+      "icon": "./assets/images/icon.png",
+      "bundleIdentifier": "org.saarthakgimsss.app",
+      "supportsTablet": true
     },
     "android": {
       "package": "org.saarthakgimsss.app",

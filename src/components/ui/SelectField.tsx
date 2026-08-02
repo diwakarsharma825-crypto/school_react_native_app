@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { Modal, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -17,15 +17,25 @@ interface SelectFieldProps {
   value: string | null;
   options: SelectOption[];
   onChange: (value: string) => void;
+  /** Shows a search box at the top of the sheet and filters options
+   * client-side as you type — used for longer lists like homework subjects. */
+  searchable?: boolean;
 }
 
 /** Label + pressable "select" control that opens a bottom-sheet modal list —
  * shared by onboarding (class/stream/designation) and the Result screen
  * (session), so every dropdown in the app looks and behaves the same. */
-export function SelectField({ label, placeholder, value, options, onChange }: SelectFieldProps) {
+export function SelectField({ label, placeholder, value, options, onChange, searchable }: SelectFieldProps) {
   const theme = useTheme();
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
   const selected = options.find((o) => o.value === value);
+
+  const filtered = useMemo(() => {
+    if (!searchable || !query.trim()) return options;
+    const q = query.trim().toLowerCase();
+    return options.filter((o) => o.label.toLowerCase().includes(q));
+  }, [options, query, searchable]);
 
   return (
     <>
@@ -39,26 +49,60 @@ export function SelectField({ label, placeholder, value, options, onChange }: Se
         <Ionicons name="chevron-down" size={18} color={theme.textSecondary} />
       </Pressable>
 
-      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
-        <Pressable style={styles.backdrop} onPress={() => setOpen(false)}>
+      <Modal
+        visible={open}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          setOpen(false);
+          setQuery('');
+        }}
+      >
+        <Pressable
+          style={styles.backdrop}
+          onPress={() => {
+            setOpen(false);
+            setQuery('');
+          }}
+        >
           <View style={[styles.sheet, { backgroundColor: theme.surface }]}>
             <ThemedText type="smallBold" style={styles.sheetTitle}>
               {label}
             </ThemedText>
-            <ScrollView>
-              {options.map((option) => (
-                <Pressable
-                  key={option.value}
-                  onPress={() => {
-                    onChange(option.value);
-                    setOpen(false);
-                  }}
-                  style={[styles.row, { borderBottomColor: theme.border }]}
-                >
-                  <ThemedText type="default">{option.label}</ThemedText>
-                  {option.value === value ? <Ionicons name="checkmark" size={18} color={theme.tint} /> : null}
-                </Pressable>
-              ))}
+            {searchable ? (
+              <View style={[styles.searchBox, { borderColor: theme.border }]}>
+                <Ionicons name="search" size={16} color={theme.textSecondary} />
+                <TextInput
+                  value={query}
+                  onChangeText={setQuery}
+                  placeholder="Search…"
+                  placeholderTextColor={theme.textSecondary}
+                  style={[styles.searchInput, { color: theme.text }]}
+                  autoFocus
+                />
+              </View>
+            ) : null}
+            <ScrollView keyboardShouldPersistTaps="handled">
+              {filtered.length === 0 ? (
+                <ThemedText type="small" themeColor="textSecondary" style={styles.emptyLabel}>
+                  No matches.
+                </ThemedText>
+              ) : (
+                filtered.map((option) => (
+                  <Pressable
+                    key={option.value}
+                    onPress={() => {
+                      onChange(option.value);
+                      setOpen(false);
+                      setQuery('');
+                    }}
+                    style={[styles.row, { borderBottomColor: theme.border }]}
+                  >
+                    <ThemedText type="default">{option.label}</ThemedText>
+                    {option.value === value ? <Ionicons name="checkmark" size={18} color={theme.tint} /> : null}
+                  </Pressable>
+                ))
+              )}
             </ScrollView>
           </View>
         </Pressable>
@@ -80,6 +124,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.sm,
     paddingHorizontal: Spacing.two,
     paddingVertical: Spacing.two + 2,
+    marginBottom: Spacing.two,
   },
   backdrop: {
     flex: 1,
@@ -95,6 +140,24 @@ const styles = StyleSheet.create({
   },
   sheetTitle: {
     marginBottom: Spacing.two,
+  },
+  searchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    borderWidth: 1,
+    borderRadius: Radius.sm,
+    paddingHorizontal: Spacing.two,
+    marginBottom: Spacing.two,
+  },
+  searchInput: {
+    flex: 1,
+    paddingVertical: Spacing.two,
+    fontSize: 16,
+  },
+  emptyLabel: {
+    textAlign: 'center',
+    paddingVertical: Spacing.four,
   },
   row: {
     flexDirection: 'row',

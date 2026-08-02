@@ -1,18 +1,21 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Brand, Radius, Spacing } from '@/constants/theme';
+import type { EventMediaItem } from '@/data/types';
 import { useTheme } from '@/hooks/use-theme';
 import { excerptFrom, formatDateShort } from '@/lib/format';
 import { Card } from './Card';
+import { EventMediaCarousel } from './EventMediaCarousel';
 import { ThemedText } from './ThemedText';
 
 interface MediaCardProps {
   title: string;
   date: string;
   imageUrl: string;
+  coverMedia?: EventMediaItem | null;
+  images?: string[];
   excerpt?: string;
   category: 'News' | 'Event';
   onPress?: () => void;
@@ -20,7 +23,7 @@ interface MediaCardProps {
   width?: number;
 }
 
-export function MediaCard({ title, date, imageUrl, excerpt, category, onPress, width }: MediaCardProps) {
+export function MediaCard({ title, date, imageUrl, coverMedia, images, excerpt, category, onPress, width }: MediaCardProps) {
   const theme = useTheme();
 
   return (
@@ -29,7 +32,7 @@ export function MediaCard({ title, date, imageUrl, excerpt, category, onPress, w
       style={[styles.card, width ? { width, marginRight: Spacing.three } : { marginBottom: Spacing.three }]}
     >
       <View style={styles.imageWrap}>
-        <Image source={{ uri: imageUrl }} style={styles.image} contentFit="cover" />
+        <EventMediaCarousel coverMedia={coverMedia} images={images} fallbackUrl={imageUrl} style={styles.image} />
         <View style={[styles.pill, styles.datePill]}>
           <ThemedText type="small" style={styles.pillText}>
             {formatDateShort(date)}

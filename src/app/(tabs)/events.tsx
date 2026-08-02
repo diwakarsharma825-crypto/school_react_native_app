@@ -36,6 +36,7 @@ export default function EventsScreen() {
               title={e.title}
               date={e.event_from}
               imageUrl={e.image_url}
+              coverMedia={e.cover_media}
               excerpt={e.note}
               category="Event"
               onPress={() => router.push(`/event/${e.id}`)}

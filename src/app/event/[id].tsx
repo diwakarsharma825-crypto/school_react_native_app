@@ -34,6 +34,8 @@ export default function EventDetailScreen() {
         title={data.title}
         date={data.event_from}
         imageUrl={data.image_url}
+        coverMedia={data.cover_media}
+        images={data.images}
         body={data.note ?? ''}
         location={data.event_place}
       />

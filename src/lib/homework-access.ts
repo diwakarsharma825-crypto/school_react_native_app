@@ -1,27 +1,52 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const STORAGE_KEY = 'saarthak.homework_access';
+const CHILDREN_KEY = 'saarthak.homework_children';
+const ACTIVE_KEY = 'saarthak.homework_active_srn';
 
-/** What's saved locally once a student logs in via /student_login — the
- * server-verified class/section from `result_students`, not a manually
- * picked value. Persists until the app is uninstalled, matching what was
- * asked for; there's no separate "session" concept, this IS the session. */
+/** One child's profile — what's saved locally once a student/parent logs in
+ * via /student_login (server-verified against `result_students`, not a
+ * manually picked value). A single phone+password login can return several
+ * of these (siblings at the same school) — see `saveHomeworkChildren()`. */
 export interface HomeworkAccess {
   name: string;
   srn: string;
   className: string;
   section: string;
+  phone?: string;
+  gender?: string | null;
+  photoUrl?: string | null;
 }
 
+/** Saves every child linked to this login. The first child becomes active
+ * unless one is already active and still present in the new list (keeps the
+ * current selection stable across a token refresh/relogin). */
+export async function saveHomeworkChildren(children: HomeworkAccess[]): Promise<void> {
+  await AsyncStorage.setItem(CHILDREN_KEY, JSON.stringify(children));
+  const currentActive = await AsyncStorage.getItem(ACTIVE_KEY);
+  const stillPresent = currentActive && children.some((c) => c.srn === currentActive);
+  if (!stillPresent && children.length > 0) {
+    await AsyncStorage.setItem(ACTIVE_KEY, children[0].srn);
+  }
+}
+
+export async function getHomeworkChildren(): Promise<HomeworkAccess[]> {
+  const raw = await AsyncStorage.getItem(CHILDREN_KEY);
+  return raw ? (JSON.parse(raw) as HomeworkAccess[]) : [];
+}
+
+export async function setActiveChildSrn(srn: string): Promise<void> {
+  await AsyncStorage.setItem(ACTIVE_KEY, srn);
+}
+
+/** The currently active child — what every existing screen (Homework,
+ * Attendance, Result) reads as "who's logged in". */
 export async function getHomeworkAccess(): Promise<HomeworkAccess | null> {
-  const raw = await AsyncStorage.getItem(STORAGE_KEY);
-  return raw ? (JSON.parse(raw) as HomeworkAccess) : null;
-}
-
-export async function saveHomeworkAccess(access: HomeworkAccess): Promise<void> {
-  await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(access));
+  const children = await getHomeworkChildren();
+  if (children.length === 0) return null;
+  const activeSrn = await AsyncStorage.getItem(ACTIVE_KEY);
+  return children.find((c) => c.srn === activeSrn) ?? children[0];
 }
 
 export async function clearHomeworkAccess(): Promise<void> {
-  await AsyncStorage.removeItem(STORAGE_KEY);
+  await AsyncStorage.multiRemove([CHILDREN_KEY, ACTIVE_KEY]);
 }
