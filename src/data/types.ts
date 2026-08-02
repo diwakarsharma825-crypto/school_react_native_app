@@ -55,6 +55,10 @@ export interface ApiAchiever {
   total: number;
   percent: number;
   grade: string;
+  /** Per-student choice from the Student admin form ("Show As"), falling
+   * back to the app-wide Marks/Grade toggle for curated achievers that
+   * predate this field. */
+  show_as?: 'marks' | 'grade';
   photo_url: string | null;
 }
 

@@ -6,7 +6,6 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AvatarFgPalette, AvatarPalette, Brand, Radius, Spacing } from '@/constants/theme';
 import type { Achiever } from '@/data/achievers';
-import { useBrand } from '@/hooks/use-brand';
 import { Card } from '../ui/Card';
 import { ThemedText } from '../ui/ThemedText';
 
@@ -17,9 +16,10 @@ interface AchieverCardProps {
 }
 
 export function AchieverCard({ achiever, paletteIndex, width }: AchieverCardProps) {
-  const { achieversDisplay } = useBrand();
   const router = useRouter();
-  const showGrade = achieversDisplay === 'grade';
+  // Each student can be individually set to show a grade or marks (Student
+  // admin → Show As) — no longer a single app-wide toggle.
+  const showGrade = achiever.showAs === 'grade';
   return (
     <Pressable
       onPress={() =>
