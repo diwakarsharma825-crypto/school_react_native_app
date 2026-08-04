@@ -4,6 +4,7 @@ import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications';
 import React, { useEffect, useState } from 'react';
 import { Alert, Linking, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { registerDevice } from '@/data/app-status';
@@ -14,7 +15,7 @@ import { Brand, Radius, Shadow, Spacing } from '@/constants/theme';
 import { useFetch } from '@/hooks/use-fetch';
 import { useStudentAuth } from '@/hooks/use-student-auth';
 import { useTeacherAuth } from '@/hooks/use-teacher-auth';
-import { HomeworkAccess, saveHomeworkChildren } from '@/lib/homework-access';
+import { HomeworkAccess, saveHomeworkChildren, savePendingRegistration } from '@/lib/homework-access';
 import { markOnboardingComplete } from '@/lib/onboarding';
 import { getFcmPushToken } from '@/lib/notifications';
 import { useTheme } from '@/hooks/use-theme';
@@ -180,6 +181,10 @@ export function OnboardingFlow({ onDone }: OnboardingFlowProps) {
             srn: srn.trim(),
             gender: gender ?? undefined,
           });
+          // Also remembered locally so the Home screen can keep reminding
+          // them even after this one-time alert is dismissed and the app
+          // is closed/reopened while still awaiting activation.
+          await savePendingRegistration({ name: trimmedName, className: studentClass ?? '' });
           setTimeout(() => {
             Alert.alert(
               'Registered!',
@@ -188,7 +193,17 @@ export function OnboardingFlow({ onDone }: OnboardingFlowProps) {
           }, 400);
         } catch (registerError) {
           setFinishing(false);
-          setPasswordError(registerError instanceof Error ? registerError.message : 'Could not verify your password.');
+          const message = registerError instanceof Error ? registerError.message : 'Could not register. Please try again.';
+          // The backend's duplicate-registration error is about the SRN, not
+          // the password — showing it under Password (as before) misled
+          // students into thinking their password was wrong.
+          if (/srn/i.test(message)) {
+            setSrnError(message);
+            setPasswordError(null);
+          } else {
+            setPasswordError(message);
+            setSrnError(null);
+          }
           setStep(3);
           return;
         }
@@ -228,7 +243,14 @@ export function OnboardingFlow({ onDone }: OnboardingFlowProps) {
       )}
       <StepDots total={TOTAL_STEPS} current={step} />
 
-      <View style={styles.body}>
+      <KeyboardAwareScrollView
+        style={styles.flex}
+        contentContainerStyle={styles.bodyScroll}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        bottomOffset={24}
+        showsVerticalScrollIndicator={false}
+      >
         {step === 0 ? <WelcomeStep schoolName={schoolName} /> : null}
         {step === 1 ? (
           <BelongingStep value={belonging} onChange={setBelonging} schoolName={schoolName} address={address} />
@@ -267,8 +289,15 @@ export function OnboardingFlow({ onDone }: OnboardingFlowProps) {
             onGender={setGender}
           />
         ) : null}
-        {step === 4 ? <PermissionsStep onGranted={completeOnboarding} busy={finishing} /> : null}
-      </View>
+        {step === 4 ? (
+          <PermissionsStep
+            onGranted={completeOnboarding}
+            onSkip={completeOnboarding}
+            busy={finishing}
+            allowSkip={belonging === 'other' || userType === 'other'}
+          />
+        ) : null}
+      </KeyboardAwareScrollView>
 
       {step < 4 ? (
         <View style={styles.footer}>
@@ -533,7 +562,9 @@ function DetailsStep({
         style={[styles.input, { borderColor: theme.border, color: theme.text }]}
       />
 
-      <SelectField label="Gender" placeholder="Select gender" value={gender} options={GENDER_OPTIONS} onChange={onGender} />
+      {userType !== 'other' ? (
+        <SelectField label="Gender" placeholder="Select gender" value={gender} options={GENDER_OPTIONS} onChange={onGender} />
+      ) : null}
 
       {userType === 'student' ? (
         <>
@@ -564,7 +595,7 @@ function DetailsStep({
           <TextInput
             value={srn}
             onChangeText={onSrn}
-            placeholder="Your school-assigned SRN"
+            placeholder="SRN"
             placeholderTextColor={theme.textSecondary}
             keyboardType="default"
             autoComplete="off"
@@ -611,7 +642,7 @@ function DetailsStep({
         <TextInput
           value={mobile}
           onChangeText={(v) => onMobile(v.replace(/\D/g, '').slice(0, 10))}
-          placeholder="10-digit mobile number"
+          placeholder="Mobile number"
           placeholderTextColor={theme.textSecondary}
           keyboardType="number-pad"
           autoComplete="tel"
@@ -626,7 +657,7 @@ function DetailsStep({
           <ThemedText type="smallBold" style={styles.fieldLabel}>
             Password
           </ThemedText>
-          <PasswordInput value={password} onChangeText={onPassword} placeholder="Password given by your school" />
+          <PasswordInput value={password} onChangeText={onPassword} placeholder="Password" />
           <ThemedText type="small" themeColor="textSecondary" style={styles.fieldHint}>
             Verified against your school record — same login used on the Homework tab.
           </ThemedText>
@@ -649,7 +680,17 @@ function DetailsStep({
   );
 }
 
-function PermissionsStep({ onGranted, busy }: { onGranted: () => void; busy: boolean }) {
+function PermissionsStep({
+  onGranted,
+  onSkip,
+  busy,
+  allowSkip,
+}: {
+  onGranted: () => void;
+  onSkip: () => void;
+  busy: boolean;
+  allowSkip: boolean;
+}) {
   const theme = useTheme();
   const [notifStatus, setNotifStatus] = useState<'unknown' | 'granted' | 'denied'>('unknown');
   const [locationStatus, setLocationStatus] = useState<'unknown' | 'granted' | 'denied'>('unknown');
@@ -679,7 +720,9 @@ function PermissionsStep({ onGranted, busy }: { onGranted: () => void; busy: boo
         Two permissions needed
       </ThemedText>
       <ThemedText type="default" themeColor="textSecondary" style={[styles.stepSubtitle, styles.centerText]}>
-        Both are required to use the app — you can change them later in your phone&apos;s Settings.
+        {allowSkip
+          ? 'Both help us reach you with school updates — you can change them later in your phone’s Settings, or skip for now.'
+          : "Both are required to use the app — you can change them later in your phone's Settings."}
       </ThemedText>
 
       <View style={[styles.permissionRow, { backgroundColor: theme.surface }]}>
@@ -708,8 +751,9 @@ function PermissionsStep({ onGranted, busy }: { onGranted: () => void; busy: boo
         <View style={styles.errorRow}>
           <Ionicons name="alert-circle" size={16} color={Brand.red} style={styles.errorIcon} />
           <ThemedText type="default" style={{ color: Brand.red, flex: 1 }}>
-            Both permissions are required. If you denied one permanently, open Settings to enable it, then come back
-            and try again.
+            {allowSkip
+              ? 'If you denied one permanently, open Settings to enable it, or skip below to continue without it.'
+              : 'Both permissions are required. If you denied one permanently, open Settings to enable it, then come back and try again.'}
           </ThemedText>
         </View>
       ) : null}
@@ -726,6 +770,14 @@ function PermissionsStep({ onGranted, busy }: { onGranted: () => void; busy: boo
         <Pressable onPress={() => Linking.openSettings()} hitSlop={8} style={styles.settingsLink}>
           <ThemedText type="default" themeColor="tint">
             Open Settings
+          </ThemedText>
+        </Pressable>
+      ) : null}
+
+      {allowSkip ? (
+        <Pressable onPress={onSkip} disabled={busy} hitSlop={8} style={styles.settingsLink}>
+          <ThemedText type="default" themeColor="textSecondary">
+            Skip for now
           </ThemedText>
         </Pressable>
       ) : null}
@@ -766,8 +818,15 @@ const styles = StyleSheet.create({
     width: 24,
     backgroundColor: Brand.blue,
   },
+  flex: {
+    flex: 1,
+  },
   body: {
     flex: 1,
+    paddingHorizontal: Spacing.four,
+  },
+  bodyScroll: {
+    flexGrow: 1,
     paddingHorizontal: Spacing.four,
   },
   footer: {

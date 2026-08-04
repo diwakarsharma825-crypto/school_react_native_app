@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Modal, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { KeyboardAwareScrollView, KeyboardAwareScrollViewRef } from 'react-native-keyboard-controller';
 
 import { Brand, Radius, Spacing } from '@/constants/theme';
 import { Card } from '@/components/ui/Card';
@@ -63,6 +64,7 @@ function AddFeeModal({
   const [file, setFile] = useState<{ uri: string; mimeType?: string | null } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const scrollRef = useRef<KeyboardAwareScrollViewRef>(null);
 
   useEffect(() => {
     if (!visible || !classId) return;
@@ -132,6 +134,13 @@ function AddFeeModal({
             </Pressable>
           </View>
 
+          <KeyboardAwareScrollView
+            ref={scrollRef}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            bottomOffset={24}
+            showsVerticalScrollIndicator={false}
+          >
           <SelectField
             label="Student"
             placeholder={loadingStudents ? 'Loading students…' : 'Select student'}
@@ -149,6 +158,7 @@ function AddFeeModal({
           <TextInput
             value={title}
             onChangeText={setTitle}
+            onFocus={() => scrollRef.current?.assureFocusedInputVisible()}
             placeholder="e.g. August 2026 Monthly Fee"
             placeholderTextColor={theme.textSecondary}
             keyboardType="default"
@@ -165,6 +175,7 @@ function AddFeeModal({
               <TextInput
                 value={amount}
                 onChangeText={setAmount}
+                onFocus={() => scrollRef.current?.assureFocusedInputVisible()}
                 placeholder="0"
                 keyboardType="decimal-pad"
                 autoComplete="off"
@@ -197,6 +208,7 @@ function AddFeeModal({
               {submitting ? 'Adding…' : 'Add Fee'}
             </ThemedText>
           </Pressable>
+          </KeyboardAwareScrollView>
         </View>
       </View>
     </Modal>

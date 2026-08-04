@@ -5,6 +5,7 @@ import { useNetworkState } from 'expo-network';
 import React, { useCallback, useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { OfflineScreen } from '@/components/ui/OfflineScreen';
 import { LaunchScreen } from '@/components/ui/LaunchScreen';
 import { DynamicBottomBar } from '@/components/ui/DynamicBottomBar';
@@ -261,12 +262,14 @@ function RootLayoutInner() {
 
 export default function RootLayout() {
   return (
-    <ThemeModeProvider>
-      <TeacherAuthProvider>
-        <StudentAuthProvider>
-          <RootLayoutInner />
-        </StudentAuthProvider>
-      </TeacherAuthProvider>
-    </ThemeModeProvider>
+    <KeyboardProvider>
+      <ThemeModeProvider>
+        <TeacherAuthProvider>
+          <StudentAuthProvider>
+            <RootLayoutInner />
+          </StudentAuthProvider>
+        </TeacherAuthProvider>
+      </ThemeModeProvider>
+    </KeyboardProvider>
   );
 }

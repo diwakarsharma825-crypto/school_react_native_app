@@ -80,7 +80,6 @@ export default function MoreScreen() {
 
   const accountRows: Row[] = teacherLoggedIn
     ? [
-        { label: 'Profile', icon: 'person-circle-outline', onPress: () => router.push('/teacher-profile-setup') },
         {
           label: 'Change Password',
           icon: 'key-outline',

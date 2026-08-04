@@ -222,6 +222,26 @@ export interface RosterStudent {
   gender?: string | null;
 }
 
+export interface StudentDetail {
+  id: string;
+  name: string;
+  srn: string | null;
+  phone: string | null;
+  gender: string | null;
+  roll_no: string | null;
+  father_name: string | null;
+  mother_name: string | null;
+  photo_url: string | null;
+  account_status: number;
+}
+
+/** Full stored record for one self-registered student — used by the edit
+ * screen to pre-fill every field the student entered at onboarding. `id`
+ * may be the numeric part or the "reg-" form; the backend strips it. */
+export async function fetchStudentDetail(id: string | number): Promise<StudentDetail> {
+  return authedRequest<StudentDetail>(`/teacher_student_detail?id=${encodeURIComponent(String(id))}`);
+}
+
 export async function fetchTeacherStudents(classId: number, sectionId?: number): Promise<RosterStudent[]> {
   const qs = `class_id=${classId}${sectionId ? `&section_id=${sectionId}` : ''}`;
   return authedRequest<RosterStudent[]>(`/teacher_students?${qs}`);

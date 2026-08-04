@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Radius, Spacing } from '@/constants/theme';
 import { Card } from '@/components/ui/Card';
@@ -30,11 +30,12 @@ function InfoRow({ icon, label, value }: { icon: keyof typeof Ionicons.glyphMap;
   );
 }
 
-/** Read-only "who am I" screen reached by tapping the name/avatar row at the
- * top of the Teacher/Student role menu — previously that row wasn't
- * tappable at all. Shows every field the logged-in profile actually carries
- * for whichever role is active; there's no separate edit flow here (teacher
- * class/section edits still live in teacher-profile-setup.tsx). */
+/** "Who am I" screen reached by tapping the name/avatar row at the top of
+ * the Teacher/Student role menu (the single entry point now — the old
+ * duplicate "Profile" row under More → Account routed straight to
+ * teacher-profile-setup.tsx and has been removed). Shows every field the
+ * logged-in profile carries; a teacher also gets an Edit button here that
+ * opens teacher-profile-setup.tsx for the actual class/section edits. */
 export default function ProfileScreen() {
   const theme = useTheme();
   const router = useRouter();
@@ -70,6 +71,15 @@ export default function ProfileScreen() {
           <ThemedText type="small" themeColor="textSecondary">
             {teacherProfile.email ?? '—'}
           </ThemedText>
+          <Pressable
+            onPress={() => router.push('/teacher-profile-setup' as any)}
+            style={[styles.editButton, { borderColor: theme.tint }]}
+          >
+            <Ionicons name="pencil-outline" size={16} color={theme.tint} />
+            <ThemedText type="smallBold" themeColor="tint">
+              Edit Profile
+            </ThemedText>
+          </Pressable>
         </Card>
 
         <Card style={styles.section}>
@@ -160,6 +170,16 @@ const styles = StyleSheet.create({
   name: {
     marginBottom: 2,
     textAlign: 'center',
+  },
+  editButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.one,
+    borderWidth: 1.5,
+    borderRadius: Radius.pill,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.one + 2,
+    marginTop: Spacing.three,
   },
   section: {
     marginBottom: Spacing.three,

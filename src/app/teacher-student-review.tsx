@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { Brand, Radius, Spacing } from '@/constants/theme';
@@ -11,7 +11,7 @@ import { PasswordInput } from '@/components/ui/PasswordInput';
 import { Screen } from '@/components/ui/Screen';
 import { SelectField } from '@/components/ui/SelectField';
 import { ThemedText } from '@/components/ui/ThemedText';
-import { reviewStudent } from '@/data/teacher-api';
+import { fetchStudentDetail, reviewStudent } from '@/data/teacher-api';
 import { useTheme } from '@/hooks/use-theme';
 
 /** One screen for both first-time activation and later edits of a
@@ -48,8 +48,35 @@ export default function TeacherStudentReviewScreen() {
   const [motherName, setMotherName] = useState(params.motherName ?? '');
   const [active, setActive] = useState(params.active === '1');
   const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [remotePhotoUrl, setRemotePhotoUrl] = useState<string | null>(params.photoUrl ?? null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Pull the authoritative stored record on open and pre-fill every field
+  // the student entered at onboarding — the roster list that launched this
+  // screen may not carry all of them (e.g. gender), so nav params alone
+  // aren't reliable for a full edit form.
+  useEffect(() => {
+    if (!params.id) return;
+    let cancelled = false;
+    fetchStudentDetail(params.id)
+      .then((d) => {
+        if (cancelled) return;
+        if (d.name) setName(d.name);
+        if (d.srn) setSrn(d.srn);
+        if (d.phone) setPhone(d.phone);
+        if (d.gender) setGender(d.gender);
+        if (d.roll_no) setRollNo(d.roll_no);
+        if (d.father_name) setFatherName(d.father_name);
+        if (d.mother_name) setMotherName(d.mother_name);
+        setActive(d.account_status === 1);
+        if (d.photo_url) setRemotePhotoUrl(d.photo_url);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [params.id]);
 
   async function pickPhoto() {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -102,8 +129,8 @@ export default function TeacherStudentReviewScreen() {
       <Card style={styles.card}>
         <View style={styles.photoRow}>
           <Pressable onPress={pickPhoto} style={[styles.photoBox, { borderColor: theme.border }]}>
-            {photoUri || params.photoUrl ? (
-              <Image source={{ uri: photoUri ?? params.photoUrl }} style={styles.photo} contentFit="cover" />
+            {photoUri || remotePhotoUrl ? (
+              <Image source={{ uri: photoUri ?? remotePhotoUrl ?? undefined }} style={styles.photo} contentFit="cover" />
             ) : (
               <Ionicons name="camera-outline" size={26} color={theme.textSecondary} />
             )}
@@ -114,7 +141,7 @@ export default function TeacherStudentReviewScreen() {
             </ThemedText>
             <ThemedText type="small" themeColor="textSecondary">
               {params.className}
-              {params.section ? ` - ${params.section}` : ''} · Class/section can't be changed here
+              {params.section ? ` - ${params.section}` : ''} · Class/section is fixed here
             </ThemedText>
           </View>
         </View>

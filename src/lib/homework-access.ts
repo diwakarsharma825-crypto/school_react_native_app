@@ -2,6 +2,30 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const CHILDREN_KEY = 'saarthak.homework_children';
 const ACTIVE_KEY = 'saarthak.homework_active_srn';
+const PENDING_KEY = 'saarthak.pending_registration';
+
+/** A just-submitted self-registration, saved locally so the Home screen can
+ * remind the student it's awaiting their teacher's approval even after they
+ * close and reopen the app (not just in the one-time alert shown right after
+ * registering). Cleared automatically once a real login succeeds — see
+ * saveHomeworkChildren() below — since that only happens post-activation. */
+export interface PendingRegistration {
+  name: string;
+  className: string;
+}
+
+export async function savePendingRegistration(pending: PendingRegistration): Promise<void> {
+  await AsyncStorage.setItem(PENDING_KEY, JSON.stringify(pending));
+}
+
+export async function getPendingRegistration(): Promise<PendingRegistration | null> {
+  const raw = await AsyncStorage.getItem(PENDING_KEY);
+  return raw ? (JSON.parse(raw) as PendingRegistration) : null;
+}
+
+export async function clearPendingRegistration(): Promise<void> {
+  await AsyncStorage.removeItem(PENDING_KEY);
+}
 
 /** One child's profile — what's saved locally once a student/parent logs in
  * via /student_login (server-verified against `result_students`, not a
@@ -22,6 +46,7 @@ export interface HomeworkAccess {
  * current selection stable across a token refresh/relogin). */
 export async function saveHomeworkChildren(children: HomeworkAccess[]): Promise<void> {
   await AsyncStorage.setItem(CHILDREN_KEY, JSON.stringify(children));
+  await clearPendingRegistration();
   const currentActive = await AsyncStorage.getItem(ACTIVE_KEY);
   const stillPresent = currentActive && children.some((c) => c.srn === currentActive);
   if (!stillPresent && children.length > 0) {

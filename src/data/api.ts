@@ -17,6 +17,7 @@ import {
   Stats,
   Teacher,
 } from './types';
+import { getHomeworkAccess } from '@/lib/homework-access';
 
 // ─── Single swap-point ──────────────────────────────────────────────────────
 // The app talks to the real, live Saarthak GIMSSS backend by default.
@@ -198,6 +199,16 @@ export interface AppNotification {
   created_at: string;
 }
 
+/** Includes admin broadcasts (always) plus any teacher-sent notification
+ * scoped to the currently active student's own class/section/SRN — the
+ * backend does the actual filtering, this just tells it who's asking. */
 export async function fetchNotifications(limit = 50): Promise<AppNotification[]> {
-  return getJson<AppNotification[]>(`/notifications?limit=${limit}`);
+  const active = await getHomeworkAccess();
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (active) {
+    params.set('class_name', active.className);
+    if (active.section) params.set('section_name', active.section);
+    params.set('srn', active.srn);
+  }
+  return getJson<AppNotification[]>(`/notifications?${params.toString()}`);
 }

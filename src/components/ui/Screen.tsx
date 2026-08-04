@@ -1,5 +1,6 @@
 import React from 'react';
-import { RefreshControl, ScrollView, StyleSheet, View, ViewStyle } from 'react-native';
+import { RefreshControl, StyleSheet, View, ViewStyle } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Spacing } from '@/constants/theme';
@@ -38,8 +39,17 @@ export function Screen({ children, refreshing = false, onRefresh, scroll = true,
   return (
     <SafeAreaView style={[styles.flex, { backgroundColor: theme.background }]} edges={edges ?? DEFAULT_EDGES}>
       {scroll ? (
-        <ScrollView
+        // KeyboardAwareScrollView (react-native-keyboard-controller) auto-
+        // scrolls the focused input above the keyboard. This app runs with
+        // edge-to-edge enabled, under which Android's windowSoftInputMode=
+        // adjustResize no longer resizes the window — so a plain ScrollView
+        // had no room to scroll and inputs stayed hidden. This library reads
+        // the keyboard frame directly and works on both platforms.
+        <KeyboardAwareScrollView
           contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          bottomOffset={Spacing.five}
           refreshControl={
             onRefresh ? (
               <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.tint} />
@@ -47,7 +57,7 @@ export function Screen({ children, refreshing = false, onRefresh, scroll = true,
           }
         >
           {body}
-        </ScrollView>
+        </KeyboardAwareScrollView>
       ) : (
         body
       )}
