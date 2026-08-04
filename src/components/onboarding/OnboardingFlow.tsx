@@ -103,6 +103,13 @@ export function OnboardingFlow({ onDone }: OnboardingFlowProps) {
   // the device, no server-side account to check against.
   const needsPassword = belonging === 'saarthak' && userType === 'student';
 
+  // Only a student from THIS school self-registers (name/class/SRN/password)
+  // — everyone else (any teacher, any "other profession", and anyone from a
+  // different school) skips the details form entirely and goes straight to
+  // the permission step. Teacher accounts are issued by the principal and
+  // signed in on the dedicated Teacher Login screen, not registered here.
+  const needsDetailsForm = belonging === 'saarthak' && userType === 'student';
+
   function validateDetails(): boolean {
     const trimmedName = fullName.trim();
     const trimmedMobile = mobile.trim();
@@ -161,6 +168,7 @@ export function OnboardingFlow({ onDone }: OnboardingFlowProps) {
           section: result.section,
           phone: result.phone,
           gender: result.gender,
+          dob: result.dob,
           photoUrl: result.photo_url,
         }));
         await saveHomeworkChildren(children);
@@ -235,7 +243,11 @@ export function OnboardingFlow({ onDone }: OnboardingFlowProps) {
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: theme.background }]}>
       {step > 0 ? (
-        <Pressable onPress={() => setStep((s) => s - 1)} hitSlop={10} style={styles.back}>
+        <Pressable
+          onPress={() => setStep((s) => (s === 4 && !needsDetailsForm ? 2 : s - 1))}
+          hitSlop={10}
+          style={styles.back}
+        >
           <Ionicons name="chevron-back" size={24} color={theme.text} />
         </Pressable>
       ) : (
@@ -294,7 +306,7 @@ export function OnboardingFlow({ onDone }: OnboardingFlowProps) {
             onGranted={completeOnboarding}
             onSkip={completeOnboarding}
             busy={finishing}
-            allowSkip={belonging === 'other' || userType === 'other'}
+            allowSkip={!needsDetailsForm}
           />
         ) : null}
       </KeyboardAwareScrollView>
@@ -306,7 +318,12 @@ export function OnboardingFlow({ onDone }: OnboardingFlowProps) {
           ) : step === 1 ? (
             <Button label="Continue" variant="primary" onPress={() => setStep(2)} disabled={!belonging} />
           ) : step === 2 ? (
-            <Button label="Continue" variant="primary" onPress={() => setStep(3)} disabled={!userType} />
+            <Button
+              label="Continue"
+              variant="primary"
+              onPress={() => setStep(needsDetailsForm ? 3 : 4)}
+              disabled={!userType}
+            />
           ) : (
             <Button label="Continue" variant="primary" onPress={goToPermissions} />
           )}

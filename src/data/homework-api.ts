@@ -48,6 +48,7 @@ export interface StudentChild {
   section: string;
   phone: string;
   gender: string | null;
+  dob: string | null;
   photo_url: string | null;
 }
 

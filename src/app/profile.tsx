@@ -13,6 +13,15 @@ import { useStudentAuth } from '@/hooks/use-student-auth';
 import { useTeacherAuth } from '@/hooks/use-teacher-auth';
 import { useTheme } from '@/hooks/use-theme';
 
+/** YYYY-MM-DD → "12 Aug 2015" for display; falls back to the raw value if
+ * it isn't in the expected shape. */
+function formatDob(value: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
+  if (!m) return value;
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return `${Number(m[3])} ${months[Number(m[2]) - 1]} ${m[1]}`;
+}
+
 function InfoRow({ icon, label, value }: { icon: keyof typeof Ionicons.glyphMap; label: string; value: string }) {
   const theme = useTheme();
   return (
@@ -135,6 +144,7 @@ export default function ProfileScreen() {
           <InfoRow icon="id-card-outline" label="SRN" value={access.srn} />
           {access.phone ? <InfoRow icon="call-outline" label="Phone" value={access.phone} /> : null}
           {access.gender ? <InfoRow icon="person-outline" label="Gender" value={access.gender} /> : null}
+          {access.dob ? <InfoRow icon="calendar-outline" label="Date of Birth" value={formatDob(access.dob)} /> : null}
         </Card>
       </Screen>
     );

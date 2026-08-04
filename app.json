@@ -2,7 +2,7 @@
   "expo": {
     "name": "Our Public School",
     "slug": "saarthak-app",
-    "version": "1.9.7",
+    "version": "1.9.8",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "saarthakapp",
@@ -15,7 +15,7 @@
     },
     "android": {
       "package": "org.saarthakgimsss.app",
-      "versionCode": 23,
+      "versionCode": 25,
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#123A6B",

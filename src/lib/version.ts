@@ -1,3 +1,5 @@
+import Constants from 'expo-constants';
+
 /** Compares two dotted version strings ("1.2.0" vs "1.10.0"). Returns
  * negative if a<b, 0 if equal, positive if a>b. Missing/garbage segments
  * are treated as 0 so partial versions ("1.2") still compare sensibly. */
@@ -16,4 +18,9 @@ export function compareVersions(a: string, b: string): number {
 export function isUpdateRequired(currentVersion: string, minVersion: string | null | undefined): boolean {
   if (!minVersion) return false;
   return compareVersions(currentVersion, minVersion) < 0;
+}
+
+/** Get the current app version from Expo Constants */
+export function getAppVersion(): string {
+  return Constants.expoConfig?.version || '1.0.0';
 }

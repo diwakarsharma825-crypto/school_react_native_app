@@ -2,6 +2,10 @@ export const Brand = {
   blue: '#123A6B',
   blueDark: '#0C2A4E',
   blueLight: '#2E6FBE',
+  /** Brighter blue used as the dark-theme tint — #2E6FBE reads too dim as
+   * text/icon/border on the dark surfaces, so dark mode steps up to this
+   * for adequate contrast across every screen at once. */
+  blueBright: '#5B9BE8',
   saffron: '#E8871E',
   saffronLight: '#F5A623',
   green: '#2E7D32',
@@ -44,7 +48,7 @@ export const Colors = {
     backgroundElement: '#1E242D',
     backgroundSelected: '#233047',
     border: '#2A313C',
-    tint: Brand.blueLight,
+    tint: Brand.blueBright,
     accent: Brand.saffronLight,
   },
 };

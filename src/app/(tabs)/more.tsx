@@ -17,6 +17,7 @@ import { useSections } from '@/hooks/use-sections';
 import { useStudentAuth } from '@/hooks/use-student-auth';
 import { useTeacherAuth } from '@/hooks/use-teacher-auth';
 import { clearHomeworkAccess } from '@/lib/homework-access';
+import { getAppVersion } from '@/lib/version';
 
 const logoSource = require('../../../assets/images/icon.png');
 
@@ -236,6 +237,9 @@ export default function MoreScreen() {
         <ThemedText type="small" themeColor="textSecondary" style={styles.footerText}>
           Vedic Culture · Scientific Approach · Communication
         </ThemedText>
+        <ThemedText type="small" themeColor="textSecondary" style={[styles.footerText, styles.versionText]}>
+          v{getAppVersion()}
+        </ThemedText>
       </View>
     </Screen>
   );
@@ -315,5 +319,9 @@ const styles = StyleSheet.create({
   footerText: {
     textAlign: 'center',
     marginBottom: 2,
+  },
+  versionText: {
+    marginTop: Spacing.two,
+    opacity: 0.6,
   },
 });

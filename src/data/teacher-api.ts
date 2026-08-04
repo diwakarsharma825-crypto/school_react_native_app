@@ -220,6 +220,9 @@ export interface RosterStudent {
   /** Only present for self-registered/teacher-added students, same
    * reasoning as srn above. */
   gender?: string | null;
+  /** Date of birth (YYYY-MM-DD), set by the teacher — self-registered/
+   * teacher-added students only. */
+  dob?: string | null;
 }
 
 export interface StudentDetail {
@@ -228,6 +231,7 @@ export interface StudentDetail {
   srn: string | null;
   phone: string | null;
   gender: string | null;
+  dob: string | null;
   roll_no: string | null;
   father_name: string | null;
   mother_name: string | null;
@@ -399,6 +403,7 @@ export async function reviewStudent(params: {
   srn?: string;
   phone?: string;
   gender?: string;
+  dob?: string | null;
   /** Optional — only send when the teacher actually wants to reset this
    * student's login password. Requires a phone number on file (or being
    * set in this same call), same rule as the initial Add Student flow. */
@@ -416,6 +421,7 @@ export async function reviewStudent(params: {
   if (params.srn !== undefined) body.append('srn', params.srn);
   if (params.phone !== undefined) body.append('phone', params.phone);
   if (params.gender !== undefined) body.append('gender', params.gender);
+  if (params.dob !== undefined) body.append('dob', params.dob ?? '');
   if (params.password) body.append('password', params.password);
   if (params.rollNo !== undefined) body.append('roll_no', params.rollNo);
   if (params.fatherName !== undefined) body.append('father_name', params.fatherName);
@@ -665,6 +671,7 @@ export interface AddStudentParams {
   rollNo: string;
   srn: string;
   gender?: string;
+  dob?: string;
   fatherName?: string;
   motherName?: string;
   phone?: string;
@@ -684,6 +691,7 @@ export async function addTeacherStudent(params: AddStudentParams): Promise<{ id:
   body.append('roll_no', params.rollNo);
   body.append('srn', params.srn);
   if (params.gender) body.append('gender', params.gender);
+  if (params.dob) body.append('dob', params.dob);
   if (params.fatherName) body.append('father_name', params.fatherName);
   if (params.motherName) body.append('mother_name', params.motherName);
   if (params.phone) body.append('phone', params.phone);

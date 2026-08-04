@@ -60,6 +60,7 @@ function AccessForm({ onDone }: { onDone: () => void }) {
         section: result.section,
         phone: result.phone,
         gender: result.gender,
+        dob: result.dob,
         photoUrl: result.photo_url,
       }));
       // Only one identity is "active" on this device at a time — logging

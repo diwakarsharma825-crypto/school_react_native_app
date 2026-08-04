@@ -9,6 +9,7 @@ import { Brand, Radius, Spacing } from '@/constants/theme';
 import { Card } from '@/components/ui/Card';
 import { Screen } from '@/components/ui/Screen';
 import { PasswordInput } from '@/components/ui/PasswordInput';
+import { DatePickerField } from '@/components/ui/DatePickerField';
 import { SelectField } from '@/components/ui/SelectField';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { addTeacherStudent } from '@/data/teacher-api';
@@ -24,6 +25,7 @@ export default function TeacherAddStudentScreen() {
   const [rollNo, setRollNo] = useState('');
   const [srn, setSrn] = useState('');
   const [gender, setGender] = useState<string | null>(null);
+  const [dob, setDob] = useState<string | null>(null);
   const [fatherName, setFatherName] = useState('');
   const [motherName, setMotherName] = useState('');
   const [phone, setPhone] = useState('');
@@ -72,6 +74,7 @@ export default function TeacherAddStudentScreen() {
         rollNo: rollNo.trim(),
         srn: srn.trim(),
         gender: gender ?? undefined,
+        dob: dob ?? undefined,
         fatherName: fatherName.trim() || undefined,
         motherName: motherName.trim() || undefined,
         phone: phone.trim() || undefined,
@@ -154,6 +157,14 @@ export default function TeacherAddStudentScreen() {
             { label: 'Other', value: 'Other' },
           ]}
           onChange={setGender}
+        />
+
+        <DatePickerField
+          label="Date of Birth"
+          placeholder="Select date of birth (optional)"
+          value={dob}
+          onChange={setDob}
+          minDate="1990-01-01"
         />
 
         <ThemedText type="smallBold" style={styles.fieldLabel}>

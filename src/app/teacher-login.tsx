@@ -1,5 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import * as Location from 'expo-location';
+import * as Notifications from 'expo-notifications';
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
@@ -8,11 +10,25 @@ import { Card } from '@/components/ui/Card';
 import { PasswordInput } from '@/components/ui/PasswordInput';
 import { Screen } from '@/components/ui/Screen';
 import { ThemedText } from '@/components/ui/ThemedText';
+import { registerDevice } from '@/data/app-status';
 import { teacherLogin } from '@/data/teacher-api';
 import { useStudentAuth } from '@/hooks/use-student-auth';
 import { useTeacherAuth } from '@/hooks/use-teacher-auth';
 import { useTheme } from '@/hooks/use-theme';
 import { clearHomeworkAccess } from '@/lib/homework-access';
+import { getFcmPushToken } from '@/lib/notifications';
+
+/** Prompt for notification + location right after a teacher signs in, and
+ * pick up the push token once notifications are granted so the server can
+ * actually reach this teacher's device. */
+async function requestTeacherPermissions() {
+  await Notifications.requestPermissionsAsync().catch(() => null);
+  await Location.requestForegroundPermissionsAsync().catch(() => null);
+  const pushToken = await getFcmPushToken().catch(() => null);
+  if (pushToken) {
+    registerDevice({ pushToken }).catch(() => {});
+  }
+}
 
 export default function TeacherLoginScreen() {
   const theme = useTheme();
@@ -40,6 +56,13 @@ export default function TeacherLoginScreen() {
       await clearHomeworkAccess();
       setStudentAccess(null);
       setLoggedIn(true);
+      // Teachers reach this screen directly (they skip the onboarding
+      // permission step), so ask for notification + location here instead —
+      // a teacher needs notifications enabled to receive the class alerts,
+      // registration pings and homework updates the app sends them. Runs
+      // after login succeeds; failures are non-fatal (they can enable it
+      // later in Settings).
+      requestTeacherPermissions().catch(() => {});
       router.replace(profile?.completed ? '/teacher-dashboard' : '/teacher-profile-setup');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Login failed.');

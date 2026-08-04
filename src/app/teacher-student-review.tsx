@@ -7,6 +7,7 @@ import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { Brand, Radius, Spacing } from '@/constants/theme';
 import { Card } from '@/components/ui/Card';
+import { DatePickerField } from '@/components/ui/DatePickerField';
 import { PasswordInput } from '@/components/ui/PasswordInput';
 import { Screen } from '@/components/ui/Screen';
 import { SelectField } from '@/components/ui/SelectField';
@@ -42,6 +43,7 @@ export default function TeacherStudentReviewScreen() {
   const [srn, setSrn] = useState(params.srn ?? '');
   const [phone, setPhone] = useState(params.phone ?? '');
   const [gender, setGender] = useState<string | null>(params.gender ?? null);
+  const [dob, setDob] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState('');
   const [rollNo, setRollNo] = useState(params.rollNo ?? '');
   const [fatherName, setFatherName] = useState(params.fatherName ?? '');
@@ -66,6 +68,7 @@ export default function TeacherStudentReviewScreen() {
         if (d.srn) setSrn(d.srn);
         if (d.phone) setPhone(d.phone);
         if (d.gender) setGender(d.gender);
+        if (d.dob) setDob(d.dob);
         if (d.roll_no) setRollNo(d.roll_no);
         if (d.father_name) setFatherName(d.father_name);
         if (d.mother_name) setMotherName(d.mother_name);
@@ -109,6 +112,7 @@ export default function TeacherStudentReviewScreen() {
         srn: srn.trim(),
         phone: phone.trim(),
         gender: gender ?? '',
+        dob: dob ?? null,
         password: newPassword.trim() || undefined,
         rollNo,
         fatherName,
@@ -198,6 +202,14 @@ export default function TeacherStudentReviewScreen() {
             { label: 'Other', value: 'Other' },
           ]}
           onChange={setGender}
+        />
+
+        <DatePickerField
+          label="Date of Birth"
+          placeholder="Select date of birth (optional)"
+          value={dob}
+          onChange={setDob}
+          minDate="1990-01-01"
         />
 
         <ThemedText type="smallBold" style={styles.fieldLabel}>

@@ -38,6 +38,7 @@ export interface HomeworkAccess {
   section: string;
   phone?: string;
   gender?: string | null;
+  dob?: string | null;
   photoUrl?: string | null;
 }
 
