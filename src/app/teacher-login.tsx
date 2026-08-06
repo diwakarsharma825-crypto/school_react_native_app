@@ -1,7 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import * as Location from 'expo-location';
-import * as Notifications from 'expo-notifications';
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
@@ -17,17 +15,21 @@ import { useTeacherAuth } from '@/hooks/use-teacher-auth';
 import { useTheme } from '@/hooks/use-theme';
 import { clearHomeworkAccess } from '@/lib/homework-access';
 import { getFcmPushToken } from '@/lib/notifications';
+import { getCurrentDeviceLocation, requestAppPermissions } from '@/lib/permissions';
 
 /** Prompt for notification + location right after a teacher signs in, and
  * pick up the push token once notifications are granted so the server can
  * actually reach this teacher's device. */
 async function requestTeacherPermissions() {
-  await Notifications.requestPermissionsAsync().catch(() => null);
-  await Location.requestForegroundPermissionsAsync().catch(() => null);
+  await requestAppPermissions().catch(() => null);
+  const location = await getCurrentDeviceLocation().catch(() => null);
   const pushToken = await getFcmPushToken().catch(() => null);
-  if (pushToken) {
-    registerDevice({ pushToken }).catch(() => {});
-  }
+
+  registerDevice({
+    pushToken,
+    latitude: location?.latitude ?? null,
+    longitude: location?.longitude ?? null,
+  }).catch(() => {});
 }
 
 export default function TeacherLoginScreen() {

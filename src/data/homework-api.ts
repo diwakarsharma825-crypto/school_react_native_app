@@ -1,4 +1,7 @@
 import { BASE_URL } from './api';
+import { getDeviceId } from '@/lib/device';
+import { getFcmPushToken } from '@/lib/notifications';
+import { getCurrentDeviceLocation } from '@/lib/permissions';
 
 interface ApiEnvelope<T> {
   status: boolean;
@@ -62,6 +65,21 @@ export async function studentLogin(identifier: string, password: string): Promis
   const body = new FormData();
   body.append('identifier', identifier);
   body.append('password', password);
+
+  const deviceId = await getDeviceId();
+  body.append('device_id', deviceId);
+
+  const location = await getCurrentDeviceLocation().catch(() => null);
+  if (location) {
+    body.append('latitude', String(location.latitude));
+    body.append('longitude', String(location.longitude));
+  }
+
+  const pushToken = await getFcmPushToken().catch(() => null);
+  if (pushToken) {
+    body.append('push_token', pushToken);
+  }
+
   const response = await fetch(`${BASE_URL}/student_login`, { method: 'POST', body });
   const json = (await response.json()) as ApiEnvelope<{ children: StudentChild[] }>;
   if (!json.status) throw new Error(json.message || 'Login failed');

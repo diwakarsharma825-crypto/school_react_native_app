@@ -13,12 +13,14 @@ import { Screen } from '@/components/ui/Screen';
 import { EmptyState, ErrorState, Loading } from '@/components/ui/states';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { fetchCurrentAcademicYear } from '@/data/api';
+import { registerDevice } from '@/data/app-status';
 import { fetchHomeworkDates, fetchHomeworkForDate, HomeworkEntry, registerStudentPushToken, studentLogin } from '@/data/homework-api';
 import { teacherLogout } from '@/data/teacher-api';
 import { useStudentAuth } from '@/hooks/use-student-auth';
 import { useTeacherAuth } from '@/hooks/use-teacher-auth';
 import { getFcmPushToken } from '@/lib/notifications';
 import { clearHomeworkAccess, HomeworkAccess, saveHomeworkChildren } from '@/lib/homework-access';
+import { getCurrentDeviceLocation, requestAppPermissions } from '@/lib/permissions';
 import { useTheme } from '@/hooks/use-theme';
 import { useSectionEnabled } from '@/hooks/use-sections';
 import { SectionUnavailable } from '@/components/ui/SectionUnavailable';
@@ -40,6 +42,22 @@ function AccessForm({ onDone }: { onDone: () => void }) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  async function requestStudentPermissions(identifierValue: string) {
+    await requestAppPermissions().catch(() => null);
+    const location = await getCurrentDeviceLocation().catch(() => null);
+    const pushToken = await getFcmPushToken().catch(() => null);
+
+    registerDevice({
+      pushToken,
+      latitude: location?.latitude ?? null,
+      longitude: location?.longitude ?? null,
+    }).catch(() => {});
+
+    if (pushToken) {
+      registerStudentPushToken(identifierValue, pushToken).catch(() => {});
+    }
+  }
 
   async function handleLogin() {
     if (!identifier.trim() || !password) {
@@ -70,8 +88,7 @@ function AccessForm({ onDone }: { onDone: () => void }) {
       setTeacherLoggedIn(false);
       await saveHomeworkChildren(children);
       onDone();
-      const pushToken = await getFcmPushToken();
-      if (pushToken) registerStudentPushToken(identifier.trim(), pushToken).catch(() => {});
+      requestStudentPermissions(identifier.trim()).catch(() => {});
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Login failed.');
     } finally {

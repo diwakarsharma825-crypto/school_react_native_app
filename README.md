@@ -1,56 +1,94 @@
-# Welcome to your Expo app 👋
+# Saarthak App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+This project is an Expo React Native app.
 
-## Get started
+## Run This App
 
-1. Install dependencies
+### Prerequisites
 
-   ```bash
-   npm install
-   ```
+- Node.js `22.13.0` or newer
+- `npm`
+- Android Studio with an Android emulator, or another Linux machine with KVM enabled
 
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+### Install
 
 ```bash
-npm run reset-project
+npm install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### Start Metro
 
-### Other setup steps
+```bash
+npx expo start
+```
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+### Run On An Android Emulator
 
-## Learn more
+1. Open Android Studio.
+2. Open `Device Manager`.
+3. Create or start an Android Virtual Device.
+4. Prefer an `x86_64` image on a machine with hardware acceleration enabled.
+5. In this project folder, run:
 
-To learn more about developing your project with Expo, look at the following resources:
+```bash
+npx expo start
+```
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+6. When Expo starts, press `a` in the terminal to open the app on the running Android emulator.
 
-## Join the community
+### Optional Script
 
-Join our community of developers creating universal apps.
+You can also try:
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+```bash
+npm run android
+```
+
+This uses Expo's Android run command.
+
+## Important Note For This Host
+
+This machine does not expose `/dev/kvm`, so Android emulators started here remain `offline` and do not finish booting.
+
+That means:
+
+- The app dependencies install correctly here.
+- Metro starts correctly here.
+- A usable Android simulator does not finish booting here.
+
+To run the app without a physical phone, use one of these:
+
+1. A Linux machine or VM with KVM enabled
+2. Android Studio on another computer with emulator acceleration enabled
+3. A cloud Android emulator service
+
+## Recommended Working Flow
+
+On a machine with a working emulator:
+
+```bash
+nvm use 22.13.0
+npm install
+npx expo start
+```
+
+Then:
+
+1. Start the Android emulator
+2. Press `a` in the Expo terminal
+
+## Troubleshooting
+
+### Node Version Problems
+
+If Expo or React Native reports engine errors, switch to Node `22.13.0` or newer.
+
+### Emulator Shows Offline
+
+If `adb devices` shows the emulator as `offline`, the emulator host is usually missing hardware acceleration or the emulator is not booting correctly.
+
+### Check Connected Devices
+
+```bash
+adb devices
+```

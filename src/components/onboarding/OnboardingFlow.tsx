@@ -18,6 +18,7 @@ import { useTeacherAuth } from '@/hooks/use-teacher-auth';
 import { HomeworkAccess, saveHomeworkChildren, savePendingRegistration } from '@/lib/homework-access';
 import { markOnboardingComplete } from '@/lib/onboarding';
 import { getFcmPushToken } from '@/lib/notifications';
+import { getCurrentDeviceLocation } from '@/lib/permissions';
 import { useTheme } from '@/hooks/use-theme';
 import { Button } from '@/components/ui/Button';
 import { PasswordInput } from '@/components/ui/PasswordInput';
@@ -145,8 +146,25 @@ export function OnboardingFlow({ onDone }: OnboardingFlowProps) {
     if (validateDetails()) setStep(4);
   }
 
-  // Only reached once notifications + location are both confirmed granted —
-  // the permissions gate below never calls this otherwise.
+  async function finishSkippedStudentOnboarding() {
+    const trimmedName = fullName.trim();
+    setFinishing(true);
+    await teacherLogout().catch(() => {});
+    setTeacherLoggedIn(false);
+    await markOnboardingComplete();
+    const location = await getCurrentDeviceLocation().catch(() => null);
+    await registerDevice({
+      userType: userType ?? undefined,
+      role: userType === 'teacher' ? designation ?? undefined : userType ?? undefined,
+      fullName: trimmedName || undefined,
+      latitude: location?.latitude ?? null,
+      longitude: location?.longitude ?? null,
+    }).catch(() => {});
+    onDone();
+  }
+
+  // Reached after the permissions step either grants access or lets the user
+  // skip for now.
   async function completeOnboarding() {
     const trimmedName = fullName.trim();
     const trimmedMobile = mobile.trim();
@@ -219,6 +237,7 @@ export function OnboardingFlow({ onDone }: OnboardingFlowProps) {
     }
 
     await markOnboardingComplete();
+    const location = await getCurrentDeviceLocation().catch(() => null);
     await registerDevice({
       userType: userType ?? undefined,
       role: userType === 'teacher' ? designation ?? undefined : userType ?? undefined,
@@ -228,13 +247,15 @@ export function OnboardingFlow({ onDone }: OnboardingFlowProps) {
       stream: userType === 'student' ? stream ?? undefined : undefined,
       designation: userType === 'teacher' ? designation ?? undefined : undefined,
       phone: `+91${trimmedMobile}`,
+      latitude: location?.latitude ?? null,
+      longitude: location?.longitude ?? null,
     }).catch(() => {});
-    // Permissions are already confirmed granted by this point (the gate
-    // below only calls completeOnboarding() once both are) — just pick up
-    // the push token now that notifications are actually allowed.
+    // If notification permission was granted in the step above, pick up the
+    // token now. If not, this simply returns null and the user can enable it
+    // later from system settings.
     const pushToken = await getFcmPushToken();
     if (pushToken) {
-      registerDevice({ pushToken }).catch(() => {});
+      registerDevice({ pushToken, latitude: location?.latitude ?? null, longitude: location?.longitude ?? null }).catch(() => {});
       if (needsPassword) registerStudentPushToken(trimmedMobile, pushToken).catch(() => {});
     }
     onDone();
@@ -306,7 +327,7 @@ export function OnboardingFlow({ onDone }: OnboardingFlowProps) {
             onGranted={completeOnboarding}
             onSkip={completeOnboarding}
             busy={finishing}
-            allowSkip={!needsDetailsForm}
+            allowSkip
           />
         ) : null}
       </KeyboardAwareScrollView>
@@ -324,6 +345,15 @@ export function OnboardingFlow({ onDone }: OnboardingFlowProps) {
               onPress={() => setStep(needsDetailsForm ? 3 : 4)}
               disabled={!userType}
             />
+          ) : needsDetailsForm ? (
+            <>
+              <Button label="Continue" variant="primary" onPress={goToPermissions} />
+              <Pressable onPress={() => finishSkippedStudentOnboarding()} hitSlop={8} style={styles.skipLink}>
+                <ThemedText type="default" themeColor="textSecondary">
+                  Skip for now
+                </ThemedText>
+              </Pressable>
+            </>
           ) : (
             <Button label="Continue" variant="primary" onPress={goToPermissions} />
           )}
@@ -849,6 +879,10 @@ const styles = StyleSheet.create({
   footer: {
     paddingHorizontal: Spacing.four,
     paddingBottom: Spacing.four,
+  },
+  skipLink: {
+    alignItems: 'center',
+    marginTop: Spacing.two,
   },
   settingsLink: {
     alignItems: 'center',
