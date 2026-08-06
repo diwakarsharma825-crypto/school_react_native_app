@@ -1,71 +1,22 @@
-name: Android CI
+name: Android Release Build
 
 on:
   push:
     branches: [ main ]
   workflow_dispatch: {}
 
+env:
+  GRADLE_USER_HOME: ${{ runner.temp }}/.gradle
+
 jobs:
-  debug:
-    name: Build Debug APK
+  build:
+    name: Build and release APK
     runs-on: ubuntu-latest
     permissions:
-      contents: read
-
-    steps:
-      - name: Checkout source
-        uses: actions/checkout@v5
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v5
-        with:
-          node-version: 22
-          cache: npm
-
-      - name: Setup Java
-        uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: 17
-
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Install Expo CLI
-        run: npm install -g expo
-
-      - name: Verify Expo
-        run: npx expo --version
-
-      - name: Generate Android project
-        run: npx expo prebuild --platform android --non-interactive
-
-      - name: Grant execute permission
-        run: chmod +x android/gradlew
-
-      - name: Clean Gradle
-        working-directory: android
-        run: ./gradlew clean
-
-      - name: Build Debug APK
-        working-directory: android
-        run: ./gradlew assembleDebug --stacktrace --no-daemon
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-debug
-          path: android/app/build/outputs/apk/debug/app-debug.apk
-
-  release:
-    name: Build and Release APK
-    runs-on: ubuntu-latest
-    needs: debug
-    permissions:
-      contents: write
+      contents: write # needed to push version bump
+      packages: write
+      issues: write
+      pull-requests: write
 
     steps:
       - name: Checkout repository
@@ -74,16 +25,16 @@ jobs:
           fetch-depth: 0
           persist-credentials: true
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-
-      - name: Setup Java
+      - name: Set up Java 11
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '11'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
 
       - name: Cache node modules
         uses: actions/cache@v4
@@ -104,14 +55,22 @@ jobs:
             npm ci
           fi
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Set up Android SDK
+        uses: r0adkll/setup-android@v2
         with:
           api-level: 31
           build-tools: 31.0.0
+          ndk: 21.4.7075529
 
-      - name: Generate Android project (Expo)
-        run: npx expo prebuild --platform android --non-interactive
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
 
       - name: Ensure gradlew is executable
         run: chmod +x ./android/gradlew
@@ -126,35 +85,32 @@ jobs:
             exit 1
           fi
 
-          CURRENT_CODE=$(grep -E "versionCode\s+\d+" $BUILD_FILE | head -n1 | sed -E 's/[^0-9]*([0-9]+).*/\1/') || true
-          CURRENT_NAME=$(grep -E 'versionName\s+"[^"]+"' $BUILD_FILE | head -n1 | sed -E 's/.*"([^"]+)".*/\1/') || true
-
-          if [ -z "$CURRENT_CODE" ]; then
-            CURRENT_CODE=1
-          fi
-          if [ -z "$CURRENT_NAME" ]; then
-            CURRENT_NAME="1.0.0"
-          fi
+          # Extract current versionCode and versionName
+          CURRENT_CODE=$(grep -E "versionCode\s+\d+" $BUILD_FILE | head -n1 | sed -E 's/[^0-9]*([0-9]+).*/\1/')
+          CURRENT_NAME=$(grep -E "versionName\s+\"[^"]+\"" $BUILD_FILE | head -n1 | sed -E 's/.*\"([^"]+)\".*/\1/')
 
           echo "Current versionCode: $CURRENT_CODE"
           echo "Current versionName: $CURRENT_NAME"
 
           NEW_CODE=$((CURRENT_CODE + 1))
-
-          # Use GitHub run number to form versionName (preserve major.minor if present)
+          # Use GitHub run number to form versionName (keeps major.minor from current if possible)
+          # If current name has at least two dots (like 1.2.3) preserve major.minor
           if echo "$CURRENT_NAME" | grep -q "^[0-9]+\.[0-9]+\.[0-9]+$"; then
             MAJOR_MINOR=$(echo "$CURRENT_NAME" | awk -F. '{print $1"."$2}')
-            NEW_NAME="${MAJOR_MINOR}.${GITHUB_RUN_NUMBER}"
+            NEW_NAME="${MAJOR_MINOR}.${{ github.run_number }}"
           else
-            NEW_NAME="1.0.${GITHUB_RUN_NUMBER}"
+            NEW_NAME="1.0.${{ github.run_number }}"
           fi
 
           echo "New versionCode: $NEW_CODE"
           echo "New versionName: $NEW_NAME"
 
+          # Replace values in build.gradle (supports numeric and string forms)
+          # Use perl for robust in-place editing
           perl -0777 -pe "s/(versionCode\s+)\d+/$1${NEW_CODE}/s" -i $BUILD_FILE
           perl -0777 -pe "s/(versionName\s+\")([^\"]+)(\")/$1${NEW_NAME}$3/s" -i $BUILD_FILE
 
+          # Show changed file snippet
           echo "--- updated build.gradle ---"
           sed -n '1,240p' $BUILD_FILE
 
@@ -163,16 +119,12 @@ jobs:
 
       - name: Commit and push version bump
         if: steps.bump_version.outcome == 'success'
-        env:
-          VERSION_CODE: ${{ env.VERSION_CODE }}
-          VERSION_NAME: ${{ env.VERSION_NAME }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add android/app/build.gradle
           git commit -m "chore(android): bump versionCode to $VERSION_CODE, versionName to $VERSION_NAME [skip ci]" || echo "No changes to commit"
-          # Push back to the branch that triggered the workflow
-          git push origin HEAD:${{ github.ref_name }} || echo "Push failed or not required"
+          git push origin HEAD:$GITHUB_REF_NAME || echo "Push failed or not required"
 
       - name: Build Android release APK
         env:
@@ -181,7 +133,7 @@ jobs:
         run: |
           set -e
           cd android
-          ./gradlew clean assembleRelease -Pci --stacktrace
+          ./gradlew clean assembleRelease -Pci
 
       - name: Upload APK to workflow artifacts
         uses: actions/upload-artifact@v4
