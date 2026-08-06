@@ -1,14 +1,17 @@
 name: Build Android APK
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
-  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout Repository
@@ -26,19 +29,24 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - name: Enable Gradle Cache
-        uses: gradle/actions/setup-gradle@v4
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
 
       - name: Install Dependencies
-        run: npm install
+        run: npm ci
 
-      - name: Make gradlew Executable
+      - name: Install Expo CLI
+        run: npm install -g expo
+
+      - name: Generate Android Project
+        run: npx expo prebuild --platform android --non-interactive
+
+      - name: Make gradlew executable
         run: chmod +x android/gradlew
 
       - name: Build Debug APK
-        run: |
-          cd android
-          ./gradlew assembleDebug
+        working-directory: android
+        run: ./gradlew assembleDebug --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
