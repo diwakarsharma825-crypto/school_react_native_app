@@ -8,7 +8,7 @@ on:
 jobs:
   debug:
     name: Build Debug APK
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     permissions:
       contents: read
 
@@ -62,7 +62,7 @@ jobs:
 
   release:
     name: Build and Release APK
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: debug
     permissions:
       contents: write
