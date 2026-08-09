@@ -1,4 +1,4 @@
-name: Android CI
+name: Build Android APK
 
 on:
   push:
@@ -6,196 +6,58 @@ on:
   workflow_dispatch: {}
 
 jobs:
-  debug:
-    name: Build Debug APK
+  build-android:
+    name: Build Android Debug & Release APK
     runs-on: ubuntu-22.04
-    permissions:
-      contents: read
 
     steps:
-      - name: Checkout source
-        uses: actions/checkout@v5
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v5
+      - name: Setup Node.js (v20)
+        uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: npm
+          node-version: 20
+          cache: 'npm'
 
-      - name: Setup Java
-        uses: actions/setup-java@v5
+      - name: Setup Java JDK (v17)
+        uses: actions/setup-java@v4
         with:
-          distribution: temurin
-          java-version: 17
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install dependencies
-        run: npm install
+      - name: Install JS dependencies
+        run: npm ci
 
-      - name: Install Expo CLI
-        run: npm install -g expo
+      - name: Prebuild Android project (Expo)
+        env:
+          CI: '1'
+          EXPO_NO_TELEMETRY: '1'
+        run: npx expo prebuild --platform android
 
-      - name: Verify Expo
-        run: npx expo --version
-
-      - name: Generate Android project
-        run: npx expo prebuild --platform android --non-interactive
-
-      - name: Grant execute permission
+      - name: Grant execute permission for gradlew
         run: chmod +x android/gradlew
-
-      - name: Clean Gradle
-        working-directory: android
-        run: ./gradlew clean
 
       - name: Build Debug APK
         working-directory: android
         run: ./gradlew assembleDebug --stacktrace --no-daemon
 
-      - name: Upload APK
+      - name: Build Release APK
+        working-directory: android
+        run: ./gradlew assembleRelease --stacktrace --no-daemon
+
+      - name: Upload Debug APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug
+          name: app-debug-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
 
-  release:
-    name: Build and Release APK
-    runs-on: ubuntu-22.04
-    needs: debug
-    permissions:
-      contents: write
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          persist-credentials: true
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: Cache node modules
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.npm
-            node_modules
-            **/node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json', '**/yarn.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-
-      - name: Install JS dependencies
-        run: |
-          if [ -f yarn.lock ]; then
-            yarn install --frozen-lockfile
-          else
-            npm ci
-          fi
-
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-        with:
-          api-level: 31
-          build-tools: 31.0.0
-
-      - name: Generate Android project (Expo)
-        run: npx expo prebuild --platform android --non-interactive
-
-      - name: Ensure gradlew is executable
-        run: chmod +x ./android/gradlew
-
-      - name: Bump Android versionCode and versionName
-        id: bump_version
-        run: |
-          set -e
-          BUILD_FILE=android/app/build.gradle
-          if [ ! -f "$BUILD_FILE" ]; then
-            echo "Error: $BUILD_FILE not found"
-            exit 1
-          fi
-
-          CURRENT_CODE=$(grep -E "versionCode\s+\d+" $BUILD_FILE | head -n1 | sed -E 's/[^0-9]*([0-9]+).*/\1/') || true
-          CURRENT_NAME=$(grep -E 'versionName\s+"[^"]+"' $BUILD_FILE | head -n1 | sed -E 's/.*"([^"]+)".*/\1/') || true
-
-          if [ -z "$CURRENT_CODE" ]; then
-            CURRENT_CODE=1
-          fi
-          if [ -z "$CURRENT_NAME" ]; then
-            CURRENT_NAME="1.0.0"
-          fi
-
-          echo "Current versionCode: $CURRENT_CODE"
-          echo "Current versionName: $CURRENT_NAME"
-
-          NEW_CODE=$((CURRENT_CODE + 1))
-
-          # Use GitHub run number to form versionName (preserve major.minor if present)
-          if echo "$CURRENT_NAME" | grep -q "^[0-9]+\.[0-9]+\.[0-9]+$"; then
-            MAJOR_MINOR=$(echo "$CURRENT_NAME" | awk -F. '{print $1"."$2}')
-            NEW_NAME="${MAJOR_MINOR}.${GITHUB_RUN_NUMBER}"
-          else
-            NEW_NAME="1.0.${GITHUB_RUN_NUMBER}"
-          fi
-
-          echo "New versionCode: $NEW_CODE"
-          echo "New versionName: $NEW_NAME"
-
-          perl -0777 -pe "s/(versionCode\s+)\d+/$1${NEW_CODE}/s" -i $BUILD_FILE
-          perl -0777 -pe "s/(versionName\s+\")([^\"]+)(\")/$1${NEW_NAME}$3/s" -i $BUILD_FILE
-
-          echo "--- updated build.gradle ---"
-          sed -n '1,240p' $BUILD_FILE
-
-          echo "VERSION_CODE=${NEW_CODE}" >> $GITHUB_ENV
-          echo "VERSION_NAME=${NEW_NAME}" >> $GITHUB_ENV
-
-      - name: Commit and push version bump
-        if: steps.bump_version.outcome == 'success'
-        env:
-          VERSION_CODE: ${{ env.VERSION_CODE }}
-          VERSION_NAME: ${{ env.VERSION_NAME }}
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add android/app/build.gradle
-          git commit -m "chore(android): bump versionCode to $VERSION_CODE, versionName to $VERSION_NAME [skip ci]" || echo "No changes to commit"
-          # Push back to the branch that triggered the workflow
-          git push origin HEAD:${{ github.ref_name }} || echo "Push failed or not required"
-
-      - name: Build Android release APK
-        env:
-          ANDROID_HOME: /usr/local/lib/android/sdk
-          PATH: ${{ runner.tool_cache }}/android-sdk/platform-tools:$PATH
-        run: |
-          set -e
-          cd android
-          ./gradlew clean assembleRelease -Pci --stacktrace
-
-      - name: Upload APK to workflow artifacts
+      - name: Upload Release APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: app-release-apk
-          path: android/app/build/outputs/apk/release/app-release.apk
-
-      - name: Create GitHub Release and upload APK
-        uses: ncipollo/release-action@v1
-        with:
-          tag: v${{ env.VERSION_NAME }}
-          name: "Release v${{ env.VERSION_NAME }}"
-          files: android/app/build/outputs/apk/release/app-release.apk
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Done
-        run: echo "Release created for version $VERSION_NAME"
+          path: android/app/build/outputs/apk/release/*.apk
