@@ -62,6 +62,22 @@ function AddFeeModal({
   const [amount, setAmount] = useState('');
   const [dueDate, setDueDate] = useState<string | null>(null);
   const [file, setFile] = useState<{ uri: string; mimeType?: string | null; name?: string | null } | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const scrollRef = useRef<KeyboardAwareScrollViewRef>(null);
+
+  useEffect(() => {
+    if (!visible || !classId) return;
+    setLoadingStudents(true);
+    fetchTeacherStudents(classId, sectionId)
+      .then(setStudents)
+      .catch(() => setStudents([]))
+      .finally(() => setLoadingStudents(false));
+  }, [visible, classId, sectionId]);
+
+  const studentOptions = (students ?? [])
+    .filter((s) => !!s.srn)
+    .map((s) => ({ label: `${s.name}${s.roll_no ? ` (Roll ${s.roll_no})` : ''}`, value: s.srn as string }));
 
   async function pickFile() {
     try {
