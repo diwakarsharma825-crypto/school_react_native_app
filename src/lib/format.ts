@@ -31,13 +31,18 @@ const HTML_ENTITIES: Record<string, string> = {
 
 /**
  * Settings fields like principle_text/about_text come from a rich-text
- * editor as raw HTML (often Word-pasted markup). Strip tags and decode
- * entities so it reads as plain text in native Text components.
+ * editor as raw HTML. Strip tags, form elements, and decode entities so
+ * it reads cleanly as plain text in native components.
  */
 export function stripHtml(html: string | null | undefined): string {
   if (!html) return '';
-  const withoutTags = html.replace(/<[^>]*>/g, ' ');
-  const decoded = withoutTags.replace(/&[a-z#0-9]+;/gi, (entity) => HTML_ENTITIES[entity] ?? ' ');
+  const clean = html
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<input[\s\S]*?>/gi, '')
+    .replace(/<textarea[\s\S]*?<\/textarea>/gi, '')
+    .replace(/<[^>]*>/g, ' ');
+  const decoded = clean.replace(/&[a-z#0-9]+;/gi, (entity) => HTML_ENTITIES[entity] ?? ' ');
   return decoded.replace(/\s+/g, ' ').trim();
 }
 

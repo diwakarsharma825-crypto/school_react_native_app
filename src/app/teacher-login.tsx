@@ -20,12 +20,15 @@ import { getCurrentDeviceLocation, requestAppPermissions } from '@/lib/permissio
 /** Prompt for notification + location right after a teacher signs in, and
  * pick up the push token once notifications are granted so the server can
  * actually reach this teacher's device. */
-async function requestTeacherPermissions() {
+async function requestTeacherPermissions(emailAddress: string, teacherName?: string) {
   await requestAppPermissions().catch(() => null);
   const location = await getCurrentDeviceLocation().catch(() => null);
   const pushToken = await getFcmPushToken().catch(() => null);
 
   registerDevice({
+    userType: 'teacher',
+    fullName: teacherName,
+    phone: emailAddress,
     pushToken,
     latitude: location?.latitude ?? null,
     longitude: location?.longitude ?? null,
@@ -50,22 +53,12 @@ export default function TeacherLoginScreen() {
     setSubmitting(true);
     setError(null);
     try {
-      await teacherLogin(email.trim(), password);
-      // Only one identity is "active" on this device at a time — logging
-      // in as a teacher clears any student session, so the bottom-nav
-      // Login slot (and every screen that reads it) never has to guess
-      // which of two simultaneously-logged-in roles it should show.
+      const loginRes = await teacherLogin(email.trim(), password);
       await clearHomeworkAccess();
       setStudentAccess(null);
       setLoggedIn(true);
-      // Teachers reach this screen directly (they skip the onboarding
-      // permission step), so ask for notification + location here instead —
-      // a teacher needs notifications enabled to receive the class alerts,
-      // registration pings and homework updates the app sends them. Runs
-      // after login succeeds; failures are non-fatal (they can enable it
-      // later in Settings).
-      requestTeacherPermissions().catch(() => {});
-      router.replace(profile?.completed ? '/teacher-dashboard' : '/teacher-profile-setup');
+      requestTeacherPermissions(email.trim(), loginRes.name).catch(() => {});
+      router.replace('/teacher-dashboard');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Login failed.');
     } finally {

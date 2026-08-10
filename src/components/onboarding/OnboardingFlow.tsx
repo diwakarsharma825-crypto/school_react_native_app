@@ -133,12 +133,7 @@ export function OnboardingFlow({ onDone }: OnboardingFlowProps) {
     } else {
       setPasswordError(null);
     }
-    if (userType === 'student' && !srn.trim()) {
-      setSrnError('Please enter your SRN (roll/registration number).');
-      hasError = true;
-    } else {
-      setSrnError(null);
-    }
+    setSrnError(null);
     return !hasError;
   }
 
@@ -636,24 +631,6 @@ function DetailsStep({
             </View>
           </View>
 
-          <ThemedText type="smallBold" style={styles.fieldLabel}>
-            SRN
-          </ThemedText>
-          <TextInput
-            value={srn}
-            onChangeText={onSrn}
-            placeholder="SRN"
-            placeholderTextColor={theme.textSecondary}
-            keyboardType="default"
-            autoComplete="off"
-            textContentType="none"
-            style={[styles.input, { borderColor: theme.border, color: theme.text }]}
-          />
-          {srnError ? (
-            <ThemedText type="small" style={{ color: Brand.red }}>
-              {srnError}
-            </ThemedText>
-          ) : null}
           <ThemedText type="small" themeColor="textSecondary" style={styles.fieldHint}>
             If you have a sibling already using this app, use the same mobile number below —
             you&apos;ll be able to switch between both after logging in.

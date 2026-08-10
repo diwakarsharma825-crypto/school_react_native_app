@@ -14,9 +14,22 @@ import { useTheme } from '@/hooks/use-theme';
  * Student -> the local class/phone/password homework calendar gate
  * (src/app/homework.tsx, already built). Teacher -> real login against the
  * school's staff credentials (src/app/teacher-login.tsx). */
+import { useStudentAuth } from '@/hooks/use-student-auth';
+import { useTeacherAuth } from '@/hooks/use-teacher-auth';
+
 export default function LoginChoiceScreen() {
   const theme = useTheme();
   const router = useRouter();
+  const { loggedIn: studentLoggedIn } = useStudentAuth();
+  const { loggedIn: teacherLoggedIn } = useTeacherAuth();
+
+  React.useEffect(() => {
+    if (studentLoggedIn) {
+      router.replace('/student-dashboard');
+    } else if (teacherLoggedIn) {
+      router.replace('/teacher-dashboard');
+    }
+  }, [studentLoggedIn, teacherLoggedIn, router]);
 
   return (
     <Screen>

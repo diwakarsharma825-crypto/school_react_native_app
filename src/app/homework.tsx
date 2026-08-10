@@ -37,18 +37,24 @@ function pad(n: number) {
 
 function AccessForm({ onDone }: { onDone: () => void }) {
   const theme = useTheme();
+  const router = useRouter();
   const { setLoggedIn: setTeacherLoggedIn } = useTeacherAuth();
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  async function requestStudentPermissions(identifierValue: string) {
+  async function requestStudentPermissions(identifierValue: string, name?: string, className?: string, section?: string) {
     await requestAppPermissions().catch(() => null);
     const location = await getCurrentDeviceLocation().catch(() => null);
     const pushToken = await getFcmPushToken().catch(() => null);
 
     registerDevice({
+      userType: 'student',
+      fullName: name,
+      studentClass: className,
+      section,
+      phone: identifierValue,
       pushToken,
       latitude: location?.latitude ?? null,
       longitude: location?.longitude ?? null,
@@ -67,9 +73,6 @@ function AccessForm({ onDone }: { onDone: () => void }) {
     setSubmitting(true);
     setError(null);
     try {
-      // One login can return several sibling children sharing this
-      // phone+password — all get saved, the app defaults to the first and
-      // lets the parent/student switch later without re-entering anything.
       const results = await studentLogin(identifier.trim(), password);
       const children: HomeworkAccess[] = results.map((result) => ({
         name: result.name,
@@ -81,14 +84,17 @@ function AccessForm({ onDone }: { onDone: () => void }) {
         dob: result.dob,
         photoUrl: result.photo_url,
       }));
-      // Only one identity is "active" on this device at a time — logging
-      // in as a student clears any teacher session, same reasoning as the
-      // reverse on the teacher login screen.
       await teacherLogout().catch(() => {});
       setTeacherLoggedIn(false);
       await saveHomeworkChildren(children);
       onDone();
-      requestStudentPermissions(identifier.trim()).catch(() => {});
+      requestStudentPermissions(
+        identifier.trim(),
+        children[0]?.name,
+        children[0]?.className,
+        children[0]?.section
+      ).catch(() => {});
+      router.replace('/student-dashboard');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Login failed.');
     } finally {

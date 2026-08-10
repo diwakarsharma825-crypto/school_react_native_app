@@ -7,18 +7,19 @@ import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ThemedText } from './ThemedText';
 
+import { useStudentAuth } from '@/hooks/use-student-auth';
+import { useTeacherAuth } from '@/hooks/use-teacher-auth';
+
 interface LoginSheetProps {
   visible: boolean;
   onClose: () => void;
 }
 
-/** Tapping the bottom bar's Login slot opens this in place, instead of
- * navigating to a full screen — a bottom sheet that slides up over
- * whatever's currently on screen, matching the "no need to open new
- * screen... must open animation with student/teacher option" ask. */
 export function LoginSheet({ visible, onClose }: LoginSheetProps) {
   const theme = useTheme();
   const router = useRouter();
+  const { loggedIn: studentLoggedIn } = useStudentAuth();
+  const { loggedIn: teacherLoggedIn } = useTeacherAuth();
   const translateY = useRef(new Animated.Value(400)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
 
@@ -60,7 +61,11 @@ export function LoginSheet({ visible, onClose }: LoginSheetProps) {
           Choose your role to continue.
         </ThemedText>
 
-        <Pressable onPress={() => closeThen(() => router.push('/homework'))}>
+        <Pressable
+          onPress={() =>
+            closeThen(() => router.push(studentLoggedIn ? ('/student-dashboard' as any) : '/homework'))
+          }
+        >
           <View style={[styles.option, { backgroundColor: theme.backgroundElement }]}>
             <View style={[styles.iconWrap, { backgroundColor: theme.backgroundSelected }]}>
               <Ionicons name="school-outline" size={26} color={theme.tint} />
@@ -68,14 +73,18 @@ export function LoginSheet({ visible, onClose }: LoginSheetProps) {
             <View style={styles.optionText}>
               <ThemedText type="smallBold">I&apos;m a Student</ThemedText>
               <ThemedText type="small" themeColor="textSecondary">
-                View your class&apos;s homework calendar
+                {studentLoggedIn ? 'Open your student dashboard' : "View your class's homework calendar"}
               </ThemedText>
             </View>
             <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
           </View>
         </Pressable>
 
-        <Pressable onPress={() => closeThen(() => router.push('/teacher-login'))}>
+        <Pressable
+          onPress={() =>
+            closeThen(() => router.push(teacherLoggedIn ? ('/teacher-dashboard' as any) : '/teacher-login'))
+          }
+        >
           <View style={[styles.option, { backgroundColor: theme.backgroundElement }]}>
             <View style={[styles.iconWrap, { backgroundColor: theme.backgroundSelected }]}>
               <Ionicons name="briefcase-outline" size={24} color={theme.tint} />
@@ -83,7 +92,7 @@ export function LoginSheet({ visible, onClose }: LoginSheetProps) {
             <View style={styles.optionText}>
               <ThemedText type="smallBold">I&apos;m a Teacher</ThemedText>
               <ThemedText type="small" themeColor="textSecondary">
-                Log in to manage your dashboard &amp; homework
+                {teacherLoggedIn ? 'Open your teacher dashboard' : 'Log in to manage your dashboard & homework'}
               </ThemedText>
             </View>
             <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
