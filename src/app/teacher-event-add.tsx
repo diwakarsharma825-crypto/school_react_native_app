@@ -113,6 +113,10 @@ export default function TeacherEventAddScreen() {
       setError('Title, start date and end date are required.');
       return;
     }
+    if (media.length === 0 && existingMedia.length === 0) {
+      setError('At least one photo or video is required for an event.');
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {

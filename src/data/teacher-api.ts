@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system';
 
@@ -7,6 +8,27 @@ import { getFcmPushToken } from '@/lib/notifications';
 import { getCurrentDeviceLocation } from '@/lib/permissions';
 
 const TOKEN_KEY = 'saarthak.teacher_token';
+
+export async function createFileBlob(uri: string, mimeType?: string | null, filename = 'attachment'): Promise<any> {
+  if (Platform.OS === 'web' || uri.startsWith('blob:') || uri.startsWith('data:') || uri.startsWith('http')) {
+    try {
+      const res = await fetch(uri);
+      return await res.blob();
+    } catch {
+      return { uri, name: filename, type: mimeType || 'application/octet-stream' };
+    }
+  }
+  try {
+    return new FileSystem.File(uri);
+  } catch {
+    try {
+      const res = await fetch(uri);
+      return await res.blob();
+    } catch {
+      return { uri, name: filename, type: mimeType || 'application/octet-stream' };
+    }
+  }
+}
 
 interface ApiEnvelope<T> {
   status: boolean;
@@ -515,10 +537,16 @@ export async function addTeacherEvent(params: TeacherEventParams): Promise<AddTe
   body.append('event_from', params.eventFrom);
   body.append('event_to', params.eventTo);
   body.append('note', params.note ?? '');
-  params.media.forEach((m, i) => {
+  for (let i = 0; i < params.media.length; i++) {
+    const m = params.media[i];
     const filename = `media-${i}.${extensionFor(m)}`;
-    body.append('media[]', new FileSystem.File(m.uri) as unknown as Blob, filename);
-  });
+    try {
+      const blob = await createFileBlob(m.uri, m.mimeType, filename);
+      body.append('media[]', blob as unknown as Blob, filename);
+    } catch {
+      body.append('media[]', { uri: m.uri, name: filename, type: m.mimeType || 'image/jpeg' } as any);
+    }
+  }
   const response = await fetch(`${BASE_URL}/teacher_add_event`, {
     method: 'POST',
     headers: token ? { Authorization: `Bearer ${token}` } : undefined,
@@ -576,10 +604,17 @@ export async function updateTeacherEvent(params: UpdateTeacherEventParams): Prom
   body.append('event_from', params.eventFrom);
   body.append('event_to', params.eventTo);
   body.append('note', params.note ?? '');
-  (params.media ?? []).forEach((m, i) => {
+  const mediaList = params.media ?? [];
+  for (let i = 0; i < mediaList.length; i++) {
+    const m = mediaList[i];
     const filename = `media-${i}.${extensionFor(m)}`;
-    body.append('media[]', new FileSystem.File(m.uri) as unknown as Blob, filename);
-  });
+    try {
+      const blob = await createFileBlob(m.uri, m.mimeType, filename);
+      body.append('media[]', blob as unknown as Blob, filename);
+    } catch {
+      body.append('media[]', { uri: m.uri, name: filename, type: m.mimeType || 'image/jpeg' } as any);
+    }
+  }
   const response = await fetch(`${BASE_URL}/teacher_update_event`, {
     method: 'POST',
     headers: token ? { Authorization: `Bearer ${token}` } : undefined,
@@ -961,6 +996,7 @@ export async function addFeeInvoice(params: {
   dueDate?: string;
   fileUri?: string;
   fileMimeType?: string | null;
+  fileName?: string | null;
 }): Promise<{ id: number }> {
   const token = await getTeacherToken();
   const body = new FormData();
@@ -970,10 +1006,14 @@ export async function addFeeInvoice(params: {
   body.append('amount', String(params.amount));
   if (params.dueDate) body.append('due_date', params.dueDate);
   if (params.fileUri) {
-    // Expo's fetch (SDK 57+) requires a real Blob/File on the FormData part —
-    // the classic RN {uri,name,type} object throws "Unsupported FormDataPart
-    // implementation" — same fix as every other upload in this file.
-    body.append('invoice', new FileSystem.File(params.fileUri) as unknown as Blob);
+    const filename = params.fileName || params.fileUri.split('/').pop() || 'invoice.pdf';
+    try {
+      const fileObj = await createFileBlob(params.fileUri, params.fileMimeType, filename);
+      body.append('invoice', fileObj as unknown as Blob, filename);
+    } catch {
+      const type = params.fileMimeType || 'application/pdf';
+      body.append('invoice', { uri: params.fileUri, name: filename, type } as any);
+    }
   }
   const response = await fetch(`${BASE_URL}/teacher_add_fee_invoice`, {
     method: 'POST',

@@ -61,34 +61,20 @@ function AddFeeModal({
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
   const [dueDate, setDueDate] = useState<string | null>(null);
-  const [file, setFile] = useState<{ uri: string; mimeType?: string | null } | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const scrollRef = useRef<KeyboardAwareScrollViewRef>(null);
-
-  useEffect(() => {
-    if (!visible || !classId) return;
-    setLoadingStudents(true);
-    fetchTeacherStudents(classId, sectionId)
-      .then(setStudents)
-      .catch(() => setStudents([]))
-      .finally(() => setLoadingStudents(false));
-  }, [visible, classId, sectionId]);
-
-  // Only students with an SRN can receive a fee due — fees are matched by
-  // SRN server-side, and officially-enrolled (non-app-registered) students
-  // don't have one in this system.
-  const studentOptions = (students ?? [])
-    .filter((s) => !!s.srn)
-    .map((s) => ({ label: `${s.name}${s.roll_no ? ` (Roll ${s.roll_no})` : ''}`, value: s.srn as string }));
+  const [file, setFile] = useState<{ uri: string; mimeType?: string | null; name?: string | null } | null>(null);
 
   async function pickFile() {
-    const result = await DocumentPicker.getDocumentAsync({
-      type: ['image/jpeg', 'image/png', 'application/pdf'],
-      copyToCacheDirectory: true,
-    });
-    if (result.canceled || !result.assets?.[0]) return;
-    setFile({ uri: result.assets[0].uri, mimeType: result.assets[0].mimeType });
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['image/*', 'application/pdf', '*/*'],
+        copyToCacheDirectory: true,
+      });
+      if (result.canceled || !result.assets?.[0]) return;
+      const asset = result.assets[0];
+      setFile({ uri: asset.uri, mimeType: asset.mimeType, name: asset.name });
+    } catch (e) {
+      Alert.alert('File Error', e instanceof Error ? e.message : 'Could not select file.');
+    }
   }
 
   async function handleSubmit() {
@@ -107,6 +93,7 @@ function AddFeeModal({
         dueDate: dueDate || undefined,
         fileUri: file?.uri,
         fileMimeType: file?.mimeType,
+        fileName: file?.name,
       });
       setStudentSrn(null);
       setFeeType(null);
