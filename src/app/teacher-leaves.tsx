@@ -60,10 +60,10 @@ export default function TeacherLeavesScreen() {
 
   useEffect(load, [classId, selected?.section_id, statusFilter]);
 
-  async function handleReview(id: number, status: 'approved' | 'rejected') {
+  async function handleReview(id: number, status: 'approved' | 'rejected', studentSrn?: string) {
     setActingId(id);
     try {
-      await reviewLeaveApplication(id, status);
+      await reviewLeaveApplication(id, status, undefined, studentSrn, classId ? Number(classId) : undefined);
       load();
     } catch (e) {
       Alert.alert('Could not update', e instanceof Error ? e.message : 'Please try again.');
@@ -129,7 +129,7 @@ export default function TeacherLeavesScreen() {
                 {app.status === 'pending' ? (
                   <View style={styles.actionRow}>
                     <Pressable
-                      onPress={() => handleReview(app.id, 'approved')}
+                      onPress={() => handleReview(app.id, 'approved', app.student_srn)}
                       disabled={actingId === app.id}
                       style={[styles.actionButton, { backgroundColor: Brand.green, opacity: actingId === app.id ? 0.6 : 1 }]}
                     >
@@ -139,7 +139,7 @@ export default function TeacherLeavesScreen() {
                       </ThemedText>
                     </Pressable>
                     <Pressable
-                      onPress={() => handleReview(app.id, 'rejected')}
+                      onPress={() => handleReview(app.id, 'rejected', app.student_srn)}
                       disabled={actingId === app.id}
                       style={[styles.actionButton, { backgroundColor: Brand.red, opacity: actingId === app.id ? 0.6 : 1 }]}
                     >

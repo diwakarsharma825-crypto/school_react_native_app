@@ -375,6 +375,12 @@ export async function saveHomework(params: {
   });
   const json = (await response.json()) as ApiEnvelope<{ id: number }>;
   if (!json.status) throw new Error(json.message);
+  sendTeacherNotification({
+    classId: params.classId,
+    sectionId: params.sectionId,
+    title: `New Homework: ${params.subject}`,
+    body: `Homework assigned for ${params.date}: ${params.description}`,
+  }).catch(() => {});
   return json.data;
 }
 
@@ -554,6 +560,12 @@ export async function addTeacherEvent(params: TeacherEventParams): Promise<AddTe
   });
   const json = (await response.json()) as ApiEnvelope<AddTeacherEventResult>;
   if (!json.status) throw new Error(json.message);
+  sendTeacherNotification({
+    classId: params.classId,
+    sectionId: params.sectionId,
+    title: `New Event: ${params.title}`,
+    body: params.note || params.eventPlace || 'New event published for your class.',
+  }).catch(() => {});
   return { id: json.data.id, skipped: json.data.skipped ?? [] };
 }
 
@@ -655,6 +667,13 @@ export async function addTeacherNotice(params: TeacherNoticeParams): Promise<voi
       return body;
     })(),
   });
+
+  sendTeacherNotification({
+    classId: params.classId,
+    sectionId: params.sectionId,
+    title: `Notice: ${params.title}`,
+    body: params.body,
+  }).catch(() => {});
 }
 
 export interface TeacherNotice {
@@ -804,6 +823,13 @@ export async function saveAttendance(
       return body;
     })(),
   });
+
+  sendTeacherNotification({
+    classId,
+    sectionId,
+    title: 'Attendance Marked',
+    body: `Today's (${date}) attendance for your class has been updated.`,
+  }).catch(() => {});
 }
 
 export interface ExportParams {
@@ -962,12 +988,19 @@ export async function fetchTeacherLeaveApplications(classId: number, sectionId?:
   return authedRequest<TeacherLeaveApplication[]>(`/teacher_leave_applications?${qs}`);
 }
 
-export async function reviewLeaveApplication(id: number, status: 'approved' | 'rejected', note?: string): Promise<void> {
+export async function reviewLeaveApplication(id: number, status: 'approved' | 'rejected', note?: string, studentSrn?: string, classId?: number): Promise<void> {
   const body = new FormData();
   body.append('id', String(id));
   body.append('status', status);
   if (note) body.append('note', note);
   await authedRequest<{ updated: boolean }>('/teacher_review_leave', { method: 'POST', body });
+
+  sendTeacherNotification({
+    classId: classId || 0,
+    studentRef: studentSrn,
+    title: `Leave Request ${status === 'approved' ? 'Approved' : 'Rejected'}`,
+    body: `Your leave request has been ${status}.${note ? ` Note: ${note}` : ''}`,
+  }).catch(() => {});
 }
 
 export type FeeType = 'monthly' | 'bus' | 'fine' | 'other';
@@ -1022,6 +1055,12 @@ export async function addFeeInvoice(params: {
   });
   const json = (await response.json()) as ApiEnvelope<{ id: number }>;
   if (!json.status) throw new Error(json.message);
+  sendTeacherNotification({
+    classId: 0,
+    studentRef: params.srn,
+    title: `New Fee Invoice: ${params.title}`,
+    body: `Fee amount ₹${params.amount} is due ${params.dueDate ? `by ${params.dueDate}` : ''}.`,
+  }).catch(() => {});
   return json.data;
 }
 
