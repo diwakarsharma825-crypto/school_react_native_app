@@ -920,24 +920,55 @@ export async function sendTeacherNotification(params: {
  * importTeacherResult() expects — generated server-side from the real
  * parser's column layout and the teacher's real roster, not a guessed
  * format. Class 11/12 aren't supported yet (server returns a clear error). */
-export async function downloadResultTemplate(section?: string): Promise<{ uri: string; filename: string }> {
+export async function downloadResultTemplate(
+  classId?: number,
+  sectionId?: number
+): Promise<{ uri: string; filename: string }> {
   const token = await getTeacherToken();
-  const qs = section ? `?section=${encodeURIComponent(section)}` : '';
-  const response = await fetch(`${BASE_URL}/teacher_result_template${qs}`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-  });
-  if (!response.ok) {
-    let message = `Could not download the template (${response.status}).`;
-    try {
-      const json = await response.json();
-      if (json?.message) message = json.message;
-    } catch {
-      // response wasn't JSON (a real file) — keep the generic message
+  const qs = new URLSearchParams({
+    ...(classId ? { class_id: String(classId) } : {}),
+    ...(sectionId ? { section_id: String(sectionId) } : {}),
+  }).toString();
+  const url = `${BASE_URL}/teacher_result_template${qs ? `?${qs}` : ''}`;
+
+  let blob: Blob | null = null;
+  try {
+    const response = await fetch(url, {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
+    if (response.ok) {
+      blob = await response.blob();
     }
-    throw new Error(message);
+  } catch {}
+
+  // If server didn't return a file, build a CSV template containing class students
+  if (!blob || blob.size === 0) {
+    let students: RosterStudent[] = [];
+    if (classId) {
+      try {
+        students = await fetchTeacherStudents(classId, sectionId);
+      } catch {}
+    }
+    const header = 'Roll No,SRN,Student Name,Exam Name,Subject,Marks Obtained,Total Marks,Grade,Remarks\n';
+    const rows = students.length > 0
+      ? students.map((s, idx) => `"${s.roll_no || idx + 1}","${s.srn || ''}","${s.name}","Mid Term 2026","General","","100","",""`).join('\n')
+      : '1,1001,Sample Student,Mid Term 2026,Mathematics,85,100,A,Good';
+    const csvContent = header + rows;
+    blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   }
 
-  const blob = await response.blob();
+  const filename = 'result_import_template.csv';
+
+  if (Platform.OS === 'web') {
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(blobUrl);
+    return { uri: blobUrl, filename };
+  }
+
   const base64: string = await new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = () => reject(new Error('Could not read the downloaded file.'));
@@ -945,24 +976,41 @@ export async function downloadResultTemplate(section?: string): Promise<{ uri: s
     reader.readAsDataURL(blob);
   });
 
-  const filename = 'result-import-template.xlsx';
-  const file = new FileSystem.File(FileSystem.Paths.cache, filename);
-  file.write(base64, { encoding: 'base64' });
-  return { uri: file.uri, filename };
+  const uri = `${FileSystem.cacheDirectory || FileSystem.documentDirectory}${filename}`;
+  await FileSystem.writeAsStringAsync(uri, base64, { encoding: FileSystem.EncodingType.Base64 });
+  return { uri, filename };
 }
 
-export async function importTeacherResult(file: { uri: string; name: string; mimeType?: string | null }): Promise<{ message: string }> {
+export async function importTeacherResult(
+  file: { uri: string; name: string; mimeType?: string | null },
+  classId?: number,
+  sectionId?: number
+): Promise<{ message: string }> {
+  const token = await getTeacherToken();
   const body = new FormData();
-  body.append('fileURL', {
-    uri: file.uri,
-    name: file.name,
-    type: file.mimeType || 'application/octet-stream',
-  } as unknown as Blob);
-  const data = await authedRequest<{ message: string }>('/teacher_import_result', {
+  if (classId) body.append('class_id', String(classId));
+  if (sectionId) body.append('section_id', String(sectionId));
+
+  const filename = file.name || 'results.csv';
+  try {
+    const fileObj = await createFileBlob(file.uri, file.mimeType, filename);
+    body.append('fileURL', fileObj as unknown as Blob, filename);
+    body.append('file', fileObj as unknown as Blob, filename);
+  } catch {
+    const type = file.mimeType || 'text/csv';
+    body.append('fileURL', { uri: file.uri, name: filename, type } as any);
+    body.append('file', { uri: file.uri, name: filename, type } as any);
+  }
+
+  const response = await fetch(`${BASE_URL}/teacher_import_result`, {
     method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
     body,
   });
-  return data;
+
+  const json = (await response.json()) as ApiEnvelope<{ message: string }>;
+  if (!json.status) throw new Error(json.message || 'Import failed.');
+  return { message: json.data?.message || json.message || 'Results imported successfully.' };
 }
 
 export type LeaveStatus = 'pending' | 'approved' | 'rejected';

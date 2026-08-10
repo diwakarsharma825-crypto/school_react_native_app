@@ -7,25 +7,40 @@ import { Pressable, StyleSheet } from 'react-native';
 import { Brand, Radius, Spacing } from '@/constants/theme';
 import { Card } from '@/components/ui/Card';
 import { Screen } from '@/components/ui/Screen';
+import { SelectField } from '@/components/ui/SelectField';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { TeacherGuard } from '@/components/ui/TeacherGuard';
 import { downloadResultTemplate, importTeacherResult } from '@/data/teacher-api';
+import { useTeacherAuth } from '@/hooks/use-teacher-auth';
 import { useTheme } from '@/hooks/use-theme';
 
 export default function TeacherImportResultScreen() {
   const theme = useTheme();
   const router = useRouter();
+  const { profile } = useTeacherAuth();
+
+  const classes = profile?.classes ?? [];
+  const classOptions = classes.map((c) => ({
+    label: `${c.class_name}${c.section_name ? ` - ${c.section_name}` : ''}`,
+    value: String(c.class_id),
+  }));
+
+  const [classId, setClassId] = useState<string | null>(classOptions[0]?.value ?? null);
   const [file, setFile] = useState<{ uri: string; name: string; mimeType?: string | null } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
+  const selectedClass = classes.find((c) => String(c.class_id) === classId);
+
   async function handleDownloadTemplate() {
     setError(null);
     setDownloading(true);
     try {
-      const { uri } = await downloadResultTemplate();
+      const cId = selectedClass ? selectedClass.class_id : undefined;
+      const sId = selectedClass ? selectedClass.section_id : undefined;
+      const { uri } = await downloadResultTemplate(cId, sId);
       const canShare = await Sharing.isAvailableAsync();
       if (canShare) {
         await Sharing.shareAsync(uri, { dialogTitle: 'Save Result Template' });
@@ -46,6 +61,7 @@ export default function TeacherImportResultScreen() {
         'text/comma-separated-values',
         'application/vnd.ms-excel',
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        '*/*',
       ],
       copyToCacheDirectory: true,
     });
@@ -63,7 +79,9 @@ export default function TeacherImportResultScreen() {
     setError(null);
     setSuccessMessage(null);
     try {
-      const { message } = await importTeacherResult(file);
+      const cId = selectedClass ? selectedClass.class_id : undefined;
+      const sId = selectedClass ? selectedClass.section_id : undefined;
+      const { message } = await importTeacherResult(file, cId, sId);
       setSuccessMessage(message);
       setFile(null);
     } catch (e) {
@@ -78,9 +96,18 @@ export default function TeacherImportResultScreen() {
       <Screen>
         <Card style={styles.card}>
           <ThemedText type="small" themeColor="textSecondary" style={styles.intro}>
-            Upload a result sheet (.csv or .xlsx) in the same template used on the admin panel's Import Result
-            page, for your own class only. Existing students matched by roll number will be updated.
+            Download the result template pre-filled with your class roster, add your exam &amp; score details, then upload (.csv or .xlsx) to import student marks.
           </ThemedText>
+
+          {classOptions.length > 0 ? (
+            <SelectField
+              label="Select Class"
+              placeholder="Choose class"
+              value={classId}
+              options={classOptions}
+              onChange={setClassId}
+            />
+          ) : null}
 
           <Pressable
             onPress={handleDownloadTemplate}
@@ -88,7 +115,7 @@ export default function TeacherImportResultScreen() {
             style={[styles.templateButton, { borderColor: theme.tint, opacity: downloading ? 0.6 : 1 }]}
           >
             <ThemedText type="smallBold" themeColor="tint">
-              {downloading ? 'Preparing…' : 'Download Template'}
+              {downloading ? 'Preparing template…' : 'Download Template'}
             </ThemedText>
           </Pressable>
 
@@ -145,6 +172,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
     alignItems: 'center',
     paddingVertical: Spacing.two + 2,
+    marginTop: Spacing.two,
     marginBottom: Spacing.three,
   },
   filePicker: {
