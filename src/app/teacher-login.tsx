@@ -1,14 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
-import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Animated, Pressable, StyleSheet, TextInput, View } from 'react-native';
 
-import { Brand, Radius, Spacing } from '@/constants/theme';
 import { Card } from '@/components/ui/Card';
 import { PasswordInput } from '@/components/ui/PasswordInput';
 import { Screen } from '@/components/ui/Screen';
 import { ThemedText } from '@/components/ui/ThemedText';
+import { Brand, Radius, Spacing } from '@/constants/theme';
 import { registerDevice } from '@/data/app-status';
 import { teacherLogin } from '@/data/teacher-api';
 import { useBrand } from '@/hooks/use-brand';
@@ -19,9 +19,6 @@ import { clearHomeworkAccess } from '@/lib/homework-access';
 import { getFcmPushToken } from '@/lib/notifications';
 import { getCurrentDeviceLocation, requestAppPermissions } from '@/lib/permissions';
 
-/** Prompt for notification + location right after a teacher signs in, and
- * pick up the push token once notifications are granted so the server can
- * actually reach this teacher's device. */
 async function requestTeacherPermissions(emailAddress: string, teacherName?: string) {
   await requestAppPermissions().catch(() => null);
   const location = await getCurrentDeviceLocation().catch(() => null);
@@ -51,8 +48,26 @@ export default function TeacherLoginScreen() {
   const [submitting, setSubmitting] = useState(false);
 
   const [imgError, setImgError] = useState(false);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(20)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [fadeAnim, slideAnim]);
+
   const logoSource = !imgError && brand.logoUrl ? { uri: brand.logoUrl } : defaultLogo;
-  const displayTitle = brand.appTitle || 'Saarthak GIMSSS';
+  const displayTitle = brand.appTitle || 'Institute Portal';
 
   async function handleLogin() {
     if (!email.trim() || !password) {
@@ -76,7 +91,6 @@ export default function TeacherLoginScreen() {
         className: res.class_name,
         section: res.section,
       });
-      // Fire-and-forget push token registration on background thread
       getFcmPushToken().then((pushToken) => {
         if (pushToken) requestTeacherPermissions(res.email, res.name);
       }).catch(() => {});
@@ -91,96 +105,130 @@ export default function TeacherLoginScreen() {
 
   return (
     <Screen>
-      <View style={styles.brandHeader}>
-        <Image
-          source={logoSource}
-          onError={() => setImgError(true)}
-          style={styles.brandLogo}
-          contentFit="contain"
-        />
-        <ThemedText type="smallBold" style={styles.brandTitle} numberOfLines={1}>
-          {displayTitle}
-        </ThemedText>
-      </View>
-      <View style={styles.hero}>
-        <View style={[styles.iconCircle, { backgroundColor: theme.backgroundSelected }]}>
-          <Ionicons name="briefcase" size={30} color={theme.tint} />
+      <Animated.View style={{ flex: 1, opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
+        {/* Brand Header */}
+        <View style={[styles.brandHeader, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+          <View style={[styles.logoGlow, { backgroundColor: theme.accent + '15' }]}>
+            <Image
+              source={logoSource}
+              onError={() => setImgError(true)}
+              style={styles.brandLogo}
+              contentFit="contain"
+            />
+          </View>
+          <View style={{ flex: 1 }}>
+            <ThemedText type="smallBold" style={{ color: theme.accent, letterSpacing: 0.8, fontSize: 10 }}>
+              TEACHER PORTAL
+            </ThemedText>
+            <ThemedText type="subtitle" style={styles.brandTitle} numberOfLines={1}>
+              {displayTitle}
+            </ThemedText>
+          </View>
         </View>
-        <ThemedText type="title" style={styles.title}>
-          Teacher Login
-        </ThemedText>
-        <ThemedText type="default" themeColor="textSecondary" style={styles.subtitle}>
-          Use the same email and password your school admin gave you for the staff portal.
-        </ThemedText>
-      </View>
 
-      <Card>
-        <ThemedText type="smallBold" style={styles.fieldLabel}>
-          Email
-        </ThemedText>
-        <TextInput
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-          placeholder="you@school.org"
-          placeholderTextColor={theme.textSecondary}
-          style={[styles.input, { borderColor: theme.border, color: theme.text }]}
-        />
-        <ThemedText type="smallBold" style={styles.fieldLabel}>
-          Password
-        </ThemedText>
-        <PasswordInput value={password} onChangeText={setPassword} placeholder="Password" />
-        <Pressable onPress={() => router.push('/teacher-forgot-password' as any)} hitSlop={8} style={styles.forgotRow}>
-          <ThemedText type="small" themeColor="tint">
-            Forgot password?
+        <View style={styles.hero}>
+          <View style={[styles.iconCircle, { backgroundColor: theme.accent + '1E' }]}>
+            <Ionicons name="briefcase-outline" size={32} color={theme.accent} />
+          </View>
+          <ThemedText type="title" style={styles.title}>
+            Teacher Login
           </ThemedText>
-        </Pressable>
-        {error ? (
-          <ThemedText type="small" style={styles.error}>
-            {error}
+          <ThemedText type="default" themeColor="textSecondary" style={styles.subtitle}>
+            Use the credentials provided by your institute administrator.
           </ThemedText>
-        ) : null}
-        <Pressable
-          onPress={handleLogin}
-          disabled={submitting}
-          style={[styles.button, { backgroundColor: theme.tint, opacity: submitting ? 0.6 : 1 }]}
-        >
-          <ThemedText type="smallBold" style={styles.buttonLabel}>
-            {submitting ? 'Logging in…' : 'Log In'}
+        </View>
+
+        <Card>
+          <ThemedText type="smallBold" style={styles.fieldLabel}>
+            Email Address
           </ThemedText>
-        </Pressable>
-      </Card>
+          <TextInput
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            keyboardType="email-address"
+            placeholder="you@institute.org"
+            placeholderTextColor={theme.textSecondary}
+            style={[styles.input, { borderColor: theme.border, color: theme.text }]}
+          />
+          <ThemedText type="smallBold" style={styles.fieldLabel}>
+            Password
+          </ThemedText>
+          <PasswordInput value={password} onChangeText={setPassword} placeholder="Password" />
+          <Pressable onPress={() => router.push('/teacher-forgot-password' as any)} hitSlop={8} style={styles.forgotRow}>
+            <ThemedText type="small" style={{ color: theme.accent }}>
+              Forgot password?
+            </ThemedText>
+          </Pressable>
+          {error ? (
+            <ThemedText type="small" style={styles.error}>
+              {error}
+            </ThemedText>
+          ) : null}
+          <Pressable
+            onPress={handleLogin}
+            disabled={submitting}
+            style={[styles.button, { backgroundColor: theme.accent, opacity: submitting ? 0.6 : 1 }]}
+          >
+            <ThemedText type="smallBold" style={styles.buttonLabel}>
+              {submitting ? 'Logging in…' : 'Log In as Teacher'}
+            </ThemedText>
+            <Ionicons name="arrow-forward" size={18} color="#fff" style={{ marginLeft: 6 }} />
+          </Pressable>
+        </Card>
+      </Animated.View>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  hero: {
+  brandHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: Spacing.four,
+    gap: Spacing.three,
+    marginBottom: Spacing.three,
+    marginTop: Spacing.two,
+    padding: Spacing.three,
+    borderRadius: Radius.xl,
+    borderWidth: 1,
   },
-  iconCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: Radius.pill,
+  logoGlow: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  brandLogo: {
+    width: 32,
+    height: 32,
+    borderRadius: Radius.sm,
+  },
+  brandTitle: {
+    fontSize: 16,
+  },
+  hero: {
+    alignItems: 'center',
     marginBottom: Spacing.three,
+  },
+  iconCircle: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.two,
   },
   title: {
     marginBottom: Spacing.one,
   },
   subtitle: {
     textAlign: 'center',
+    lineHeight: 20,
   },
   fieldLabel: {
-    marginBottom: Spacing.one,
     marginTop: Spacing.three,
-  },
-  forgotRow: {
-    alignSelf: 'flex-end',
-    marginTop: Spacing.two,
+    marginBottom: Spacing.one,
   },
   input: {
     borderWidth: 1,
@@ -189,32 +237,23 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.two + 2,
     fontSize: 16,
   },
+  forgotRow: {
+    alignSelf: 'flex-end',
+    marginTop: Spacing.one + 2,
+  },
   error: {
     color: Brand.red,
     marginTop: Spacing.two,
   },
   button: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: Spacing.three,
     borderRadius: Radius.pill,
     marginTop: Spacing.four,
   },
   buttonLabel: {
     color: Brand.white,
-  },
-  brandHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-    marginBottom: Spacing.three,
-  },
-  brandLogo: {
-    width: 36,
-    height: 36,
-    borderRadius: Radius.sm,
-  },
-  brandTitle: {
-    fontSize: 16,
-    flex: 1,
   },
 });

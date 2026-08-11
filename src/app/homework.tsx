@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { Brand, Radius, Spacing } from '@/constants/theme';
 import { Card } from '@/components/ui/Card';
@@ -108,65 +108,100 @@ function AccessForm({ onDone }: { onDone: () => void }) {
     }
   }
 
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(20)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [fadeAnim, slideAnim]);
+
   const brand = useBrand();
   const [imgError, setImgError] = useState(false);
   const logoSource = !imgError && brand.logoUrl ? { uri: brand.logoUrl } : defaultLogo;
   const displayTitle = brand.appTitle || 'Saarthak GIMSSS';
 
   return (
-    <Card>
-      <View style={styles.brandHeader}>
-        <Image
-          source={logoSource}
-          onError={() => setImgError(true)}
-          style={styles.brandLogo}
-          contentFit="contain"
-        />
-        <ThemedText type="smallBold" style={styles.brandTitle} numberOfLines={1}>
-          {displayTitle}
-        </ThemedText>
+    <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
+      <View style={[styles.brandHeader, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+        <View style={[styles.logoGlow, { backgroundColor: theme.tint + '15' }]}>
+          <Image
+            source={logoSource}
+            onError={() => setImgError(true)}
+            style={styles.brandLogo}
+            contentFit="contain"
+          />
+        </View>
+        <View style={{ flex: 1 }}>
+          <ThemedText type="smallBold" style={{ color: theme.tint, letterSpacing: 0.8, fontSize: 10 }}>
+            STUDENT PORTAL
+          </ThemedText>
+          <ThemedText type="subtitle" style={styles.brandTitle} numberOfLines={1}>
+            {displayTitle}
+          </ThemedText>
+        </View>
       </View>
-      <ThemedText type="subtitle" style={styles.formTitle}>
-        Student Login
-      </ThemedText>
-      <ThemedText type="small" themeColor="textSecondary" style={styles.formSubtitle}>
-        Use your SRN or mobile number and the password your school gave you. Saved on this
-        device so you only need to do this once — until the app is uninstalled.
-      </ThemedText>
 
-      <ThemedText type="smallBold" style={styles.fieldLabel}>
-        SRN or Mobile Number
-      </ThemedText>
-      <TextInput
-        value={identifier}
-        onChangeText={setIdentifier}
-        autoCapitalize="none"
-        placeholder="SRN or mobile number"
-        placeholderTextColor={theme.textSecondary}
-        style={[styles.input, { borderColor: theme.border, color: theme.text }]}
-      />
+      <Card>
+        <View style={styles.formHeroRow}>
+          <View style={[styles.studentIconWrap, { backgroundColor: theme.tint + '1E' }]}>
+            <Ionicons name="school-outline" size={26} color={theme.tint} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <ThemedText type="subtitle" style={styles.formTitle}>
+              Student Login
+            </ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">
+              Enter your SRN or mobile number and password
+            </ThemedText>
+          </View>
+        </View>
 
-      <ThemedText type="smallBold" style={styles.fieldLabel}>
-        Password
-      </ThemedText>
-      <PasswordInput value={password} onChangeText={setPassword} placeholder="Password" />
-
-      {error ? (
-        <ThemedText type="small" style={styles.error}>
-          {error}
+        <ThemedText type="smallBold" style={styles.fieldLabel}>
+          SRN or Mobile Number
         </ThemedText>
-      ) : null}
+        <TextInput
+          value={identifier}
+          onChangeText={setIdentifier}
+          autoCapitalize="none"
+          placeholder="SRN or mobile number"
+          placeholderTextColor={theme.textSecondary}
+          style={[styles.input, { borderColor: theme.border, color: theme.text }]}
+        />
 
-      <Pressable
-        onPress={handleLogin}
-        disabled={submitting}
-        style={[styles.button, { backgroundColor: theme.tint, opacity: submitting ? 0.6 : 1 }]}
-      >
-        <ThemedText type="smallBold" style={styles.buttonLabel}>
-          {submitting ? 'Logging in…' : 'Log In'}
+        <ThemedText type="smallBold" style={styles.fieldLabel}>
+          Password
         </ThemedText>
-      </Pressable>
-    </Card>
+        <PasswordInput value={password} onChangeText={setPassword} placeholder="Password" />
+
+        {error ? (
+          <ThemedText type="small" style={styles.error}>
+            {error}
+          </ThemedText>
+        ) : null}
+
+        <Pressable
+          onPress={handleLogin}
+          disabled={submitting}
+          style={[styles.button, { backgroundColor: theme.tint, opacity: submitting ? 0.6 : 1 }]}
+        >
+          <ThemedText type="smallBold" style={styles.buttonLabel}>
+            {submitting ? 'Signing in…' : 'Sign In as Student'}
+          </ThemedText>
+          <Ionicons name="arrow-forward" size={18} color="#fff" style={{ marginLeft: 6 }} />
+        </Pressable>
+      </Card>
+    </Animated.View>
   );
 }
 
