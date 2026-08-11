@@ -412,11 +412,14 @@ function HomeworkTab({ classId, sectionId }: { classId: number; sectionId?: numb
   const theme = useTheme();
   const router = useRouter();
   const today = new Date();
+  const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar');
+  const [searchQuery, setSearchQuery] = useState('');
   const [viewYear, setViewYear] = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth() + 1);
   const [selectedDate, setSelectedDate] = useState(todayStr());
   const [homeworkDates, setHomeworkDates] = useState<string[]>([]);
   const [entries, setEntries] = useState<HomeworkEntry[]>([]);
+  const [allEntries, setAllEntries] = useState<HomeworkEntry[]>([]);
   const [loadingEntries, setLoadingEntries] = useState(true);
   const [error, setError] = useState(false);
   const [detailEntry, setDetailEntry] = useState<HomeworkEntry | null>(null);
@@ -440,22 +443,48 @@ function HomeworkTab({ classId, sectionId }: { classId: number; sectionId?: numb
       .finally(() => setLoadingEntries(false));
   }
 
-  useEffect(() => {
-    loadEntries(selectedDate);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedDate]);
+  function loadAllEntries() {
+    setLoadingEntries(true);
+    setError(false);
+    fetchHomeworkForDate(classId, sectionId, 'all')
+      .then(setAllEntries)
+      .catch(() => setError(true))
+      .finally(() => setLoadingEntries(false));
+  }
 
-  // Also reload on focus — coming back from Add/Edit Homework shouldn't
-  // require a manual refresh to see the change.
+  useEffect(() => {
+    if (viewMode === 'calendar') {
+      loadEntries(selectedDate);
+    } else {
+      loadAllEntries();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDate, viewMode]);
+
   useFocusEffect(
     useCallback(() => {
       fetchHomeworkDates(classId, sectionId, viewYear, viewMonth)
         .then(setHomeworkDates)
         .catch(() => setHomeworkDates([]));
-      loadEntries(selectedDate);
+      if (viewMode === 'calendar') {
+        loadEntries(selectedDate);
+      } else {
+        loadAllEntries();
+      }
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [classId, sectionId, viewYear, viewMonth, selectedDate])
+    }, [classId, sectionId, viewYear, viewMonth, selectedDate, viewMode])
   );
+
+  const filteredList = useMemo(() => {
+    if (!searchQuery.trim()) return allEntries;
+    const q = searchQuery.toLowerCase().trim();
+    return allEntries.filter((e) =>
+      e.subject.toLowerCase().includes(q) ||
+      (e.chapter && e.chapter.toLowerCase().includes(q)) ||
+      e.homework_date.includes(q) ||
+      (e.description && e.description.toLowerCase().includes(q))
+    );
+  }, [allEntries, searchQuery]);
 
   function confirmDelete(entry: HomeworkEntry) {
     Alert.alert('Delete homework?', `"${entry.subject}" will be permanently removed.`, [
@@ -465,7 +494,10 @@ function HomeworkTab({ classId, sectionId }: { classId: number; sectionId?: numb
         style: 'destructive',
         onPress: () => {
           deleteHomework(entry.id)
-            .then(() => loadEntries(selectedDate))
+            .then(() => {
+              if (viewMode === 'calendar') loadEntries(selectedDate);
+              else loadAllEntries();
+            })
             .catch((e) => Alert.alert('Could not delete', e instanceof Error ? e.message : 'Please try again.'));
         },
       },
@@ -492,132 +524,316 @@ function HomeworkTab({ classId, sectionId }: { classId: number; sectionId?: numb
 
   return (
     <>
-      <Card style={styles.calendarCard}>
-        <View style={styles.calendarHeader}>
-          <Pressable onPress={() => changeMonth(-1)} hitSlop={8}>
-            <Ionicons name="chevron-back" size={20} color={theme.tint} />
-          </Pressable>
-          <ThemedText type="smallBold">
-            {MONTH_NAMES[viewMonth - 1]} {viewYear}
-          </ThemedText>
-          <Pressable onPress={() => changeMonth(1)} hitSlop={8}>
-            <Ionicons name="chevron-forward" size={20} color={theme.tint} />
-          </Pressable>
-        </View>
-
-        <View style={styles.weekdayRow}>
-          {WEEKDAY_LABELS.map((w, i) => (
-            <ThemedText key={i} type="small" themeColor="textSecondary" style={styles.weekdayLabel}>
-              {w}
-            </ThemedText>
-          ))}
-        </View>
-
-        <View style={styles.grid}>
-          {days.map((day, i) => {
-            if (day === null) return <View key={i} style={styles.dayCell} />;
-            const dateStr = `${viewYear}-${pad(viewMonth)}-${pad(day)}`;
-            const hasHomework = homeworkDates.includes(dateStr);
-            const isSelected = dateStr === selectedDate;
-            return (
-              <Pressable key={i} style={styles.dayCell} onPress={() => setSelectedDate(dateStr)}>
-                <View style={[styles.dayCircle, isSelected && { backgroundColor: theme.tint }]}>
-                  <ThemedText type="small" themeColor={isSelected ? 'textOnBrand' : 'text'}>
-                    {day}
-                  </ThemedText>
-                </View>
-                {hasHomework ? <View style={[styles.dot, { backgroundColor: theme.accent }]} /> : null}
-              </Pressable>
-            );
-          })}
-        </View>
-      </Card>
-
-      <View style={styles.entriesHeader}>
-        <ThemedText type="smallBold">Homework — {selectedDate}</ThemedText>
+      {/* View Toggle Bar */}
+      <View style={[styles.viewToggleContainer, { backgroundColor: theme.backgroundElement }]}>
         <Pressable
-          onPress={() =>
-            router.push({
-              pathname: '/teacher-homework-add',
-              params: { classId: String(classId), sectionId: sectionId ? String(sectionId) : '', date: selectedDate },
-            })
-          }
-          style={[styles.addButton, { backgroundColor: theme.tint }]}
+          onPress={() => setViewMode('calendar')}
+          style={[
+            styles.viewToggleButton,
+            viewMode === 'calendar' && { backgroundColor: theme.surface },
+          ]}
         >
-          <Ionicons name="add" size={18} color={Brand.white} />
+          <Ionicons name="calendar-outline" size={16} color={viewMode === 'calendar' ? theme.tint : theme.textSecondary} />
+          <ThemedText
+            type="smallBold"
+            style={{ color: viewMode === 'calendar' ? theme.tint : theme.textSecondary }}
+          >
+            Calendar View
+          </ThemedText>
+        </Pressable>
+
+        <Pressable
+          onPress={() => setViewMode('list')}
+          style={[
+            styles.viewToggleButton,
+            viewMode === 'list' && { backgroundColor: theme.surface },
+          ]}
+        >
+          <Ionicons name="list-outline" size={16} color={viewMode === 'list' ? theme.tint : theme.textSecondary} />
+          <ThemedText
+            type="smallBold"
+            style={{ color: viewMode === 'list' ? theme.tint : theme.textSecondary }}
+          >
+            List View
+          </ThemedText>
         </Pressable>
       </View>
 
-      {loadingEntries ? (
-        <Loading label="Loading…" />
-      ) : error ? (
-        <ErrorState message="Could not load homework." onRetry={() => loadEntries(selectedDate)} />
-      ) : entries.length === 0 ? (
-        <EmptyState message="No homework for this date yet." icon="book-outline" />
-      ) : (
-        entries.map((entry) => (
-          <Pressable key={entry.id} onPress={() => setDetailEntry(entry)}>
-            <Card style={styles.entryCard}>
-              <View style={styles.entryHeader}>
-                <ThemedText type="smallBold">{entry.subject}</ThemedText>
-                {isEditableDate ? (
-                  <View style={styles.entryActions}>
-                    <Pressable
-                      onPress={(e) => {
-                        e.stopPropagation();
-                        router.push({
-                          pathname: '/teacher-homework-add',
-                          params: {
-                            classId: String(classId),
-                            sectionId: sectionId ? String(sectionId) : '',
-                            date: selectedDate,
-                            homeworkId: String(entry.id),
-                            initialSubject: entry.subject,
-                            initialDescription: entry.description ?? '',
-                            existingPhotos: entry.attachments.map((a) => a.photo_url).join('|'),
-                          },
-                        });
-                      }}
-                      hitSlop={8}
-                      style={styles.entryActionButton}
-                    >
-                      <Ionicons name="create-outline" size={16} color={theme.tint} />
-                    </Pressable>
-                    <Pressable
-                      onPress={(e) => {
-                        e.stopPropagation();
-                        confirmDelete(entry);
-                      }}
-                      hitSlop={8}
-                      style={styles.entryActionButton}
-                    >
-                      <Ionicons name="trash-outline" size={16} color={Brand.red} />
-                    </Pressable>
-                  </View>
-                ) : null}
-              </View>
-              {entry.description ? (
-                <ThemedText type="small" themeColor="textSecondary" style={styles.entryDescription} numberOfLines={2}>
-                  {entry.description}
+      {viewMode === 'calendar' ? (
+        <>
+          <Card style={styles.calendarCard}>
+            <View style={styles.calendarHeader}>
+              <Pressable onPress={() => changeMonth(-1)} hitSlop={8}>
+                <Ionicons name="chevron-back" size={20} color={theme.tint} />
+              </Pressable>
+              <ThemedText type="smallBold">
+                {MONTH_NAMES[viewMonth - 1]} {viewYear}
+              </ThemedText>
+              <Pressable onPress={() => changeMonth(1)} hitSlop={8}>
+                <Ionicons name="chevron-forward" size={20} color={theme.tint} />
+              </Pressable>
+            </View>
+
+            <View style={styles.weekdayRow}>
+              {WEEKDAY_LABELS.map((w, i) => (
+                <ThemedText key={i} type="small" themeColor="textSecondary" style={styles.weekdayLabel}>
+                  {w}
                 </ThemedText>
-              ) : null}
-              {entry.attachments.length > 0 ? (
-                <View style={styles.attachmentRow}>
-                  {entry.attachments.slice(0, 4).map((att, i) => (
-                    <Image key={i} source={{ uri: att.photo_url }} style={styles.attachmentThumb} contentFit="cover" />
-                  ))}
-                  {entry.attachments.length > 4 ? (
-                    <View style={[styles.attachmentThumb, styles.attachmentMore, { backgroundColor: theme.backgroundSelected }]}>
-                      <ThemedText type="small" themeColor="textSecondary">
-                        +{entry.attachments.length - 4}
+              ))}
+            </View>
+
+            <View style={styles.grid}>
+              {days.map((day, i) => {
+                if (day === null) return <View key={i} style={styles.dayCell} />;
+                const dateStr = `${viewYear}-${pad(viewMonth)}-${pad(day)}`;
+                const hasHomework = homeworkDates.includes(dateStr);
+                const isSelected = dateStr === selectedDate;
+                return (
+                  <Pressable key={i} style={styles.dayCell} onPress={() => setSelectedDate(dateStr)}>
+                    <View style={[styles.dayCircle, isSelected && { backgroundColor: theme.tint }]}>
+                      <ThemedText type="small" themeColor={isSelected ? 'textOnBrand' : 'text'}>
+                        {day}
                       </ThemedText>
                     </View>
+                    {hasHomework ? <View style={[styles.dot, { backgroundColor: theme.accent }]} /> : null}
+                  </Pressable>
+                );
+              })}
+            </View>
+          </Card>
+
+          <View style={styles.entriesHeader}>
+            <ThemedText type="smallBold">Homework — {selectedDate}</ThemedText>
+            <Pressable
+              onPress={() =>
+                router.push({
+                  pathname: '/teacher-homework-add',
+                  params: { classId: String(classId), sectionId: sectionId ? String(sectionId) : '', date: selectedDate },
+                })
+              }
+              style={[styles.addButton, { backgroundColor: theme.tint }]}
+            >
+              <Ionicons name="add" size={18} color={Brand.white} />
+            </Pressable>
+          </View>
+
+          {loadingEntries ? (
+            <Loading label="Loading…" />
+          ) : error ? (
+            <ErrorState message="Could not load homework." onRetry={() => loadEntries(selectedDate)} />
+          ) : entries.length === 0 ? (
+            <EmptyState message="No homework for this date yet." icon="book-outline" />
+          ) : (
+            entries.map((entry) => (
+              <Pressable key={entry.id} onPress={() => setDetailEntry(entry)}>
+                <Card style={styles.entryCard}>
+                  <View style={styles.entryHeader}>
+                    <View style={styles.badgeRow}>
+                      <View style={[styles.subjectBadge, { backgroundColor: theme.tint }]}>
+                        <ThemedText type="smallBold" style={{ color: Brand.white, fontSize: 12 }}>
+                          {entry.subject}
+                        </ThemedText>
+                      </View>
+                      {entry.chapter ? (
+                        <View style={[styles.chapterBadge, { backgroundColor: theme.accent + '22', borderColor: theme.accent, borderWidth: 1 }]}>
+                          <ThemedText type="smallBold" style={{ color: theme.accent, fontSize: 12 }}>
+                            {entry.chapter}
+                          </ThemedText>
+                        </View>
+                      ) : null}
+                    </View>
+                    {isEditableDate ? (
+                      <View style={styles.entryActions}>
+                        <Pressable
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            router.push({
+                              pathname: '/teacher-homework-add',
+                              params: {
+                                classId: String(classId),
+                                sectionId: sectionId ? String(sectionId) : '',
+                                date: selectedDate,
+                                homeworkId: String(entry.id),
+                                initialSubject: entry.subject,
+                                initialChapter: entry.chapter ?? '',
+                                initialDescription: entry.description ?? '',
+                                existingPhotos: entry.attachments.map((a) => a.photo_url).join('|'),
+                              },
+                            });
+                          }}
+                          hitSlop={8}
+                          style={styles.entryActionButton}
+                        >
+                          <Ionicons name="create-outline" size={16} color={theme.tint} />
+                        </Pressable>
+                        <Pressable
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            confirmDelete(entry);
+                          }}
+                          hitSlop={8}
+                          style={styles.entryActionButton}
+                        >
+                          <Ionicons name="trash-outline" size={16} color={Brand.red} />
+                        </Pressable>
+                      </View>
+                    ) : null}
+                  </View>
+                  {entry.description ? (
+                    <ThemedText type="small" themeColor="textSecondary" style={styles.entryDescription} numberOfLines={2}>
+                      {entry.description}
+                    </ThemedText>
                   ) : null}
-                </View>
+                  {entry.attachments.length > 0 ? (
+                    <View style={styles.attachmentRow}>
+                      {entry.attachments.slice(0, 4).map((att, i) => (
+                        <Image key={i} source={{ uri: att.photo_url }} style={styles.attachmentThumb} contentFit="cover" />
+                      ))}
+                      {entry.attachments.length > 4 ? (
+                        <View style={[styles.attachmentThumb, styles.attachmentMore, { backgroundColor: theme.backgroundSelected }]}>
+                          <ThemedText type="small" themeColor="textSecondary">
+                            +{entry.attachments.length - 4}
+                          </ThemedText>
+                        </View>
+                      ) : null}
+                    </View>
+                  ) : null}
+                </Card>
+              </Pressable>
+            ))
+          )}
+        </>
+      ) : (
+        /* Teacher List View */
+        <>
+          <View style={styles.listHeaderRow}>
+            <View style={[styles.searchBar, { backgroundColor: theme.surface, borderColor: theme.border, flex: 1 }]}>
+              <Ionicons name="search-outline" size={18} color={theme.textSecondary} style={{ marginRight: 8 }} />
+              <TextInput
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder="Search date, subject, chapter..."
+                placeholderTextColor={theme.textSecondary}
+                style={[styles.searchInput, { color: theme.text }]}
+              />
+              {searchQuery ? (
+                <Pressable onPress={() => setSearchQuery('')}>
+                  <Ionicons name="close-circle" size={18} color={theme.textSecondary} />
+                </Pressable>
               ) : null}
-            </Card>
-          </Pressable>
-        ))
+            </View>
+
+            <Pressable
+              onPress={() =>
+                router.push({
+                  pathname: '/teacher-homework-add',
+                  params: { classId: String(classId), sectionId: sectionId ? String(sectionId) : '', date: todayStr() },
+                })
+              }
+              style={[styles.addButton, { backgroundColor: theme.tint, marginLeft: Spacing.two, marginBottom: Spacing.four }]}
+            >
+              <Ionicons name="add" size={18} color={Brand.white} />
+            </Pressable>
+          </View>
+
+          {loadingEntries ? (
+            <Loading label="Loading homework list…" />
+          ) : error ? (
+            <ErrorState message="Could not load homework." onRetry={loadAllEntries} />
+          ) : filteredList.length === 0 ? (
+            <EmptyState
+              message={searchQuery ? 'No matching homework found.' : 'No homework assigned yet.'}
+              icon="book-outline"
+            />
+          ) : (
+            filteredList.map((entry) => {
+              const canEditThis = entry.homework_date >= todayStr();
+              return (
+                <Pressable key={entry.id} onPress={() => setDetailEntry(entry)}>
+                  <Card style={styles.entryCard}>
+                    <View style={styles.entryHeader}>
+                      <View style={styles.badgeRow}>
+                        <View style={[styles.subjectBadge, { backgroundColor: theme.tint }]}>
+                          <ThemedText type="smallBold" style={{ color: Brand.white, fontSize: 12 }}>
+                            {entry.subject}
+                          </ThemedText>
+                        </View>
+                        {entry.chapter ? (
+                          <View style={[styles.chapterBadge, { backgroundColor: theme.accent + '22', borderColor: theme.accent, borderWidth: 1 }]}>
+                            <ThemedText type="smallBold" style={{ color: theme.accent, fontSize: 12 }}>
+                              {entry.chapter}
+                            </ThemedText>
+                          </View>
+                        ) : null}
+                        <View style={[styles.dateBadge, { backgroundColor: theme.backgroundSelected }]}>
+                          <Ionicons name="calendar-outline" size={12} color={theme.textSecondary} style={{ marginRight: 4 }} />
+                          <ThemedText type="small" themeColor="textSecondary">
+                            {entry.homework_date}
+                          </ThemedText>
+                        </View>
+                      </View>
+                      {canEditThis ? (
+                        <View style={styles.entryActions}>
+                          <Pressable
+                            onPress={(e) => {
+                              e.stopPropagation();
+                              router.push({
+                                pathname: '/teacher-homework-add',
+                                params: {
+                                  classId: String(classId),
+                                  sectionId: sectionId ? String(sectionId) : '',
+                                  date: entry.homework_date,
+                                  homeworkId: String(entry.id),
+                                  initialSubject: entry.subject,
+                                  initialChapter: entry.chapter ?? '',
+                                  initialDescription: entry.description ?? '',
+                                  existingPhotos: entry.attachments.map((a) => a.photo_url).join('|'),
+                                },
+                              });
+                            }}
+                            hitSlop={8}
+                            style={styles.entryActionButton}
+                          >
+                            <Ionicons name="create-outline" size={16} color={theme.tint} />
+                          </Pressable>
+                          <Pressable
+                            onPress={(e) => {
+                              e.stopPropagation();
+                              confirmDelete(entry);
+                            }}
+                            hitSlop={8}
+                            style={styles.entryActionButton}
+                          >
+                            <Ionicons name="trash-outline" size={16} color={Brand.red} />
+                          </Pressable>
+                        </View>
+                      ) : null}
+                    </View>
+                    {entry.description ? (
+                      <ThemedText type="small" themeColor="textSecondary" style={styles.entryDescription} numberOfLines={3}>
+                        {entry.description}
+                      </ThemedText>
+                    ) : null}
+                    {entry.attachments.length > 0 ? (
+                      <View style={styles.attachmentRow}>
+                        {entry.attachments.slice(0, 4).map((att, i) => (
+                          <Image key={i} source={{ uri: att.photo_url }} style={styles.attachmentThumb} contentFit="cover" />
+                        ))}
+                        {entry.attachments.length > 4 ? (
+                          <View style={[styles.attachmentThumb, styles.attachmentMore, { backgroundColor: theme.backgroundSelected }]}>
+                            <ThemedText type="small" themeColor="textSecondary">
+                              +{entry.attachments.length - 4}
+                            </ThemedText>
+                          </View>
+                        ) : null}
+                      </View>
+                    ) : null}
+                  </Card>
+                </Pressable>
+              );
+            })
+          )}
+        </>
       )}
 
       {detailEntry ? (
@@ -625,9 +841,11 @@ function HomeworkTab({ classId, sectionId }: { classId: number; sectionId?: numb
           visible
           onClose={() => setDetailEntry(null)}
           subject={detailEntry.subject}
+          chapter={detailEntry.chapter}
           date={detailEntry.homework_date}
           description={detailEntry.description}
           photoUrls={detailEntry.attachments.map((a) => a.photo_url)}
+          teacherName={detailEntry.teacher_name}
         />
       ) : null}
     </>
@@ -1104,5 +1322,61 @@ const styles = StyleSheet.create({
   attachmentMore: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  viewToggleContainer: {
+    flexDirection: 'row',
+    borderRadius: Radius.pill,
+    padding: 3,
+    marginBottom: Spacing.three,
+  },
+  viewToggleButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.one,
+    paddingVertical: Spacing.two,
+    borderRadius: Radius.pill,
+  },
+  listHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: Radius.lg,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+    marginBottom: Spacing.four,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    padding: 0,
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: Spacing.two,
+  },
+  subjectBadge: {
+    paddingHorizontal: Spacing.two,
+    paddingVertical: 3,
+    borderRadius: Radius.pill,
+  },
+  chapterBadge: {
+    paddingHorizontal: Spacing.two,
+    paddingVertical: 2,
+    borderRadius: Radius.pill,
+  },
+  dateBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.two,
+    paddingVertical: 3,
+    borderRadius: Radius.pill,
   },
 });

@@ -22,6 +22,7 @@ export default function TeacherHomeworkAddScreen() {
     date,
     homeworkId,
     initialSubject,
+    initialChapter,
     initialDescription,
     existingPhotos,
   } = useLocalSearchParams<{
@@ -30,6 +31,7 @@ export default function TeacherHomeworkAddScreen() {
     date: string;
     homeworkId?: string;
     initialSubject?: string;
+    initialChapter?: string;
     initialDescription?: string;
     existingPhotos?: string;
   }>();
@@ -37,6 +39,7 @@ export default function TeacherHomeworkAddScreen() {
   const existingPhotoUrls = existingPhotos ? existingPhotos.split('|').filter(Boolean) : [];
 
   const [subject, setSubject] = useState(initialSubject ?? '');
+  const [chapter, setChapter] = useState(initialChapter ?? '');
   const [description, setDescription] = useState(initialDescription ?? '');
   const [photos, setPhotos] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -74,6 +77,7 @@ export default function TeacherHomeworkAddScreen() {
         await updateHomework({
           id: Number(homeworkId),
           subject: subject.trim(),
+          chapter: chapter.trim() || undefined,
           description: description.trim(),
           photoUris: photos.length > 0 ? photos : undefined,
         });
@@ -82,6 +86,7 @@ export default function TeacherHomeworkAddScreen() {
           classId: Number(classId),
           sectionId: sectionId ? Number(sectionId) : undefined,
           subject: subject.trim(),
+          chapter: chapter.trim() || undefined,
           date,
           description: description.trim(),
           photoUris: photos,
@@ -125,6 +130,17 @@ export default function TeacherHomeworkAddScreen() {
             />
           </>
         )}
+
+        <ThemedText type="smallBold" style={styles.fieldLabel}>
+          Chapter / Unit (Optional)
+        </ThemedText>
+        <TextInput
+          value={chapter}
+          onChangeText={setChapter}
+          placeholder="e.g. Chapter 1: Rational Numbers"
+          placeholderTextColor={theme.textSecondary}
+          style={[styles.input, { borderColor: theme.border, color: theme.text }]}
+        />
 
         <ThemedText type="smallBold" style={styles.fieldLabel}>
           Details

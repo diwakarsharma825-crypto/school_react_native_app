@@ -335,6 +335,7 @@ export async function fetchHomeworkDates(
 export interface HomeworkEntry {
   id: number;
   subject: string;
+  chapter?: string | null;
   homework_date: string;
   description: string | null;
   attachments: { photo_url: string }[];
@@ -354,6 +355,7 @@ export async function saveHomework(params: {
   classId: number;
   sectionId?: number;
   subject: string;
+  chapter?: string;
   date: string;
   description: string;
   photoUris: string[];
@@ -363,6 +365,7 @@ export async function saveHomework(params: {
   body.append('class_id', String(params.classId));
   if (params.sectionId) body.append('section_id', String(params.sectionId));
   body.append('subject', params.subject);
+  if (params.chapter) body.append('chapter', params.chapter);
   body.append('date', params.date);
   body.append('description', params.description);
   params.photoUris.forEach((uri) => {
@@ -378,7 +381,7 @@ export async function saveHomework(params: {
   sendTeacherNotification({
     classId: params.classId,
     sectionId: params.sectionId,
-    title: `New Homework: ${params.subject}`,
+    title: `New Homework: ${params.subject}${params.chapter ? ` - ${params.chapter}` : ''}`,
     body: `Homework assigned for ${params.date}: ${params.description}`,
   }).catch(() => {});
   return json.data;
@@ -398,6 +401,7 @@ export async function deleteHomework(id: number): Promise<void> {
 export async function updateHomework(params: {
   id: number;
   subject: string;
+  chapter?: string;
   description: string;
   photoUris?: string[];
 }): Promise<void> {
@@ -405,6 +409,7 @@ export async function updateHomework(params: {
   const body = new FormData();
   body.append('id', String(params.id));
   body.append('subject', params.subject);
+  if (params.chapter) body.append('chapter', params.chapter);
   body.append('description', params.description);
   if (params.photoUris) {
     params.photoUris.forEach((uri) => {

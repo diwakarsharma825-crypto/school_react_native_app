@@ -19,6 +19,7 @@ interface HomeworkDetailModalProps {
   visible: boolean;
   onClose: () => void;
   subject: string;
+  chapter?: string | null;
   date: string;
   description: string | null;
   photoUrls: string[];
@@ -28,7 +29,7 @@ interface HomeworkDetailModalProps {
 /** Full-detail view for one homework entry — subject, date, complete
  * description text, and every attached photo at a readable size, opened by
  * tapping an entry in either the teacher or student calendar list. */
-export function HomeworkDetailModal({ visible, onClose, subject, date, description, photoUrls, teacherName }: HomeworkDetailModalProps) {
+export function HomeworkDetailModal({ visible, onClose, subject, chapter, date, description, photoUrls, teacherName }: HomeworkDetailModalProps) {
   const theme = useTheme();
   const [galleryIndex, setGalleryIndex] = useState<number | null>(null);
 
@@ -41,7 +42,16 @@ export function HomeworkDetailModal({ visible, onClose, subject, date, descripti
           </View>
           <View style={styles.header}>
             <View style={styles.headerText}>
-              <ThemedText type="title">{subject}</ThemedText>
+              <View style={styles.badgeRow}>
+                <ThemedText type="title">{subject}</ThemedText>
+                {chapter ? (
+                  <View style={[styles.chapterBadge, { backgroundColor: theme.backgroundSelected }]}>
+                    <ThemedText type="smallBold" style={{ color: theme.tint }}>
+                      {chapter}
+                    </ThemedText>
+                  </View>
+                ) : null}
+              </View>
               <ThemedText type="small" themeColor="textSecondary">
                 {date}
               </ThemedText>
@@ -129,6 +139,17 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 2,
     marginRight: Spacing.two,
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: Spacing.two,
+  },
+  chapterBadge: {
+    paddingHorizontal: Spacing.two,
+    paddingVertical: 2,
+    borderRadius: Radius.pill,
   },
   body: {
     marginBottom: Spacing.two,

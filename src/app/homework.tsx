@@ -170,6 +170,8 @@ function HomeworkCalendar({ access, onLogout }: { access: HomeworkAccess; onLogo
   const theme = useTheme();
   const { allChildren, switchChild } = useStudentAuth();
   const today = new Date();
+  const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar');
+  const [searchQuery, setSearchQuery] = useState('');
   const [viewYear, setViewYear] = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth() + 1);
   const [selectedDate, setSelectedDate] = useState(
@@ -177,6 +179,7 @@ function HomeworkCalendar({ access, onLogout }: { access: HomeworkAccess; onLogo
   );
   const [homeworkDates, setHomeworkDates] = useState<string[]>([]);
   const [entries, setEntries] = useState<HomeworkEntry[]>([]);
+  const [allEntries, setAllEntries] = useState<HomeworkEntry[]>([]);
   const [loadingEntries, setLoadingEntries] = useState(true);
   const [error, setError] = useState(false);
   const [detailEntry, setDetailEntry] = useState<HomeworkEntry | null>(null);
@@ -203,10 +206,35 @@ function HomeworkCalendar({ access, onLogout }: { access: HomeworkAccess; onLogo
       .finally(() => setLoadingEntries(false));
   }
 
+  function loadAllEntries() {
+    setLoadingEntries(true);
+    setError(false);
+    fetchHomeworkForDate(access.className, access.section || undefined, 'all')
+      .then(setAllEntries)
+      .catch(() => setError(true))
+      .finally(() => setLoadingEntries(false));
+  }
+
   useEffect(() => {
-    loadEntries(selectedDate);
+    if (viewMode === 'calendar') {
+      loadEntries(selectedDate);
+    } else {
+      loadAllEntries();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedDate]);
+  }, [selectedDate, viewMode]);
+
+  const filteredList = useMemo(() => {
+    if (!searchQuery.trim()) return allEntries;
+    const q = searchQuery.toLowerCase().trim();
+    return allEntries.filter((e) =>
+      e.subject.toLowerCase().includes(q) ||
+      (e.chapter && e.chapter.toLowerCase().includes(q)) ||
+      e.homework_date.includes(q) ||
+      (e.description && e.description.toLowerCase().includes(q)) ||
+      (e.teacher_name && e.teacher_name.toLowerCase().includes(q))
+    );
+  }, [allEntries, searchQuery]);
 
   const days = useMemo(() => {
     const firstOfMonth = new Date(viewYear, viewMonth - 1, 1);
@@ -228,8 +256,6 @@ function HomeworkCalendar({ access, onLogout }: { access: HomeworkAccess; onLogo
 
   return (
     <>
-      {/* No menu here — Change Password/Log out now live under the More
-          tab's Account section, so a second menu here was redundant. */}
       {allChildren.length > 1 ? (
         <ChildSwitcherCard siblings={allChildren} activeSrn={access.srn} onSwitch={switchChild} sessionLabel={sessionLabel} />
       ) : (
@@ -246,80 +272,208 @@ function HomeworkCalendar({ access, onLogout }: { access: HomeworkAccess; onLogo
         />
       )}
 
-      <Card style={styles.calendarCard}>
-        <View style={styles.calendarHeader}>
-          <Pressable onPress={() => changeMonth(-1)} hitSlop={8}>
-            <Ionicons name="chevron-back" size={20} color={theme.tint} />
-          </Pressable>
-          <ThemedText type="smallBold">
-            {MONTH_NAMES[viewMonth - 1]} {viewYear}
+      {/* View Toggle Bar */}
+      <View style={[styles.viewToggleContainer, { backgroundColor: theme.backgroundElement }]}>
+        <Pressable
+          onPress={() => setViewMode('calendar')}
+          style={[
+            styles.viewToggleButton,
+            viewMode === 'calendar' && { backgroundColor: theme.surface },
+          ]}
+        >
+          <Ionicons name="calendar-outline" size={16} color={viewMode === 'calendar' ? theme.tint : theme.textSecondary} />
+          <ThemedText
+            type="smallBold"
+            style={{ color: viewMode === 'calendar' ? theme.tint : theme.textSecondary }}
+          >
+            Calendar View
           </ThemedText>
-          <Pressable onPress={() => changeMonth(1)} hitSlop={8}>
-            <Ionicons name="chevron-forward" size={20} color={theme.tint} />
-          </Pressable>
-        </View>
-        <View style={styles.weekdayRow}>
-          {WEEKDAY_LABELS.map((w, i) => (
-            <ThemedText key={i} type="small" themeColor="textSecondary" style={styles.weekdayLabel}>
-              {w}
-            </ThemedText>
-          ))}
-        </View>
-        <View style={styles.grid}>
-          {days.map((day, i) => {
-            if (day === null) return <View key={i} style={styles.dayCell} />;
-            const dateStr = `${viewYear}-${pad(viewMonth)}-${pad(day)}`;
-            const hasHomework = homeworkDates.includes(dateStr);
-            const isSelected = dateStr === selectedDate;
-            return (
-              <Pressable key={i} style={styles.dayCell} onPress={() => setSelectedDate(dateStr)}>
-                <View style={[styles.dayCircle, isSelected && { backgroundColor: theme.tint }]}>
-                  <ThemedText type="small" themeColor={isSelected ? 'textOnBrand' : 'text'}>
-                    {day}
-                  </ThemedText>
-                </View>
-                {hasHomework ? <View style={[styles.dot, { backgroundColor: theme.accent }]} /> : null}
+        </Pressable>
+
+        <Pressable
+          onPress={() => setViewMode('list')}
+          style={[
+            styles.viewToggleButton,
+            viewMode === 'list' && { backgroundColor: theme.surface },
+          ]}
+        >
+          <Ionicons name="list-outline" size={16} color={viewMode === 'list' ? theme.tint : theme.textSecondary} />
+          <ThemedText
+            type="smallBold"
+            style={{ color: viewMode === 'list' ? theme.tint : theme.textSecondary }}
+          >
+            List View
+          </ThemedText>
+        </Pressable>
+      </View>
+
+      {viewMode === 'calendar' ? (
+        <>
+          <Card style={styles.calendarCard}>
+            <View style={styles.calendarHeader}>
+              <Pressable onPress={() => changeMonth(-1)} hitSlop={8}>
+                <Ionicons name="chevron-back" size={20} color={theme.tint} />
               </Pressable>
-            );
-          })}
-        </View>
-      </Card>
+              <ThemedText type="smallBold">
+                {MONTH_NAMES[viewMonth - 1]} {viewYear}
+              </ThemedText>
+              <Pressable onPress={() => changeMonth(1)} hitSlop={8}>
+                <Ionicons name="chevron-forward" size={20} color={theme.tint} />
+              </Pressable>
+            </View>
+            <View style={styles.weekdayRow}>
+              {WEEKDAY_LABELS.map((w, i) => (
+                <ThemedText key={i} type="small" themeColor="textSecondary" style={styles.weekdayLabel}>
+                  {w}
+                </ThemedText>
+              ))}
+            </View>
+            <View style={styles.grid}>
+              {days.map((day, i) => {
+                if (day === null) return <View key={i} style={styles.dayCell} />;
+                const dateStr = `${viewYear}-${pad(viewMonth)}-${pad(day)}`;
+                const hasHomework = homeworkDates.includes(dateStr);
+                const isSelected = dateStr === selectedDate;
+                return (
+                  <Pressable key={i} style={styles.dayCell} onPress={() => setSelectedDate(dateStr)}>
+                    <View style={[styles.dayCircle, isSelected && { backgroundColor: theme.tint }]}>
+                      <ThemedText type="small" themeColor={isSelected ? 'textOnBrand' : 'text'}>
+                        {day}
+                      </ThemedText>
+                    </View>
+                    {hasHomework ? <View style={[styles.dot, { backgroundColor: theme.accent }]} /> : null}
+                  </Pressable>
+                );
+              })}
+            </View>
+          </Card>
 
-      <ThemedText type="smallBold" style={styles.entriesTitle}>
-        Homework — {selectedDate}
-      </ThemedText>
+          <ThemedText type="smallBold" style={styles.entriesTitle}>
+            Homework — {selectedDate}
+          </ThemedText>
 
-      {loadingEntries ? (
-        <Loading label="Loading…" />
-      ) : error ? (
-        <ErrorState message="Could not load homework." onRetry={() => loadEntries(selectedDate)} />
-      ) : entries.length === 0 ? (
-        <EmptyState message="No homework for this date." icon="book-outline" />
+          {loadingEntries ? (
+            <Loading label="Loading…" />
+          ) : error ? (
+            <ErrorState message="Could not load homework." onRetry={() => loadEntries(selectedDate)} />
+          ) : entries.length === 0 ? (
+            <EmptyState message="No homework for this date." icon="book-outline" />
+          ) : (
+            entries.map((entry) => (
+              <Pressable key={entry.id} onPress={() => setDetailEntry(entry)}>
+                <Card style={styles.entryCard}>
+                  <View style={styles.entryHeaderRow}>
+                    <View style={[styles.subjectBadge, { backgroundColor: theme.tint }]}>
+                      <ThemedText type="smallBold" style={{ color: Brand.white, fontSize: 12 }}>
+                        {entry.subject}
+                      </ThemedText>
+                    </View>
+                    {entry.chapter ? (
+                      <View style={[styles.chapterBadge, { backgroundColor: theme.accent + '22', borderColor: theme.accent, borderWidth: 1 }]}>
+                        <ThemedText type="smallBold" style={{ color: theme.accent, fontSize: 12 }}>
+                          {entry.chapter}
+                        </ThemedText>
+                      </View>
+                    ) : null}
+                  </View>
+
+                  {entry.teacher_name ? (
+                    <ThemedText type="small" themeColor="textSecondary" style={styles.entryTeacher}>
+                      Assigned by {entry.teacher_name}
+                    </ThemedText>
+                  ) : null}
+                  {entry.description ? (
+                    <ThemedText type="small" themeColor="textSecondary" style={styles.entryDescription} numberOfLines={2}>
+                      {entry.description}
+                    </ThemedText>
+                  ) : null}
+                  {entry.attachments.length > 0 ? (
+                    <View style={styles.attachmentRow}>
+                      {entry.attachments.map((att, i) => (
+                        <Image key={i} source={{ uri: att.photo_url }} style={styles.attachmentThumb} contentFit="cover" />
+                      ))}
+                    </View>
+                  ) : null}
+                </Card>
+              </Pressable>
+            ))
+          )}
+        </>
       ) : (
-        entries.map((entry) => (
-          <Pressable key={entry.id} onPress={() => setDetailEntry(entry)}>
-            <Card style={styles.entryCard}>
-              <ThemedText type="smallBold">{entry.subject}</ThemedText>
-              {entry.teacher_name ? (
-                <ThemedText type="small" themeColor="textSecondary" style={styles.entryTeacher}>
-                  Assigned by {entry.teacher_name}
-                </ThemedText>
-              ) : null}
-              {entry.description ? (
-                <ThemedText type="small" themeColor="textSecondary" style={styles.entryDescription} numberOfLines={2}>
-                  {entry.description}
-                </ThemedText>
-              ) : null}
-              {entry.attachments.length > 0 ? (
-                <View style={styles.attachmentRow}>
-                  {entry.attachments.map((att, i) => (
-                    <Image key={i} source={{ uri: att.photo_url }} style={styles.attachmentThumb} contentFit="cover" />
-                  ))}
-                </View>
-              ) : null}
-            </Card>
-          </Pressable>
-        ))
+        /* List View */
+        <>
+          <View style={[styles.searchBar, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <Ionicons name="search-outline" size={18} color={theme.textSecondary} style={{ marginRight: 8 }} />
+            <TextInput
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder="Search by date, subject or chapter..."
+              placeholderTextColor={theme.textSecondary}
+              style={[styles.searchInput, { color: theme.text }]}
+            />
+            {searchQuery ? (
+              <Pressable onPress={() => setSearchQuery('')}>
+                <Ionicons name="close-circle" size={18} color={theme.textSecondary} />
+              </Pressable>
+            ) : null}
+          </View>
+
+          {loadingEntries ? (
+            <Loading label="Loading homework list…" />
+          ) : error ? (
+            <ErrorState message="Could not load homework." onRetry={loadAllEntries} />
+          ) : filteredList.length === 0 ? (
+            <EmptyState
+              message={searchQuery ? 'No matching homework found.' : 'No homework assigned yet.'}
+              icon="book-outline"
+            />
+          ) : (
+            filteredList.map((entry) => (
+              <Pressable key={entry.id} onPress={() => setDetailEntry(entry)}>
+                <Card style={styles.entryCard}>
+                  <View style={styles.entryHeaderRow}>
+                    <View style={[styles.subjectBadge, { backgroundColor: theme.tint }]}>
+                      <ThemedText type="smallBold" style={{ color: Brand.white, fontSize: 12 }}>
+                        {entry.subject}
+                      </ThemedText>
+                    </View>
+                    {entry.chapter ? (
+                      <View style={[styles.chapterBadge, { backgroundColor: theme.accent + '22', borderColor: theme.accent, borderWidth: 1 }]}>
+                        <ThemedText type="smallBold" style={{ color: theme.accent, fontSize: 12 }}>
+                          {entry.chapter}
+                        </ThemedText>
+                      </View>
+                    ) : null}
+                    <View style={[styles.dateBadge, { backgroundColor: theme.backgroundSelected }]}>
+                      <Ionicons name="calendar-outline" size={12} color={theme.textSecondary} style={{ marginRight: 4 }} />
+                      <ThemedText type="small" themeColor="textSecondary">
+                        {entry.homework_date}
+                      </ThemedText>
+                    </View>
+                  </View>
+
+                  {entry.teacher_name ? (
+                    <ThemedText type="small" themeColor="textSecondary" style={styles.entryTeacher}>
+                      Assigned by {entry.teacher_name}
+                    </ThemedText>
+                  ) : null}
+                  {entry.description ? (
+                    <ThemedText type="small" themeColor="textSecondary" style={styles.entryDescription} numberOfLines={3}>
+                      {entry.description}
+                    </ThemedText>
+                  ) : null}
+                  {entry.attachments.length > 0 ? (
+                    <View style={styles.attachmentRow}>
+                      {entry.attachments.map((att, i) => (
+                        <Image key={i} source={{ uri: att.photo_url }} style={styles.attachmentThumb} contentFit="cover" />
+                      ))}
+                    </View>
+                  ) : null}
+                </Card>
+              </Pressable>
+            ))
+          )}
+        </>
       )}
 
       {detailEntry ? (
@@ -327,6 +481,7 @@ function HomeworkCalendar({ access, onLogout }: { access: HomeworkAccess; onLogo
           visible
           onClose={() => setDetailEntry(null)}
           subject={detailEntry.subject}
+          chapter={detailEntry.chapter}
           date={detailEntry.homework_date}
           description={detailEntry.description}
           photoUrls={detailEntry.attachments.map((a) => a.photo_url)}
@@ -474,5 +629,59 @@ const styles = StyleSheet.create({
   brandTitle: {
     fontSize: 16,
     flex: 1,
+  },
+  viewToggleContainer: {
+    flexDirection: 'row',
+    borderRadius: Radius.pill,
+    padding: 3,
+    marginBottom: Spacing.three,
+  },
+  viewToggleButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.one,
+    paddingVertical: Spacing.two,
+    borderRadius: Radius.pill,
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: Radius.lg,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+    marginBottom: Spacing.four,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    padding: 0,
+  },
+  entryHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: Spacing.two,
+    marginBottom: Spacing.one,
+  },
+  subjectBadge: {
+    paddingHorizontal: Spacing.two,
+    paddingVertical: 3,
+    borderRadius: Radius.pill,
+  },
+  chapterBadge: {
+    paddingHorizontal: Spacing.two,
+    paddingVertical: 2,
+    borderRadius: Radius.pill,
+  },
+  dateBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.two,
+    paddingVertical: 3,
+    borderRadius: Radius.pill,
+    marginLeft: 'auto',
   },
 });

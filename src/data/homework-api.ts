@@ -12,6 +12,7 @@ interface ApiEnvelope<T> {
 export interface HomeworkEntry {
   id: number;
   subject: string;
+  chapter?: string | null;
   homework_date: string;
   description: string | null;
   attachments: { photo_url: string }[];
