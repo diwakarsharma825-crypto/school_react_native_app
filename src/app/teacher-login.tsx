@@ -60,9 +60,6 @@ export default function TeacherLoginScreen() {
     ]).start();
   }, [fadeAnim, slideAnim]);
 
-  const logoSource = !imgError && brand.logoUrl ? { uri: brand.logoUrl } : defaultLogo;
-  const displayTitle = brand.appTitle || 'Institute Portal';
-
   async function handleLogin() {
     if (!email.trim() || !password) {
       setError('Please enter both email and password.');

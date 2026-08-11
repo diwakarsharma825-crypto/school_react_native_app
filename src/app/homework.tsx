@@ -126,11 +126,6 @@ function AccessForm({ onDone }: { onDone: () => void }) {
     ]).start();
   }, [fadeAnim, slideAnim]);
 
-  const brand = useBrand();
-  const [imgError, setImgError] = useState(false);
-  const logoSource = !imgError && brand.logoUrl ? { uri: brand.logoUrl } : defaultLogo;
-  const displayTitle = brand.appTitle || 'Saarthak GIMSSS';
-
   return (
     <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
       <Card style={styles.loginCard}>
