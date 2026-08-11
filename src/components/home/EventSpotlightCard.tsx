@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Brand, Radius, Spacing } from '@/constants/theme';
 import type { EventMediaItem } from '@/data/types';
+import { useTheme } from '@/hooks/use-theme';
 import { formatDateShort } from '@/lib/format';
 import { EventMediaCarousel } from '../ui/EventMediaCarousel';
 import { ThemedText } from '../ui/ThemedText';

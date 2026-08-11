@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Brand, Radius, Spacing } from '@/constants/theme';
 import { Stats } from '@/data/types';
+import { useTheme } from '@/hooks/use-theme';
 import { ThemedText } from '../ui/ThemedText';
 
 interface StatsRowProps {
