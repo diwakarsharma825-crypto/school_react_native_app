@@ -42,10 +42,13 @@ export default function FeesScreen() {
   const [viewerInvoice, setViewerInvoice] = useState<FeeInvoice | null>(null);
 
   function load() {
-    if (!access?.srn) return;
+    if (!access) return;
+    const validSrn = access.srn && access.srn !== '0' && access.srn !== '0.0' ? access.srn : null;
+    const identifier = validSrn || access.phone;
+    if (!identifier) return;
     setLoading(true);
     setError(false);
-    fetchStudentFeeInvoices(access.srn, dateFromFilter ?? undefined, dateToFilter ?? undefined)
+    fetchStudentFeeInvoices(identifier, dateFromFilter ?? undefined, dateToFilter ?? undefined)
       .then(setInvoices)
       .catch(() => setError(true))
       .finally(() => setLoading(false));

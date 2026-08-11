@@ -54,13 +54,18 @@ export default function StudentDashboardScreen() {
   }, []);
 
   const loadStats = useCallback(() => {
-    if (!access?.srn) return;
+    if (!access) return;
     setLoadingStats(true);
-    const identifier = access.srn || access.phone;
+    const validSrn = access.srn && access.srn !== '0' && access.srn !== '0.0' ? access.srn : null;
+    const identifier = validSrn || access.phone;
+    if (!identifier) {
+      setLoadingStats(false);
+      return;
+    }
     Promise.all([
-      identifier ? fetchStudentAttendance(identifier).catch(() => []) : Promise.resolve([]),
-      fetchStudentFeeInvoices(access.srn).catch(() => []),
-      fetchStudentLeaveApplications(access.srn).catch(() => []),
+      fetchStudentAttendance(identifier).catch(() => []),
+      fetchStudentFeeInvoices(identifier).catch(() => []),
+      fetchStudentLeaveApplications(identifier).catch(() => []),
     ]).then(([attendance, fees, leaves]) => {
       const now = new Date();
       const prefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-`;

@@ -51,9 +51,9 @@ export default function StudentAttendanceScreen() {
   const [viewMonth, setViewMonth] = useState(today.getMonth() + 1);
 
   function load() {
-    // SRN first — a shared parent phone can match more than one sibling
-    // now, only SRN is guaranteed to resolve to this exact child.
-    const identifier = access?.srn || access?.phone;
+    if (!access) return;
+    const validSrn = access.srn && access.srn !== '0' && access.srn !== '0.0' ? access.srn : null;
+    const identifier = validSrn || access.phone;
     if (!identifier) return;
     setLoading(true);
     setError(false);
@@ -63,7 +63,7 @@ export default function StudentAttendanceScreen() {
       .finally(() => setLoading(false));
   }
 
-  useEffect(load, [access?.phone, access?.srn]);
+  useEffect(load, [access]);
 
   const byDate = useMemo(() => {
     const map: Record<string, AttendanceDay> = {};

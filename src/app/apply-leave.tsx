@@ -48,10 +48,13 @@ export default function ApplyLeaveScreen() {
   const [historyError, setHistoryError] = useState(false);
 
   function loadHistory() {
-    if (!access?.srn) return;
+    if (!access) return;
+    const validSrn = access.srn && access.srn !== '0' && access.srn !== '0.0' ? access.srn : null;
+    const identifier = validSrn || access.phone;
+    if (!identifier) return;
     setLoadingHistory(true);
     setHistoryError(false);
-    fetchStudentLeaveApplications(access.srn)
+    fetchStudentLeaveApplications(identifier)
       .then(setHistory)
       .catch(() => setHistoryError(true))
       .finally(() => setLoadingHistory(false));
@@ -65,11 +68,14 @@ export default function ApplyLeaveScreen() {
       }
       loadHistory();
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [checking, loggedIn, access?.srn])
+    }, [checking, loggedIn, access])
   );
 
   async function handleSubmit() {
-    if (!access?.srn) return;
+    if (!access) return;
+    const validSrn = access.srn && access.srn !== '0' && access.srn !== '0.0' ? access.srn : null;
+    const identifier = validSrn || access.phone;
+    if (!identifier) return;
     if (!leaveType || !dateFrom || !dateTo) {
       setError('Please select a leave type and both dates.');
       return;
@@ -83,7 +89,7 @@ export default function ApplyLeaveScreen() {
     setSuccessMessage(null);
     try {
       await applyForLeave({
-        srn: access.srn,
+        srn: identifier,
         leaveType,
         dateFrom,
         dateTo,
