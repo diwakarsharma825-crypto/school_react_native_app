@@ -1,25 +1,21 @@
+import { Image } from 'expo-image';
 import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, StyleSheet } from 'react-native';
 
 import { Brand } from '@/constants/theme';
+import { useBrand } from '@/hooks/use-brand';
+import { useTheme } from '@/hooks/use-theme';
 
-const logoSource = require('../../../assets/images/icon.png');
+const defaultLogo = require('../../../assets/images/icon.png');
 
-/** Shown while the app boots (app_status/onboarding checks in flight) — a
- * simple scale+fade entrance for the school logo instead of a bare spinner,
- * matching the "make app open feel alive" ask. Kept dependency-free (no
- * Lottie) since it only needs to run once for ~1s.
- *
- * NOTE: this used to combine two separate Animated.Values with
- * Animated.multiply() for the transform — that threw a native
- * "Illegal node ID set as an input for Animated.multiply node" exception on
- * some devices/RN versions and could hang the app on this very first
- * screen. Fixed by driving the entrance spring AND the pulse loop off the
- * same single Animated.Value instead — never combine two animated values
- * into one transform here again without testing on a real device first. */
 export function LaunchScreen() {
   const scale = useRef(new Animated.Value(0.7)).current;
   const opacity = useRef(new Animated.Value(0)).current;
+  const brand = useBrand();
+  const theme = useTheme();
+
+  const logoSource = brand.logoUrl ? { uri: brand.logoUrl } : defaultLogo;
+  const splashBg = brand.splashColor || brand.primaryColor || theme.tint || Brand.blueDark;
 
   useEffect(() => {
     Animated.parallel([
@@ -46,8 +42,10 @@ export function LaunchScreen() {
   }, [opacity, scale]);
 
   return (
-    <Animated.View style={[styles.container, { opacity }]}>
-      <Animated.Image source={logoSource} style={[styles.logo, { transform: [{ scale }] }]} />
+    <Animated.View style={[styles.container, { backgroundColor: splashBg, opacity }]}>
+      <Animated.View style={styles.logoWrap}>
+        <Image source={logoSource} style={[styles.logo, { transform: [{ scale }] }]} contentFit="cover" />
+      </Animated.View>
     </Animated.View>
   );
 }
@@ -58,6 +56,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: Brand.blueDark,
+  },
+  logoWrap: {
+    width: 104,
+    height: 104,
+    borderRadius: 52,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
   },
   logo: {
     width: 96,

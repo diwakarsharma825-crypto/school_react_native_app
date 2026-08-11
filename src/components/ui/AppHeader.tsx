@@ -29,9 +29,12 @@ export function AppHeader() {
   const schoolName = settings?.school_name;
   const address = settings?.address;
 
+  const logoUri = brand.logoUrl || settings?.logo_url || settings?.front_logo_url;
+  const headerBg = brand.headerColor || brand.primaryColor || theme.tint;
+
   return (
-    <View style={[styles.container, { paddingTop: insets.top + Spacing.two, backgroundColor: theme.tint }]}>
-      <Image source={brand.logoUrl ? { uri: brand.logoUrl } : logoSource} style={styles.logo} contentFit="cover" />
+    <View style={[styles.container, { paddingTop: insets.top + Spacing.two, backgroundColor: headerBg }]}>
+      <Image source={logoUri ? { uri: logoUri } : logoSource} style={styles.logo} contentFit="cover" />
       <View style={styles.textWrap}>
         {schoolName ? (
           <ThemedText type="smallBold" themeColor="textOnBrand" numberOfLines={1} style={styles.name}>

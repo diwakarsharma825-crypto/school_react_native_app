@@ -4,10 +4,12 @@ export interface BrandOverride {
   logoUrl: string | null;
   primaryColor: string | null;
   accentColor: string | null;
+  splashColor?: string | null;
+  headerColor?: string | null;
   achieversDisplay: 'marks' | 'grade';
 }
 
-const EMPTY_BRAND: BrandOverride = { logoUrl: null, primaryColor: null, accentColor: null, achieversDisplay: 'marks' };
+const EMPTY_BRAND: BrandOverride = { logoUrl: null, primaryColor: null, accentColor: null, splashColor: null, headerColor: null, achieversDisplay: 'marks' };
 
 const BrandContext = createContext<BrandOverride>(EMPTY_BRAND);
 

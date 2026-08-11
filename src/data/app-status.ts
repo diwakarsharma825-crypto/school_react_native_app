@@ -50,10 +50,10 @@ export interface AppStatus {
   appLogoUrl: string | null;
   primaryColor: string | null;
   accentColor: string | null;
+  splashColor?: string | null;
+  headerColor?: string | null;
   homeTiles: LayoutItem[];
   bottomTabs: LayoutItem[];
-  /** Admin-toggled — whether Top Achiever cards show a CBSE-style grade
-   * (A1, A2, ...) or the raw marks (475/500). */
   achieversDisplay: 'marks' | 'grade';
   trial: TrialStatus;
 }
@@ -151,6 +151,8 @@ export async function fetchAppStatus(): Promise<AppStatus> {
     app_logo_url?: string | null;
     primary_color?: string | null;
     accent_color?: string | null;
+    splash_color?: string | null;
+    header_color?: string | null;
     home_tiles?: Array<{ label: string; icon: string; color_bg: string | null; color_fg: string | null; target: string; target_url: string | null }>;
     bottom_tabs?: Array<{ label: string; icon: string; color_bg: string | null; color_fg: string | null; target: string; target_url: string | null }>;
     achievers_display?: 'marks' | 'grade';
@@ -182,6 +184,8 @@ export async function fetchAppStatus(): Promise<AppStatus> {
     appLogoUrl: json.data.app_logo_url ?? null,
     primaryColor: json.data.primary_color ?? null,
     accentColor: json.data.accent_color ?? null,
+    splashColor: json.data.splash_color ?? null,
+    headerColor: json.data.header_color ?? null,
     homeTiles: parseLayoutItems(json.data.home_tiles, DEFAULT_HOME_TILES),
     bottomTabs: parseLayoutItems(json.data.bottom_tabs, DEFAULT_BOTTOM_TABS),
     achieversDisplay: json.data.achievers_display === 'grade' ? 'grade' : 'marks',

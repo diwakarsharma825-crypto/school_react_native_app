@@ -94,8 +94,6 @@ export default function HomeScreen() {
         <ErrorState message="Could not load the home page." onRetry={home.refetch} />
       ) : home.data ? (
         <>
-          {pendingRegistration ? <PendingApprovalBanner pending={pendingRegistration} /> : null}
-
           {home.data.sliders.length > 0 ? (
             <Carousel sliders={home.data.sliders} />
           ) : (

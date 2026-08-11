@@ -191,6 +191,8 @@ function RootLayoutInner() {
           logoUrl: status?.appLogoUrl ?? null,
           primaryColor: status?.primaryColor ?? null,
           accentColor: status?.accentColor ?? null,
+          splashColor: status?.splashColor ?? null,
+          headerColor: status?.headerColor ?? null,
           achieversDisplay: status?.achieversDisplay ?? 'marks',
         }}
       >
