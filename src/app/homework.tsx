@@ -466,9 +466,9 @@ function HomeworkCalendar({ access, onLogout }: { access: HomeworkAccess; onLogo
             <TextInput
               value={searchQuery}
               onChangeText={setSearchQuery}
-              placeholder="Search by date, subject or chapter..."
+              placeholder="Search by subject or chapter..."
               placeholderTextColor={theme.textSecondary}
-              style={[styles.searchInput, { color: theme.text }]}
+              style={[styles.searchInput, { color: theme.text, outlineStyle: 'none' } as any]}
             />
             {searchQuery ? (
               <Pressable onPress={() => setSearchQuery('')}>
@@ -791,8 +791,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderRadius: Radius.lg,
-    paddingHorizontal: Spacing.three,
+    borderRadius: Radius.pill,
+    paddingHorizontal: Spacing.three + 2,
     paddingVertical: Spacing.two,
     marginBottom: Spacing.four,
   },
