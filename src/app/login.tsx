@@ -14,6 +14,8 @@ import { useTheme } from '@/hooks/use-theme';
 import { useStudentAuth } from '@/hooks/use-student-auth';
 import { useTeacherAuth } from '@/hooks/use-teacher-auth';
 
+const defaultLogo = require('../../assets/images/icon.png');
+
 export default function LoginChoiceScreen() {
   const theme = useTheme();
   const brand = useBrand();
@@ -29,20 +31,17 @@ export default function LoginChoiceScreen() {
     }
   }, [studentLoggedIn, teacherLoggedIn, router]);
 
+  const logoSource = brand.logoUrl ? { uri: brand.logoUrl } : defaultLogo;
+  const displayTitle = brand.appTitle || 'Saarthak GIMSSS';
+
   return (
     <Screen>
-      {brand.logoUrl || brand.appTitle ? (
-        <View style={styles.brandHeader}>
-          {brand.logoUrl ? (
-            <Image source={{ uri: brand.logoUrl }} style={styles.brandLogo} contentFit="contain" />
-          ) : null}
-          {brand.appTitle ? (
-            <ThemedText type="subtitle" style={styles.brandTitle} numberOfLines={1}>
-              {brand.appTitle}
-            </ThemedText>
-          ) : null}
-        </View>
-      ) : null}
+      <View style={styles.brandHeader}>
+        <Image source={logoSource} style={styles.brandLogo} contentFit="contain" />
+        <ThemedText type="subtitle" style={styles.brandTitle} numberOfLines={1}>
+          {displayTitle}
+        </ThemedText>
+      </View>
 
       <ThemedText type="title" style={styles.title}>
         Who&apos;s using this?

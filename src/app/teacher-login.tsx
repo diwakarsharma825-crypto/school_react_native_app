@@ -37,31 +37,49 @@ async function requestTeacherPermissions(emailAddress: string, teacherName?: str
   }).catch(() => {});
 }
 
+const defaultLogo = require('../../assets/images/icon.png');
+
 export default function TeacherLoginScreen() {
   const theme = useTheme();
   const brand = useBrand();
   const router = useRouter();
-  const { profile, setLoggedIn, refresh: refreshTeacherAuth } = useTeacherAuth();
+  const { setLoggedIn } = useTeacherAuth();
   const { setAccess: setStudentAccess } = useStudentAuth();
-  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  const logoSource = brand.logoUrl ? { uri: brand.logoUrl } : defaultLogo;
+  const displayTitle = brand.appTitle || 'Saarthak GIMSSS';
+
   async function handleLogin() {
-    if (!email.trim() || !password) {
-      setError('Enter your email and password.');
+    if (!phone.trim() || !password) {
+      setError('Please enter both mobile number and password.');
       return;
     }
     setSubmitting(true);
     setError(null);
     try {
-      const loginRes = await teacherLogin(email.trim(), password);
+      const res = await teacherLogin(phone.trim(), password);
       await clearHomeworkAccess();
       setStudentAccess(null);
-      setLoggedIn(true);
-      await refreshTeacherAuth();
-      requestTeacherPermissions(email.trim(), loginRes.name).catch(() => {});
+      setLoggedIn({
+        name: res.name,
+        phone: res.phone,
+        email: res.email,
+        photoUrl: res.photo_url,
+        subject: res.subject,
+        classId: res.class_id,
+        sectionId: res.section_id,
+        className: res.class_name,
+        section: res.section,
+      });
+      // Fire-and-forget push token registration on background thread
+      getFcmPushToken().then((pushToken) => {
+        if (pushToken) registerTeacherPushToken(pushToken);
+      }).catch(() => {});
+
       router.replace('/teacher-dashboard');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Login failed.');
@@ -72,18 +90,12 @@ export default function TeacherLoginScreen() {
 
   return (
     <Screen>
-      {brand.logoUrl || brand.appTitle ? (
-        <View style={styles.brandHeader}>
-          {brand.logoUrl ? (
-            <Image source={{ uri: brand.logoUrl }} style={styles.brandLogo} contentFit="contain" />
-          ) : null}
-          {brand.appTitle ? (
-            <ThemedText type="smallBold" style={styles.brandTitle} numberOfLines={1}>
-              {brand.appTitle}
-            </ThemedText>
-          ) : null}
-        </View>
-      ) : null}
+      <View style={styles.brandHeader}>
+        <Image source={logoSource} style={styles.brandLogo} contentFit="contain" />
+        <ThemedText type="smallBold" style={styles.brandTitle} numberOfLines={1}>
+          {displayTitle}
+        </ThemedText>
+      </View>
       <View style={styles.hero}>
         <View style={[styles.iconCircle, { backgroundColor: theme.backgroundSelected }]}>
           <Ionicons name="briefcase" size={30} color={theme.tint} />
