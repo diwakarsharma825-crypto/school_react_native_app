@@ -359,6 +359,7 @@ export function OnboardingFlow({ onDone }: OnboardingFlowProps) {
 }
 
 function StepDots({ total, current }: { total: number; current: number }) {
+  const theme = useTheme();
   return (
     <View style={styles.dotsRow}>
       {Array.from({ length: total }, (_, i) => (
@@ -366,8 +367,8 @@ function StepDots({ total, current }: { total: number; current: number }) {
           key={i}
           style={[
             styles.dot,
-            i === current && styles.dotActive,
-            i < current && styles.dotDone,
+            i === current && [styles.dotActive, { backgroundColor: theme.tint }],
+            i < current && { backgroundColor: theme.tint },
           ]}
         />
       ))}
