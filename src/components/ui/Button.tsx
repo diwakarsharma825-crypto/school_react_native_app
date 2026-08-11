@@ -21,7 +21,7 @@ export function Button({ label, onPress, variant = 'primary', icon, loading = fa
   const theme = useTheme();
 
   const backgroundColor =
-    variant === 'primary' ? theme.tint : variant === 'accent' ? Brand.saffron : 'transparent';
+    variant === 'primary' ? theme.tint : variant === 'accent' ? theme.accent : 'transparent';
   const borderColor = variant === 'outline' ? theme.tint : 'transparent';
   const textColor = variant === 'outline' ? theme.tint : theme.textOnBrand;
 

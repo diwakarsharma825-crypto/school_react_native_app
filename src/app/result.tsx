@@ -77,8 +77,8 @@ export default function ResultScreen() {
 
   return (
     <Screen>
-      <View style={styles.hero}>
-        <View style={styles.heroIcon}>
+      <View style={[styles.hero, { backgroundColor: theme.tint }]}>
+        <View style={[styles.heroIcon, { backgroundColor: theme.accent }]}>
           <Ionicons name="document-text" size={26} color="#fff" />
         </View>
         <View style={styles.heroText}>

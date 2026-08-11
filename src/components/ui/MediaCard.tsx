@@ -33,12 +33,12 @@ export function MediaCard({ title, date, imageUrl, coverMedia, images, excerpt, 
     >
       <View style={styles.imageWrap}>
         <EventMediaCarousel coverMedia={coverMedia} images={images} fallbackUrl={imageUrl} style={styles.image} />
-        <View style={[styles.pill, styles.datePill]}>
+        <View style={[styles.pill, styles.datePill, { backgroundColor: theme.accent }]}>
           <ThemedText type="small" style={styles.pillText}>
             {formatDateShort(date)}
           </ThemedText>
         </View>
-        <View style={[styles.pill, styles.categoryPill]}>
+        <View style={[styles.pill, styles.categoryPill, { backgroundColor: theme.tint }]}>
           <ThemedText type="small" style={styles.pillText}>
             {category}
           </ThemedText>

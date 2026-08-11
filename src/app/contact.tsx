@@ -90,7 +90,7 @@ export default function ContactScreen() {
       <View style={styles.ctaRow}>
         <Pressable
           onPress={() => Linking.openURL(`tel:${data.phone}`)}
-          style={[styles.ctaButton, { backgroundColor: Brand.blue }]}
+          style={[styles.ctaButton, { backgroundColor: theme.tint }]}
         >
           <Ionicons name="call" size={18} color={Brand.white} />
           <ThemedText type="smallBold" style={styles.ctaLabel}>
@@ -99,7 +99,7 @@ export default function ContactScreen() {
         </Pressable>
         <Pressable
           onPress={() => Linking.openURL(`https://maps.google.com/?q=${encodeURIComponent(data.address)}`)}
-          style={[styles.ctaButton, { backgroundColor: Brand.saffron }]}
+          style={[styles.ctaButton, { backgroundColor: theme.accent }]}
         >
           <Ionicons name="navigate" size={18} color={Brand.white} />
           <ThemedText type="smallBold" style={styles.ctaLabel}>
