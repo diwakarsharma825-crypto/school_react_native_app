@@ -64,6 +64,7 @@ function RowList({ rows }: { rows: Row[] }) {
 }
 
 export default function MoreScreen() {
+  const theme = useTheme();
   const { data: settings } = useFetch(fetchSettings);
   const sections = useSections();
   const brand = useBrand();
