@@ -717,8 +717,11 @@ const styles = StyleSheet.create({
     marginTop: Spacing.three,
   },
   button: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: Spacing.three,
+    justifyContent: 'center',
+    paddingVertical: Spacing.two + 4,
+    paddingHorizontal: Spacing.four,
     borderRadius: Radius.pill,
     marginTop: Spacing.four,
   },
