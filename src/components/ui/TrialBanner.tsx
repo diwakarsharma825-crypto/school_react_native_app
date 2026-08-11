@@ -5,6 +5,7 @@ import { Animated, Easing, Modal, Pressable, StyleSheet, View } from 'react-nati
 
 import { Brand, Radius, Spacing } from '@/constants/theme';
 import type { TrialStatus } from '@/data/app-status';
+import { useTheme } from '@/hooks/use-theme';
 import { ThemedText } from './ThemedText';
 
 const LAST_SHOWN_KEY = 'saarthak.trial_banner_last_shown';
@@ -19,6 +20,7 @@ function todayStr() {
  * user regardless of when they personally installed the app. Dismissing
  * with the ✕ just hides it for the rest of today; it reappears tomorrow. */
 export function TrialBanner({ trial }: { trial: TrialStatus }) {
+  const theme = useTheme();
   const [visible, setVisible] = useState(false);
   const anim = useRef(new Animated.Value(0)).current;
 
@@ -51,6 +53,7 @@ export function TrialBanner({ trial }: { trial: TrialStatus }) {
           style={[
             styles.card,
             {
+              backgroundColor: theme.tint,
               opacity: anim,
               transform: [{ scale: anim.interpolate({ inputRange: [0, 1], outputRange: [0.85, 1] }) }],
             },
@@ -83,7 +86,7 @@ export function TrialBanner({ trial }: { trial: TrialStatus }) {
             <View style={styles.features}>
               {trial.features.map((f, i) => (
                 <View key={i} style={styles.featureRow}>
-                  <Ionicons name="checkmark-circle" size={18} color={Brand.saffronLight} />
+                  <Ionicons name="checkmark-circle" size={18} color={theme.accent} />
                   <ThemedText type="small" style={styles.featureText}>
                     {f}
                   </ThemedText>
@@ -92,7 +95,7 @@ export function TrialBanner({ trial }: { trial: TrialStatus }) {
             </View>
           ) : null}
 
-          <Pressable onPress={dismiss} style={styles.ctaButton}>
+          <Pressable onPress={dismiss} style={[styles.ctaButton, { backgroundColor: theme.accent }]}>
             <ThemedText type="smallBold" style={styles.ctaLabel}>
               Continue Exploring
             </ThemedText>
