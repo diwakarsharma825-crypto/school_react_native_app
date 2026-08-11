@@ -1,5 +1,5 @@
 import * as SystemUI from 'expo-system-ui';
-import { Stack } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useNetworkState } from 'expo-network';
 import React, { useCallback, useEffect, useState } from 'react';
@@ -184,7 +184,13 @@ function RootLayoutInner() {
       ) : !instituteOnboarded && status?.instituteMode ? (
         <SafeAreaProvider>
           <StatusBar style="dark" />
-          <InstituteOnboarding onDone={() => { markInstituteOnboardingComplete(); setInstituteOnboarded(true); }} />
+          <InstituteOnboarding
+            onDone={async () => {
+              await markInstituteOnboardingComplete();
+              setInstituteOnboarded(true);
+              router.replace('/login');
+            }}
+          />
         </SafeAreaProvider>
       ) : (
         <SafeAreaProvider>

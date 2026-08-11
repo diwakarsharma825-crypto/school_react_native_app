@@ -27,16 +27,8 @@ export function AppHeader() {
   const insets = useSafeAreaInsets();
   const theme = useTheme();
   const brand = useBrand();
-  const { instituteMode } = useLayout();
-  const { loggedIn: teacherLoggedIn } = useTeacherAuth();
-  const { loggedIn: studentLoggedIn } = useStudentAuth();
   const { data: settings } = useFetch(fetchSettings);
   const [imgError, setImgError] = useState(false);
-
-  if (instituteMode && !teacherLoggedIn && !studentLoggedIn) {
-    return null;
-  }
-
   const schoolName = settings?.school_name;
   const address = settings?.address;
 

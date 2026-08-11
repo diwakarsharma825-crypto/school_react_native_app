@@ -53,7 +53,6 @@ export function DynamicBottomBar() {
   }, [menuOpen, menuAnim]);
 
   if (bottomTabs.length === 0) return null;
-  if (instituteMode && !teacherLoggedIn && !studentLoggedIn) return null;
 
   // A teacher without gallery permission doesn't see the shared Gallery
   // tab at all — every other role/user still does, this only strips it
