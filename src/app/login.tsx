@@ -67,33 +67,6 @@ export default function LoginChoiceScreen() {
   return (
     <Screen>
       <Animated.View style={{ flex: 1, opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
-        {/* Glowing Brand Hero Card */}
-        <View style={[styles.brandCard, { backgroundColor: theme.surface, borderColor: theme.border }, Shadow.card]}>
-          <View style={[styles.logoGlow, { backgroundColor: theme.tint + '12' }]}>
-            <View style={[styles.logoRing, { backgroundColor: theme.tint + '20', borderColor: theme.tint + '38' }]}>
-              <Image
-                source={logoSource}
-                onError={() => setImgError(true)}
-                style={styles.brandLogo}
-                contentFit="contain"
-              />
-            </View>
-          </View>
-          <View style={styles.brandTextCol}>
-            <View style={[styles.welcomeBadge, { backgroundColor: theme.tint + '18' }]}>
-              <ThemedText type="smallBold" style={{ color: theme.tint, letterSpacing: 1, fontSize: 10 }}>
-                WELCOME TO
-              </ThemedText>
-            </View>
-            <ThemedText type="subtitle" style={styles.brandTitle} numberOfLines={1}>
-              {displayTitle}
-            </ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
-              Select your role below to log in
-            </ThemedText>
-          </View>
-        </View>
-
         {/* Section Header */}
         <View style={styles.titleWrap}>
           <ThemedText type="title" style={styles.title}>
