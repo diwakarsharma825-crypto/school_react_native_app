@@ -166,12 +166,31 @@ function AccessForm({ onDone }: { onDone: () => void }) {
   );
 }
 
+function formatDateHeader(dateStr: string): string {
+  if (!dateStr || dateStr === 'All') return 'All Dates';
+  try {
+    const parts = dateStr.split('-');
+    if (parts.length !== 3) return dateStr;
+    const y = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10) - 1;
+    const d = parseInt(parts[2], 10);
+    const dt = new Date(y, m, d);
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${days[dt.getDay()]}, ${d < 10 ? '0' + d : d} ${months[m]} ${y}`;
+  } catch {
+    return dateStr;
+  }
+}
+
 function HomeworkCalendar({ access, onLogout }: { access: HomeworkAccess; onLogout: () => void }) {
   const theme = useTheme();
   const { allChildren, switchChild } = useStudentAuth();
   const today = new Date();
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar');
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedSubject, setSelectedSubject] = useState<string>('All');
+  const [selectedDateFilter, setSelectedDateFilter] = useState<string>('All');
   const [viewYear, setViewYear] = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth() + 1);
   const [selectedDate, setSelectedDate] = useState(
@@ -224,17 +243,57 @@ function HomeworkCalendar({ access, onLogout }: { access: HomeworkAccess; onLogo
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate, viewMode]);
 
+  const availableSubjects = useMemo(() => {
+    const set = new Set<string>();
+    allEntries.forEach((e) => {
+      if (e.subject) set.add(e.subject.trim());
+    });
+    return ['All', ...Array.from(set).sort()];
+  }, [allEntries]);
+
+  const availableDates = useMemo(() => {
+    const set = new Set<string>();
+    allEntries.forEach((e) => {
+      if (e.homework_date) set.add(e.homework_date);
+    });
+    return ['All', ...Array.from(set).sort((a, b) => b.localeCompare(a))];
+  }, [allEntries]);
+
   const filteredList = useMemo(() => {
-    if (!searchQuery.trim()) return allEntries;
-    const q = searchQuery.toLowerCase().trim();
-    return allEntries.filter((e) =>
-      e.subject.toLowerCase().includes(q) ||
-      (e.chapter && e.chapter.toLowerCase().includes(q)) ||
-      e.homework_date.includes(q) ||
-      (e.description && e.description.toLowerCase().includes(q)) ||
-      (e.teacher_name && e.teacher_name.toLowerCase().includes(q))
-    );
-  }, [allEntries, searchQuery]);
+    return allEntries.filter((e) => {
+      if (selectedSubject !== 'All' && e.subject.toLowerCase() !== selectedSubject.toLowerCase()) {
+        return false;
+      }
+      if (selectedDateFilter !== 'All' && e.homework_date !== selectedDateFilter) {
+        return false;
+      }
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const match =
+          e.subject.toLowerCase().includes(q) ||
+          (e.chapter && e.chapter.toLowerCase().includes(q)) ||
+          e.homework_date.includes(q) ||
+          (e.description && e.description.toLowerCase().includes(q)) ||
+          (e.teacher_name && e.teacher_name.toLowerCase().includes(q));
+        if (!match) return false;
+      }
+      return true;
+    });
+  }, [allEntries, selectedSubject, selectedDateFilter, searchQuery]);
+
+  const groupedList = useMemo(() => {
+    const map = new Map<string, HomeworkEntry[]>();
+    filteredList.forEach((e) => {
+      const key = e.homework_date;
+      if (!map.has(key)) {
+        map.set(key, []);
+      }
+      map.get(key)!.push(e);
+    });
+
+    const sortedDates = Array.from(map.keys()).sort((a, b) => b.localeCompare(a));
+    return sortedDates.map((date) => ({ date, items: map.get(date)! }));
+  }, [filteredList]);
 
   const days = useMemo(() => {
     const firstOfMonth = new Date(viewYear, viewMonth - 1, 1);
@@ -418,59 +477,142 @@ function HomeworkCalendar({ access, onLogout }: { access: HomeworkAccess; onLogo
             ) : null}
           </View>
 
+          {/* Filters Section */}
+          {allEntries.length > 0 ? (
+            <View style={styles.filterSection}>
+              {availableSubjects.length > 2 ? (
+                <>
+                  <ThemedText type="smallBold" themeColor="textSecondary" style={styles.filterLabel}>
+                    SUBJECT:
+                  </ThemedText>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
+                    {availableSubjects.map((subj) => {
+                      const active = selectedSubject === subj;
+                      return (
+                        <Pressable
+                          key={subj}
+                          onPress={() => setSelectedSubject(subj)}
+                          style={[
+                            styles.filterPill,
+                            active
+                              ? { backgroundColor: theme.tint, borderColor: theme.tint }
+                              : { backgroundColor: theme.surface, borderColor: theme.border },
+                          ]}
+                        >
+                          <ThemedText
+                            type="smallBold"
+                            style={{ color: active ? Brand.white : theme.text, fontSize: 12 }}
+                          >
+                            {subj}
+                          </ThemedText>
+                        </Pressable>
+                      );
+                    })}
+                  </ScrollView>
+                </>
+              ) : null}
+
+              {availableDates.length > 2 ? (
+                <>
+                  <ThemedText type="smallBold" themeColor="textSecondary" style={styles.filterLabel}>
+                    DATE:
+                  </ThemedText>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
+                    {availableDates.map((dateVal) => {
+                      const active = selectedDateFilter === dateVal;
+                      return (
+                        <Pressable
+                          key={dateVal}
+                          onPress={() => setSelectedDateFilter(dateVal)}
+                          style={[
+                            styles.filterPill,
+                            active
+                              ? { backgroundColor: theme.accent, borderColor: theme.accent }
+                              : { backgroundColor: theme.surface, borderColor: theme.border },
+                          ]}
+                        >
+                          <ThemedText
+                            type="smallBold"
+                            style={{ color: active ? Brand.white : theme.text, fontSize: 12 }}
+                          >
+                            {formatDateHeader(dateVal)}
+                          </ThemedText>
+                        </Pressable>
+                      );
+                    })}
+                  </ScrollView>
+                </>
+              ) : null}
+            </View>
+          ) : null}
+
           {loadingEntries ? (
             <Loading label="Loading homework list…" />
           ) : error ? (
             <ErrorState message="Could not load homework." onRetry={loadAllEntries} />
-          ) : filteredList.length === 0 ? (
+          ) : groupedList.length === 0 ? (
             <EmptyState
-              message={searchQuery ? 'No matching homework found.' : 'No homework assigned yet.'}
+              message={
+                searchQuery || selectedSubject !== 'All' || selectedDateFilter !== 'All'
+                  ? 'No matching homework found.'
+                  : 'No homework assigned yet.'
+              }
               icon="book-outline"
             />
           ) : (
-            filteredList.map((entry) => (
-              <Pressable key={entry.id} onPress={() => setDetailEntry(entry)}>
-                <Card style={styles.entryCard}>
-                  <View style={styles.entryHeaderRow}>
-                    <View style={[styles.subjectBadge, { backgroundColor: theme.tint }]}>
-                      <ThemedText type="smallBold" style={{ color: Brand.white, fontSize: 12 }}>
-                        {entry.subject}
-                      </ThemedText>
-                    </View>
-                    {entry.chapter ? (
-                      <View style={[styles.chapterBadge, { backgroundColor: theme.accent + '22', borderColor: theme.accent, borderWidth: 1 }]}>
-                        <ThemedText type="smallBold" style={{ color: theme.accent, fontSize: 12 }}>
-                          {entry.chapter}
-                        </ThemedText>
-                      </View>
-                    ) : null}
-                    <View style={[styles.dateBadge, { backgroundColor: theme.backgroundSelected }]}>
-                      <Ionicons name="calendar-outline" size={12} color={theme.textSecondary} style={{ marginRight: 4 }} />
-                      <ThemedText type="small" themeColor="textSecondary">
-                        {entry.homework_date}
-                      </ThemedText>
-                    </View>
+            groupedList.map((group) => (
+              <View key={group.date} style={styles.dateGroupWrap}>
+                <View style={styles.dateGroupHeader}>
+                  <View style={[styles.dateGroupBadge, { backgroundColor: theme.backgroundSelected }]}>
+                    <Ionicons name="calendar-outline" size={14} color={theme.tint} />
+                    <ThemedText type="smallBold" style={{ color: theme.tint, marginLeft: 6 }}>
+                      {formatDateHeader(group.date)}
+                    </ThemedText>
                   </View>
+                  <ThemedText type="small" themeColor="textSecondary">
+                    {group.items.length} {group.items.length === 1 ? 'homework' : 'homeworks'}
+                  </ThemedText>
+                </View>
 
-                  {entry.teacher_name ? (
-                    <ThemedText type="small" themeColor="textSecondary" style={styles.entryTeacher}>
-                      Assigned by {entry.teacher_name}
-                    </ThemedText>
-                  ) : null}
-                  {entry.description ? (
-                    <ThemedText type="small" themeColor="textSecondary" style={styles.entryDescription} numberOfLines={3}>
-                      {entry.description}
-                    </ThemedText>
-                  ) : null}
-                  {entry.attachments.length > 0 ? (
-                    <View style={styles.attachmentRow}>
-                      {entry.attachments.map((att, i) => (
-                        <Image key={i} source={{ uri: att.photo_url }} style={styles.attachmentThumb} contentFit="cover" />
-                      ))}
-                    </View>
-                  ) : null}
-                </Card>
-              </Pressable>
+                {group.items.map((entry) => (
+                  <Pressable key={entry.id} onPress={() => setDetailEntry(entry)}>
+                    <Card style={styles.entryCard}>
+                      <View style={styles.entryHeaderRow}>
+                        <View style={[styles.subjectBadge, { backgroundColor: theme.tint }]}>
+                          <ThemedText type="smallBold" style={{ color: Brand.white, fontSize: 12 }}>
+                            {entry.subject}
+                          </ThemedText>
+                        </View>
+                        {entry.chapter ? (
+                          <View style={[styles.chapterBadge, { backgroundColor: theme.accent + '22', borderColor: theme.accent, borderWidth: 1 }]}>
+                            <ThemedText type="smallBold" style={{ color: theme.accent, fontSize: 12 }}>
+                              {entry.chapter}
+                            </ThemedText>
+                          </View>
+                        ) : null}
+                      </View>
+
+                      {entry.teacher_name ? (
+                        <ThemedText type="small" themeColor="textSecondary" style={styles.entryTeacher}>
+                          Assigned by {entry.teacher_name}
+                        </ThemedText>
+                      ) : null}
+                      {entry.description ? (
+                        <ThemedText type="small" themeColor="textSecondary" style={styles.entryDescription} numberOfLines={3}>
+                          {entry.description}
+                        </ThemedText>
+                      ) : null}
+                      {entry.attachments.length > 0 ? (
+                        <View style={styles.attachmentRow}>
+                          {entry.attachments.map((att, i) => (
+                            <Image key={i} source={{ uri: att.photo_url }} style={styles.attachmentThumb} contentFit="cover" />
+                          ))}
+                        </View>
+                      ) : null}
+                    </Card>
+                  </Pressable>
+                ))}
+              </View>
             ))
           )}
         </>
@@ -683,5 +825,41 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     borderRadius: Radius.pill,
     marginLeft: 'auto',
+  },
+  filterSection: {
+    marginBottom: Spacing.four,
+    gap: Spacing.one,
+  },
+  filterLabel: {
+    fontSize: 11,
+    letterSpacing: 0.5,
+    marginTop: Spacing.one,
+  },
+  filterScroll: {
+    flexDirection: 'row',
+    paddingVertical: Spacing.one,
+  },
+  filterPill: {
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.one + 1,
+    borderRadius: Radius.pill,
+    borderWidth: 1,
+    marginRight: Spacing.two,
+  },
+  dateGroupWrap: {
+    marginBottom: Spacing.four,
+  },
+  dateGroupHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.two,
+  },
+  dateGroupBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.one + 2,
+    borderRadius: Radius.pill,
   },
 });
