@@ -13,6 +13,17 @@ export async function markOnboardingComplete(): Promise<void> {
   await AsyncStorage.setItem(ONBOARDING_KEY, '1');
 }
 
+const INSTITUTE_ONBOARDING_KEY = 'saarthak.institute_onboarding_completed';
+
+export async function isInstituteOnboardingComplete(): Promise<boolean> {
+  const value = await AsyncStorage.getItem(INSTITUTE_ONBOARDING_KEY);
+  return value === '1';
+}
+
+export async function markInstituteOnboardingComplete(): Promise<void> {
+  await AsyncStorage.setItem(INSTITUTE_ONBOARDING_KEY, '1');
+}
+
 export type Belonging = 'saarthak' | 'other';
 export type UserType = 'student' | 'teacher' | 'other';
 

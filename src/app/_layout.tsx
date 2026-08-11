@@ -27,7 +27,7 @@ import {
 } from '@/data/app-status';
 import { BASE_URL } from '@/data/api';
 import { getAppVersion } from '@/lib/device';
-import { isOnboardingComplete } from '@/lib/onboarding';
+import { isOnboardingComplete, isInstituteOnboardingComplete, markInstituteOnboardingComplete } from '@/lib/onboarding';
 import { configureNotificationHandler, ensureNotificationChannel, getFcmPushToken } from '@/lib/notifications';
 import { isUpdateRequired } from '@/lib/version';
 import { LockScreen } from '@/components/ui/LockScreen';
@@ -35,6 +35,7 @@ import { UpdateRequiredScreen } from '@/components/ui/UpdateRequiredScreen';
 import { DetailHeader } from '@/components/ui/DetailHeader';
 import { SectionsProvider } from '@/hooks/use-sections';
 import { OnboardingFlow } from '@/components/onboarding/OnboardingFlow';
+import { InstituteOnboarding } from '@/components/onboarding/InstituteOnboarding';
 
 configureNotificationHandler();
 
@@ -64,6 +65,7 @@ function RootLayoutInner() {
   const [status, setStatus] = useState<AppStatus | null>(null);
   const [checking, setChecking] = useState(true);
   const [onboarded, setOnboarded] = useState<boolean | null>(null);
+  const [instituteOnboarded, setInstituteOnboarded] = useState<boolean | null>(null);
   const [offline, setOffline] = useState(false);
   const networkState = useNetworkState();
 
@@ -100,6 +102,7 @@ function RootLayoutInner() {
     checkStatus();
     registerDevice();
     isOnboardingComplete().then(setOnboarded);
+    isInstituteOnboardingComplete().then(setInstituteOnboarded);
     ensureNotificationChannel().then(() =>
       getFcmPushToken().then((pushToken) => {
         // Re-register with the push token once we have one — device_register
@@ -161,7 +164,7 @@ function RootLayoutInner() {
           <StatusBar style="light" />
           <OfflineScreen onRetry={handleOfflineRetry} retrying={checking} />
         </SafeAreaProvider>
-      ) : (checking && !status) || onboarded === null ? (
+      ) : (checking && !status) || onboarded === null || (status?.instituteMode && instituteOnboarded === null) ? (
         <LaunchScreen />
       ) : status && isUpdateRequired(getAppVersion(), status.minVersion) ? (
         <SafeAreaProvider>
@@ -177,6 +180,11 @@ function RootLayoutInner() {
         <SafeAreaProvider>
           <StatusBar style="dark" />
           <OnboardingFlow onDone={() => setOnboarded(true)} />
+        </SafeAreaProvider>
+      ) : !instituteOnboarded && status?.instituteMode ? (
+        <SafeAreaProvider>
+          <StatusBar style="dark" />
+          <InstituteOnboarding onDone={() => { markInstituteOnboardingComplete(); setInstituteOnboarded(true); }} />
         </SafeAreaProvider>
       ) : (
         <SafeAreaProvider>
