@@ -45,23 +45,24 @@ export default function TeacherLoginScreen() {
   const router = useRouter();
   const { setLoggedIn } = useTeacherAuth();
   const { setAccess: setStudentAccess } = useStudentAuth();
-  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const logoSource = brand.logoUrl ? { uri: brand.logoUrl } : defaultLogo;
+  const [imgError, setImgError] = useState(false);
+  const logoSource = !imgError && brand.logoUrl ? { uri: brand.logoUrl } : defaultLogo;
   const displayTitle = brand.appTitle || 'Saarthak GIMSSS';
 
   async function handleLogin() {
-    if (!phone.trim() || !password) {
-      setError('Please enter both mobile number and password.');
+    if (!email.trim() || !password) {
+      setError('Please enter both email and password.');
       return;
     }
     setSubmitting(true);
     setError(null);
     try {
-      const res = await teacherLogin(phone.trim(), password);
+      const res = await teacherLogin(email.trim(), password);
       await clearHomeworkAccess();
       setStudentAccess(null);
       setLoggedIn({
