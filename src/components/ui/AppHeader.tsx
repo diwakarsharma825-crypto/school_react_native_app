@@ -24,17 +24,24 @@ export function AppHeader() {
   const theme = useTheme();
   const brand = useBrand();
   const { data: settings } = useFetch(fetchSettings);
+  const [imgError, setImgError] = useState(false);
   // No hardcoded fallback — showing "Saarthak GIMSSS" while /settings is
   // still loading, then swapping to the real school name, reads as a bug.
   const schoolName = settings?.school_name;
   const address = settings?.address;
 
-  const logoUri = brand.logoUrl || settings?.logo_url || settings?.front_logo_url;
+  const rawLogoUri = brand.logoUrl || settings?.logo_url || settings?.front_logo_url;
+  const logoUri = !imgError && rawLogoUri ? rawLogoUri : null;
   const headerBg = brand.headerColor || brand.primaryColor || theme.tint;
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + Spacing.two, backgroundColor: headerBg }]}>
-      <Image source={logoUri ? { uri: logoUri } : logoSource} style={styles.logo} contentFit="cover" />
+      <Image
+        source={logoUri ? { uri: logoUri } : logoSource}
+        onError={() => setImgError(true)}
+        style={styles.logo}
+        contentFit="cover"
+      />
       <View style={styles.textWrap}>
         {schoolName ? (
           <ThemedText type="smallBold" themeColor="textOnBrand" numberOfLines={1} style={styles.name}>

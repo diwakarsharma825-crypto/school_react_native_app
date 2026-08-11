@@ -31,13 +31,19 @@ export default function LoginChoiceScreen() {
     }
   }, [studentLoggedIn, teacherLoggedIn, router]);
 
-  const logoSource = brand.logoUrl ? { uri: brand.logoUrl } : defaultLogo;
+  const [imgError, setImgError] = useState(false);
+  const logoSource = !imgError && brand.logoUrl ? { uri: brand.logoUrl } : defaultLogo;
   const displayTitle = brand.appTitle || 'Saarthak GIMSSS';
 
   return (
     <Screen>
       <View style={styles.brandHeader}>
-        <Image source={logoSource} style={styles.brandLogo} contentFit="contain" />
+        <Image
+          source={logoSource}
+          onError={() => setImgError(true)}
+          style={styles.brandLogo}
+          contentFit="contain"
+        />
         <ThemedText type="subtitle" style={styles.brandTitle} numberOfLines={1}>
           {displayTitle}
         </ThemedText>

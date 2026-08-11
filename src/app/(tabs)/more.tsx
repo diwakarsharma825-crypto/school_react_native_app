@@ -181,13 +181,22 @@ export default function MoreScreen() {
   // No hardcoded fallback name here on purpose — showing "Saarthak GIMSSS"
   // while /settings is still loading, then swapping to the real school name,
   // reads as a bug (flash of wrong content). Just wait for the real data.
+  const [imgError, setImgError] = useState(false);
   const schoolName = settings?.school_name;
   const address = settings?.address;
+
+  const rawLogoUri = brand.logoUrl || settings?.logo_url || settings?.front_logo_url;
+  const logoUri = !imgError && rawLogoUri ? rawLogoUri : null;
 
   return (
     <Screen>
       <View style={[styles.brandCard, { backgroundColor: theme.tint }]}>
-        <Image source={brand.logoUrl ? { uri: brand.logoUrl } : logoSource} style={styles.logo} contentFit="cover" />
+        <Image
+          source={logoUri ? { uri: logoUri } : logoSource}
+          onError={() => setImgError(true)}
+          style={styles.logo}
+          contentFit="cover"
+        />
         {schoolName ? (
           <ThemedText type="subtitle" themeColor="textOnBrand" style={styles.brandName}>
             {schoolName}

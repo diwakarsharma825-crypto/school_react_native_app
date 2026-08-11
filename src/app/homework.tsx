@@ -107,14 +107,19 @@ function AccessForm({ onDone }: { onDone: () => void }) {
   }
 
   const brand = useBrand();
-  const defaultLogo = require('../../assets/images/icon.png');
-  const logoSource = brand.logoUrl ? { uri: brand.logoUrl } : defaultLogo;
+  const [imgError, setImgError] = useState(false);
+  const logoSource = !imgError && brand.logoUrl ? { uri: brand.logoUrl } : defaultLogo;
   const displayTitle = brand.appTitle || 'Saarthak GIMSSS';
 
   return (
     <Card>
       <View style={styles.brandHeader}>
-        <Image source={logoSource} style={styles.brandLogo} contentFit="contain" />
+        <Image
+          source={logoSource}
+          onError={() => setImgError(true)}
+          style={styles.brandLogo}
+          contentFit="contain"
+        />
         <ThemedText type="smallBold" style={styles.brandTitle} numberOfLines={1}>
           {displayTitle}
         </ThemedText>

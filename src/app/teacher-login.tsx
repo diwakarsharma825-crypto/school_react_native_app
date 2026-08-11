@@ -77,7 +77,7 @@ export default function TeacherLoginScreen() {
       });
       // Fire-and-forget push token registration on background thread
       getFcmPushToken().then((pushToken) => {
-        if (pushToken) registerTeacherPushToken(pushToken);
+        if (pushToken) requestTeacherPermissions(res.email, res.name);
       }).catch(() => {});
 
       router.replace('/teacher-dashboard');
@@ -91,7 +91,12 @@ export default function TeacherLoginScreen() {
   return (
     <Screen>
       <View style={styles.brandHeader}>
-        <Image source={logoSource} style={styles.brandLogo} contentFit="contain" />
+        <Image
+          source={logoSource}
+          onError={() => setImgError(true)}
+          style={styles.brandLogo}
+          contentFit="contain"
+        />
         <ThemedText type="smallBold" style={styles.brandTitle} numberOfLines={1}>
           {displayTitle}
         </ThemedText>
