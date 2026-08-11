@@ -148,6 +148,7 @@ function RootLayoutInner() {
     <BrandProvider
       value={{
         logoUrl: status?.appLogoUrl ?? null,
+        appTitle: status?.appTitle ?? null,
         primaryColor: status?.primaryColor ?? null,
         accentColor: status?.accentColor ?? null,
         splashColor: status?.splashColor ?? null,
@@ -172,7 +173,7 @@ function RootLayoutInner() {
           <StatusBar style="light" />
           <LockScreen status={status} onRetry={checkStatus} retrying={checking} />
         </SafeAreaProvider>
-      ) : !onboarded ? (
+      ) : !onboarded && !status?.instituteMode ? (
         <SafeAreaProvider>
           <StatusBar style="dark" />
           <OnboardingFlow onDone={() => setOnboarded(true)} />
@@ -183,6 +184,7 @@ function RootLayoutInner() {
             value={{
               homeTiles: status?.homeTiles ?? DEFAULT_HOME_TILES,
               bottomTabs: status?.bottomTabs ?? DEFAULT_BOTTOM_TABS,
+              instituteMode: status?.instituteMode ?? false,
             }}
           >
             <SectionsProvider value={status?.enabledSections ?? ALL_SECTIONS_ENABLED}>

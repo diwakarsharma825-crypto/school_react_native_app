@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
@@ -10,6 +11,7 @@ import { Screen } from '@/components/ui/Screen';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { registerDevice } from '@/data/app-status';
 import { teacherLogin } from '@/data/teacher-api';
+import { useBrand } from '@/hooks/use-brand';
 import { useStudentAuth } from '@/hooks/use-student-auth';
 import { useTeacherAuth } from '@/hooks/use-teacher-auth';
 import { useTheme } from '@/hooks/use-theme';
@@ -37,6 +39,7 @@ async function requestTeacherPermissions(emailAddress: string, teacherName?: str
 
 export default function TeacherLoginScreen() {
   const theme = useTheme();
+  const brand = useBrand();
   const router = useRouter();
   const { profile, setLoggedIn, refresh: refreshTeacherAuth } = useTeacherAuth();
   const { setAccess: setStudentAccess } = useStudentAuth();
@@ -69,6 +72,18 @@ export default function TeacherLoginScreen() {
 
   return (
     <Screen>
+      {brand.logoUrl || brand.appTitle ? (
+        <View style={styles.brandHeader}>
+          {brand.logoUrl ? (
+            <Image source={{ uri: brand.logoUrl }} style={styles.brandLogo} contentFit="contain" />
+          ) : null}
+          {brand.appTitle ? (
+            <ThemedText type="smallBold" style={styles.brandTitle} numberOfLines={1}>
+              {brand.appTitle}
+            </ThemedText>
+          ) : null}
+        </View>
+      ) : null}
       <View style={styles.hero}>
         <View style={[styles.iconCircle, { backgroundColor: theme.backgroundSelected }]}>
           <Ionicons name="briefcase" size={30} color={theme.tint} />
@@ -168,5 +183,20 @@ const styles = StyleSheet.create({
   },
   buttonLabel: {
     color: Brand.white,
+  },
+  brandHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    marginBottom: Spacing.three,
+  },
+  brandLogo: {
+    width: 36,
+    height: 36,
+    borderRadius: Radius.sm,
+  },
+  brandTitle: {
+    fontSize: 16,
+    flex: 1,
   },
 });

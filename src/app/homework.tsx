@@ -22,6 +22,7 @@ import { useTeacherAuth } from '@/hooks/use-teacher-auth';
 import { getFcmPushToken } from '@/lib/notifications';
 import { clearHomeworkAccess, HomeworkAccess, saveHomeworkChildren } from '@/lib/homework-access';
 import { getCurrentDeviceLocation, requestAppPermissions } from '@/lib/permissions';
+import { useBrand } from '@/hooks/use-brand';
 import { useTheme } from '@/hooks/use-theme';
 import { useSectionEnabled } from '@/hooks/use-sections';
 import { SectionUnavailable } from '@/components/ui/SectionUnavailable';
@@ -105,8 +106,22 @@ function AccessForm({ onDone }: { onDone: () => void }) {
     }
   }
 
+  const brand = useBrand();
+
   return (
     <Card>
+      {brand.logoUrl || brand.appTitle ? (
+        <View style={styles.brandHeader}>
+          {brand.logoUrl ? (
+            <Image source={{ uri: brand.logoUrl }} style={styles.brandLogo} contentFit="contain" />
+          ) : null}
+          {brand.appTitle ? (
+            <ThemedText type="smallBold" style={styles.brandTitle} numberOfLines={1}>
+              {brand.appTitle}
+            </ThemedText>
+          ) : null}
+        </View>
+      ) : null}
       <ThemedText type="subtitle" style={styles.formTitle}>
         Student Login
       </ThemedText>
@@ -444,5 +459,20 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: Radius.sm,
+  },
+  brandHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    marginBottom: Spacing.three,
+  },
+  brandLogo: {
+    width: 36,
+    height: 36,
+    borderRadius: Radius.sm,
+  },
+  brandTitle: {
+    fontSize: 16,
+    flex: 1,
   },
 });

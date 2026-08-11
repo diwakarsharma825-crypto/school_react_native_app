@@ -6,9 +6,10 @@ import type { LayoutItem } from '@/lib/layout';
 export interface LayoutConfig {
   homeTiles: LayoutItem[];
   bottomTabs: LayoutItem[];
+  instituteMode?: boolean;
 }
 
-const DEFAULT_LAYOUT: LayoutConfig = { homeTiles: DEFAULT_HOME_TILES, bottomTabs: DEFAULT_BOTTOM_TABS };
+const DEFAULT_LAYOUT: LayoutConfig = { homeTiles: DEFAULT_HOME_TILES, bottomTabs: DEFAULT_BOTTOM_TABS, instituteMode: false };
 
 const LayoutContext = createContext<LayoutConfig>(DEFAULT_LAYOUT);
 

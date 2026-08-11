@@ -2,6 +2,7 @@ import React, { createContext, useContext } from 'react';
 
 export interface BrandOverride {
   logoUrl: string | null;
+  appTitle?: string | null;
   primaryColor: string | null;
   accentColor: string | null;
   splashColor?: string | null;
@@ -9,7 +10,7 @@ export interface BrandOverride {
   achieversDisplay: 'marks' | 'grade';
 }
 
-const EMPTY_BRAND: BrandOverride = { logoUrl: null, primaryColor: null, accentColor: null, splashColor: null, headerColor: null, achieversDisplay: 'marks' };
+const EMPTY_BRAND: BrandOverride = { logoUrl: null, appTitle: null, primaryColor: null, accentColor: null, splashColor: null, headerColor: null, achieversDisplay: 'marks' };
 
 const BrandContext = createContext<BrandOverride>(EMPTY_BRAND);
 

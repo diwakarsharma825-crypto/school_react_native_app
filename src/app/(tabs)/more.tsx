@@ -63,8 +63,11 @@ function RowList({ rows }: { rows: Row[] }) {
   );
 }
 
+import { useLayout } from '@/hooks/use-layout';
+
 export default function MoreScreen() {
   const theme = useTheme();
+  const { instituteMode } = useLayout();
   const { data: settings } = useFetch(fetchSettings);
   const sections = useSections();
   const brand = useBrand();
@@ -113,7 +116,7 @@ export default function MoreScreen() {
 
   const exploreRows: Row[] = [
     { label: 'Notifications', icon: 'notifications-outline', onPress: () => router.push('/notifications') },
-    { label: 'About Us', icon: 'information-circle-outline', onPress: () => router.push('/about') },
+    ...(!instituteMode ? [{ label: 'About Us', icon: 'information-circle-outline' as const, onPress: () => router.push('/about') }] : []),
     {
       label: 'Announcements',
       icon: 'megaphone-outline',
@@ -136,21 +139,22 @@ export default function MoreScreen() {
       onPress: () => router.push('/teachers'),
       locked: !sections.teachers,
     },
-    {
-      label: 'Top Students',
-      icon: 'ribbon-outline',
-      onPress: () => router.push('/top-students'),
-      locked: !sections.top_students,
-    },
-    {
-      label: 'Mandatory Disclosure',
-      icon: 'shield-checkmark-outline',
-      onPress: () => router.push('/disclosure'),
-      locked: !sections.disclosure,
-    },
-    // Storage shows the whole school's upload usage — only worth showing
-    // (and only meant to be seen) once a student/teacher from this school
-    // is actually logged in, not to anyone who opens the app.
+    ...(!instituteMode
+      ? [
+          {
+            label: 'Top Students',
+            icon: 'ribbon-outline' as const,
+            onPress: () => router.push('/top-students'),
+            locked: !sections.top_students,
+          },
+          {
+            label: 'Mandatory Disclosure',
+            icon: 'shield-checkmark-outline' as const,
+            onPress: () => router.push('/disclosure'),
+            locked: !sections.disclosure,
+          },
+        ]
+      : []),
     ...(loggedIn
       ? [{ label: 'Storage', icon: 'server-outline' as const, onPress: () => router.push('/storage-usage' as any) }]
       : []),

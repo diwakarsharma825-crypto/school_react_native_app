@@ -48,6 +48,7 @@ export interface AppStatus {
   minVersion: string | null;
   storeUrl: string | null;
   appLogoUrl: string | null;
+  appTitle?: string | null;
   primaryColor: string | null;
   accentColor: string | null;
   splashColor?: string | null;
@@ -55,6 +56,7 @@ export interface AppStatus {
   homeTiles: LayoutItem[];
   bottomTabs: LayoutItem[];
   achieversDisplay: 'marks' | 'grade';
+  instituteMode?: boolean;
   trial: TrialStatus;
 }
 
@@ -182,6 +184,7 @@ export async function fetchAppStatus(): Promise<AppStatus> {
     minVersion: json.data.min_version ?? null,
     storeUrl: json.data.store_url ?? null,
     appLogoUrl: json.data.app_logo_url ?? null,
+    appTitle: json.data.app_title ?? null,
     primaryColor: json.data.primary_color ?? null,
     accentColor: json.data.accent_color ?? null,
     splashColor: json.data.splash_color ?? null,
@@ -189,6 +192,7 @@ export async function fetchAppStatus(): Promise<AppStatus> {
     homeTiles: parseLayoutItems(json.data.home_tiles, DEFAULT_HOME_TILES),
     bottomTabs: parseLayoutItems(json.data.bottom_tabs, DEFAULT_BOTTOM_TABS),
     achieversDisplay: json.data.achievers_display === 'grade' ? 'grade' : 'marks',
+    instituteMode: json.data.institute_mode === true || json.data.institute_mode === 1,
     trial: json.data.trial
       ? {
           startDate: json.data.trial.start_date,

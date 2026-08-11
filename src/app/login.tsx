@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
@@ -7,18 +8,15 @@ import { Radius, Spacing } from '@/constants/theme';
 import { Card } from '@/components/ui/Card';
 import { Screen } from '@/components/ui/Screen';
 import { ThemedText } from '@/components/ui/ThemedText';
+import { useBrand } from '@/hooks/use-brand';
 import { useTheme } from '@/hooks/use-theme';
 
-/** Entry point for the bottom bar's Login/Dashboard slot when nobody's
- * logged in as a teacher yet — lets the user pick which flow they want.
- * Student -> the local class/phone/password homework calendar gate
- * (src/app/homework.tsx, already built). Teacher -> real login against the
- * school's staff credentials (src/app/teacher-login.tsx). */
 import { useStudentAuth } from '@/hooks/use-student-auth';
 import { useTeacherAuth } from '@/hooks/use-teacher-auth';
 
 export default function LoginChoiceScreen() {
   const theme = useTheme();
+  const brand = useBrand();
   const router = useRouter();
   const { loggedIn: studentLoggedIn } = useStudentAuth();
   const { loggedIn: teacherLoggedIn } = useTeacherAuth();
@@ -33,6 +31,19 @@ export default function LoginChoiceScreen() {
 
   return (
     <Screen>
+      {brand.logoUrl || brand.appTitle ? (
+        <View style={styles.brandHeader}>
+          {brand.logoUrl ? (
+            <Image source={{ uri: brand.logoUrl }} style={styles.brandLogo} contentFit="contain" />
+          ) : null}
+          {brand.appTitle ? (
+            <ThemedText type="subtitle" style={styles.brandTitle} numberOfLines={1}>
+              {brand.appTitle}
+            </ThemedText>
+          ) : null}
+        </View>
+      ) : null}
+
       <ThemedText type="title" style={styles.title}>
         Who&apos;s using this?
       </ThemedText>
@@ -74,6 +85,22 @@ export default function LoginChoiceScreen() {
 }
 
 const styles = StyleSheet.create({
+  brandHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    marginBottom: Spacing.three,
+    marginTop: Spacing.one,
+  },
+  brandLogo: {
+    width: 44,
+    height: 44,
+    borderRadius: Radius.sm,
+  },
+  brandTitle: {
+    fontSize: 18,
+    flex: 1,
+  },
   title: {
     marginBottom: Spacing.one,
   },

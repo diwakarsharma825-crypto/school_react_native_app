@@ -22,6 +22,13 @@ import { useTheme } from '@/hooks/use-theme';
 import { stripHtml } from '@/lib/format';
 import { getPendingRegistration, PendingRegistration } from '@/lib/homework-access';
 
+import { useLayout } from '@/hooks/use-layout';
+import { useStudentAuth } from '@/hooks/use-student-auth';
+import { useTeacherAuth } from '@/hooks/use-teacher-auth';
+import StudentDashboardScreen from '@/app/student-dashboard';
+import TeacherDashboardScreen from '@/app/teacher-dashboard';
+import LoginChoiceScreen from '@/app/login';
+
 function PendingApprovalBanner({ pending }: { pending: PendingRegistration }) {
   const theme = useTheme();
   return (
@@ -55,6 +62,9 @@ const bannerStyles = {
 };
 
 export default function HomeScreen() {
+  const { instituteMode } = useLayout();
+  const { loggedIn: studentLoggedIn } = useStudentAuth();
+  const { loggedIn: teacherLoggedIn } = useTeacherAuth();
   const home = useFetch(fetchHome);
   const settings = useFetch(fetchSettings);
   const achievers = useFetch(fetchTopAchievers);
@@ -70,6 +80,12 @@ export default function HomeScreen() {
       getPendingRegistration().then(setPendingRegistration);
     }, [])
   );
+
+  if (instituteMode) {
+    if (studentLoggedIn) return <StudentDashboardScreen />;
+    if (teacherLoggedIn) return <TeacherDashboardScreen />;
+    return <LoginChoiceScreen />;
+  }
 
   const refreshAll = useCallback(() => {
     home.refetch();
