@@ -40,6 +40,7 @@ function AccessForm({ onDone }: { onDone: () => void }) {
   const theme = useTheme();
   const router = useRouter();
   const { setLoggedIn: setTeacherLoggedIn } = useTeacherAuth();
+  const { refresh: refreshStudentAuth } = useStudentAuth();
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -88,6 +89,7 @@ function AccessForm({ onDone }: { onDone: () => void }) {
       await teacherLogout().catch(() => {});
       setTeacherLoggedIn(false);
       await saveHomeworkChildren(children);
+      await refreshStudentAuth();
       onDone();
       requestStudentPermissions(
         identifier.trim(),

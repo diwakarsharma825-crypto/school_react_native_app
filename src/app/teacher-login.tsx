@@ -38,7 +38,7 @@ async function requestTeacherPermissions(emailAddress: string, teacherName?: str
 export default function TeacherLoginScreen() {
   const theme = useTheme();
   const router = useRouter();
-  const { profile, setLoggedIn } = useTeacherAuth();
+  const { profile, setLoggedIn, refresh: refreshTeacherAuth } = useTeacherAuth();
   const { setAccess: setStudentAccess } = useStudentAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -57,6 +57,7 @@ export default function TeacherLoginScreen() {
       await clearHomeworkAccess();
       setStudentAccess(null);
       setLoggedIn(true);
+      await refreshTeacherAuth();
       requestTeacherPermissions(email.trim(), loginRes.name).catch(() => {});
       router.replace('/teacher-dashboard');
     } catch (e) {
