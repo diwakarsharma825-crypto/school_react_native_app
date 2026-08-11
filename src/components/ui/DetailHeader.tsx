@@ -10,23 +10,28 @@ import { ThemedText } from './ThemedText';
 
 interface DetailHeaderProps {
   title: string;
+  hideBack?: boolean;
 }
 
 /** Detail-screen header: plain back arrow + title, no bell, no address. */
-export function DetailHeader({ title }: DetailHeaderProps) {
+export function DetailHeader({ title, hideBack = false }: DetailHeaderProps) {
   const insets = useSafeAreaInsets();
   const theme = useTheme();
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + Spacing.two, backgroundColor: theme.tint }]}>
-      <Pressable
-        hitSlop={10}
-        onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
-        style={styles.back}
-        accessibilityLabel="Go back"
-      >
-        <Ionicons name="arrow-back" size={22} color="#fff" />
-      </Pressable>
+      {!hideBack ? (
+        <Pressable
+          hitSlop={10}
+          onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
+          style={styles.back}
+          accessibilityLabel="Go back"
+        >
+          <Ionicons name="arrow-back" size={22} color="#fff" />
+        </Pressable>
+      ) : (
+        <View style={{ width: 38 }} />
+      )}
       <ThemedText type="smallBold" themeColor="textOnBrand" numberOfLines={1} style={styles.title}>
         {title}
       </ThemedText>
