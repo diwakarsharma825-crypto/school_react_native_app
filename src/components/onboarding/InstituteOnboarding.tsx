@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import React, { useState } from 'react';
-import { Dimensions, Pressable, StyleSheet, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Animated, Dimensions, Easing, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/ui/ThemedText';
@@ -13,16 +13,14 @@ const defaultLogo = require('../../../assets/images/icon.png');
 const { width } = Dimensions.get('window');
 
 interface SlideData {
-  icon: keyof typeof Ionicons.glyphMap;
+  badge: string;
   title: string;
   subtitle: string;
-  badge: string;
   points: { icon: keyof typeof Ionicons.glyphMap; text: string }[];
 }
 
 const SLIDES: SlideData[] = [
   {
-    icon: 'book-outline',
     badge: 'CLASSWORK & HOMEWORK',
     title: 'Smart Learning & Homework',
     subtitle: 'Access daily homework assignments, chapter notes, and study material assigned directly by your teachers.',
@@ -33,7 +31,6 @@ const SLIDES: SlideData[] = [
     ],
   },
   {
-    icon: 'stats-chart-outline',
     badge: 'PROGRESS & MARKS',
     title: 'Real-Time Attendance & Results',
     subtitle: 'Track monthly attendance records, test marks, and academic performance reports instantly in real-time.',
@@ -44,7 +41,6 @@ const SLIDES: SlideData[] = [
     ],
   },
   {
-    icon: 'notifications-outline',
     badge: 'NOTICES & LEAVES',
     title: 'Instant Notices & Easy Leaves',
     subtitle: 'Stay updated with important institute announcements and submit leave applications seamlessly.',
@@ -63,31 +59,62 @@ export function InstituteOnboarding({ onDone }: { onDone: () => void }) {
   const [currentStep, setCurrentStep] = useState(0);
   const [imgError, setImgError] = useState(false);
 
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
   const logoSource = !imgError && brand.logoUrl ? { uri: brand.logoUrl } : defaultLogo;
-  const instituteTitle = brand.appTitle || 'Institute Portal';
+  const instituteTitle = brand.appTitle || 'Our Institute';
   const isLastStep = currentStep === SLIDES.length - 1;
   const slide = SLIDES[currentStep];
 
-  function nextStep() {
+  function animateStepChange(nextStepIdx: number) {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 120,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleAnim, {
+        toValue: 0.95,
+        duration: 120,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setCurrentStep(nextStepIdx);
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 200,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          friction: 8,
+          tension: 80,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    });
+  }
+
+  function handleNext() {
     if (isLastStep) {
       onDone();
     } else {
-      setCurrentStep((prev) => prev + 1);
+      animateStepChange(currentStep + 1);
     }
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top + Spacing.three, paddingBottom: insets.bottom + Spacing.four }]}>
-      {/* Top Header with Institute Logo & Skip */}
+    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top + Spacing.two, paddingBottom: insets.bottom + Spacing.three }]}>
+      {/* Top Header with Skip Button Only */}
       <View style={styles.topHeader}>
-        <View style={[styles.logoCard, { backgroundColor: theme.surface, borderColor: theme.border }, Shadow.card]}>
-          <Image
-            source={logoSource}
-            onError={() => setImgError(true)}
-            style={styles.logoImage}
-            contentFit="contain"
-          />
-          <ThemedText type="smallBold" numberOfLines={1} style={styles.logoText}>
+        <View style={styles.headerTitleWrap}>
+          <ThemedText type="smallBold" style={{ color: theme.tint, letterSpacing: 1, fontSize: 11 }}>
+            INSTITUTE PORTAL
+          </ThemedText>
+          <ThemedText type="subtitle" numberOfLines={1} style={styles.headerInstituteName}>
             {instituteTitle}
           </ThemedText>
         </View>
@@ -101,22 +128,27 @@ export function InstituteOnboarding({ onDone }: { onDone: () => void }) {
         ) : null}
       </View>
 
-      {/* Slide Content */}
-      <View style={styles.contentWrap}>
-        {/* Dynamic Graphic Hero Container */}
-        <View style={[styles.heroWrap]}>
+      {/* Animated Slide Content */}
+      <Animated.View style={[styles.contentWrap, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
+        {/* Dynamic Center Graphic Container showcasing Logo in Central Circle */}
+        <View style={styles.heroWrap}>
           <View style={[styles.outerGlow, { backgroundColor: theme.tint + '12' }]}>
-            <View style={[styles.middleRing, { backgroundColor: theme.tint + '20', borderColor: theme.tint + '40' }]}>
-              <View style={[styles.innerCircle, { backgroundColor: theme.tint }, Shadow.card]}>
-                <Ionicons name={slide.icon} size={44} color={Brand.white} />
+            <View style={[styles.middleRing, { backgroundColor: theme.tint + '20', borderColor: theme.tint + '38' }]}>
+              <View style={[styles.innerCircle, { backgroundColor: theme.surface, borderColor: theme.border }, Shadow.card]}>
+                <Image
+                  source={logoSource}
+                  onError={() => setImgError(true)}
+                  style={styles.centerLogoImage}
+                  contentFit="contain"
+                />
               </View>
             </View>
           </View>
         </View>
 
-        {/* Badge */}
-        <View style={[styles.badge, { backgroundColor: theme.accent + '1E', borderColor: theme.accent }]}>
-          <ThemedText type="smallBold" style={{ color: theme.accent, fontSize: 11, letterSpacing: 1.2 }}>
+        {/* Category Badge */}
+        <View style={[styles.badge, { backgroundColor: theme.accent + '1A', borderColor: theme.accent }]}>
+          <ThemedText type="smallBold" style={{ color: theme.accent, fontSize: 11, letterSpacing: 1 }}>
             {slide.badge}
           </ThemedText>
         </View>
@@ -142,34 +174,35 @@ export function InstituteOnboarding({ onDone }: { onDone: () => void }) {
             </View>
           ))}
         </View>
-      </View>
+      </Animated.View>
 
-      {/* Footer Controls */}
+      {/* Footer Controls with Full Width Button */}
       <View style={styles.footer}>
         {/* Step Indicators */}
         <View style={styles.paginationDots}>
           {SLIDES.map((_, idx) => (
-            <View
-              key={idx}
-              style={[
-                styles.dot,
-                idx === currentStep
-                  ? [styles.activeDot, { backgroundColor: theme.tint, width: 28 }]
-                  : { backgroundColor: theme.border },
-              ]}
-            />
+            <Pressable key={idx} onPress={() => animateStepChange(idx)} hitSlop={8}>
+              <View
+                style={[
+                  styles.dot,
+                  idx === currentStep
+                    ? [styles.activeDot, { backgroundColor: theme.tint, width: 28 }]
+                    : { backgroundColor: theme.border },
+                ]}
+              />
+            </Pressable>
           ))}
         </View>
 
-        {/* Primary Action Button */}
+        {/* Full-Width User-Friendly Action Button */}
         <Pressable
-          onPress={nextStep}
+          onPress={handleNext}
           style={[styles.primaryButton, { backgroundColor: theme.tint }, Shadow.card]}
         >
           <ThemedText type="smallBold" style={styles.buttonText}>
             {isLastStep ? 'Get Started' : 'Next'}
           </ThemedText>
-          <Ionicons name={isLastStep ? 'checkmark-circle' : 'arrow-forward'} size={20} color={Brand.white} style={{ marginLeft: 8 }} />
+          <Ionicons name={isLastStep ? 'checkmark-circle' : 'arrow-forward'} size={22} color={Brand.white} style={{ marginLeft: 8 }} />
         </Pressable>
       </View>
     </View>
@@ -188,35 +221,23 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: Spacing.two,
   },
-  logoCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.three + 2,
-    paddingVertical: Spacing.two,
-    borderRadius: Radius.pill,
-    borderWidth: 1,
-    gap: Spacing.two,
-    maxWidth: width * 0.72,
+  headerTitleWrap: {
+    flex: 1,
+    gap: 2,
+    marginRight: Spacing.two,
   },
-  logoImage: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-  },
-  logoText: {
-    fontSize: 14,
-    flexShrink: 1,
+  headerInstituteName: {
+    fontSize: 16,
   },
   skipButton: {
     paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.one + 3,
+    paddingVertical: Spacing.one + 2,
     borderRadius: Radius.pill,
   },
   contentWrap: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: Spacing.one,
   },
   heroWrap: {
     alignItems: 'center',
@@ -242,37 +263,44 @@ const styles = StyleSheet.create({
     width: 86,
     height: 86,
     borderRadius: 43,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    padding: 10,
+  },
+  centerLogoImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 33,
   },
   badge: {
     paddingHorizontal: Spacing.three + 2,
-    paddingVertical: 5,
+    paddingVertical: 4,
     borderRadius: Radius.pill,
     borderWidth: 1,
     marginBottom: Spacing.two,
   },
   titleText: {
     textAlign: 'center',
-    fontSize: 23,
+    fontSize: 22,
     marginBottom: Spacing.one + 2,
   },
   subtitleText: {
     textAlign: 'center',
     fontSize: 14,
     marginBottom: Spacing.four,
-    lineHeight: 21,
-    paddingHorizontal: Spacing.two,
+    lineHeight: 20,
+    paddingHorizontal: Spacing.one,
   },
   pointsList: {
     width: '100%',
-    gap: Spacing.two + 2,
+    gap: Spacing.two,
   },
   pointRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: Spacing.three + 2,
-    paddingVertical: Spacing.three,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.three - 1,
     borderRadius: Radius.lg,
     borderWidth: 1,
     gap: Spacing.three,
@@ -289,14 +317,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   footer: {
-    flexDirection: 'row',
+    width: '100%',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: Spacing.three,
+    gap: Spacing.three,
+    marginTop: Spacing.two,
   },
   paginationDots: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
   },
   dot: {
@@ -309,16 +338,16 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   primaryButton: {
+    width: '100%',
+    height: 52,
+    borderRadius: Radius.pill,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: Spacing.five + 2,
-    paddingVertical: Spacing.three + 2,
-    borderRadius: Radius.pill,
-    minWidth: 140,
   },
   buttonText: {
     color: Brand.white,
     fontSize: 16,
+    fontWeight: '700',
   },
 });
