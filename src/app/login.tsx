@@ -37,34 +37,41 @@ export default function LoginChoiceScreen() {
 
   return (
     <Screen>
-      <View style={styles.brandHeader}>
+      <View style={[styles.brandHeader, { backgroundColor: theme.surface, borderColor: theme.border }]}>
         <Image
           source={logoSource}
           onError={() => setImgError(true)}
           style={styles.brandLogo}
           contentFit="contain"
         />
-        <ThemedText type="subtitle" style={styles.brandTitle} numberOfLines={1}>
-          {displayTitle}
+        <View style={styles.brandTextCol}>
+          <ThemedText type="smallBold" style={{ color: theme.tint, letterSpacing: 0.5, fontSize: 11 }}>
+            WELCOME TO
+          </ThemedText>
+          <ThemedText type="subtitle" style={styles.brandTitle} numberOfLines={1}>
+            {displayTitle}
+          </ThemedText>
+        </View>
+      </View>
+
+      <View style={styles.titleWrap}>
+        <ThemedText type="title" style={styles.title}>
+          Who&apos;s using this?
+        </ThemedText>
+        <ThemedText type="default" themeColor="textSecondary" style={styles.subtitle}>
+          Choose your role to continue to your dashboard.
         </ThemedText>
       </View>
 
-      <ThemedText type="title" style={styles.title}>
-        Who&apos;s using this?
-      </ThemedText>
-      <ThemedText type="default" themeColor="textSecondary" style={styles.subtitle}>
-        Choose your role to continue.
-      </ThemedText>
-
       <Pressable onPress={() => router.push('/homework')}>
         <Card style={styles.option}>
-          <View style={[styles.iconWrap, { backgroundColor: theme.backgroundSelected }]}>
+          <View style={[styles.iconWrap, { backgroundColor: theme.tint + '18' }]}>
             <Ionicons name="school-outline" size={28} color={theme.tint} />
           </View>
           <View style={styles.optionText}>
-            <ThemedText type="smallBold">I&apos;m a Student</ThemedText>
+            <ThemedText type="smallBold" style={{ fontSize: 16 }}>I&apos;m a Student</ThemedText>
             <ThemedText type="small" themeColor="textSecondary">
-              View your class&apos;s homework calendar
+              View class homework, attendance &amp; results
             </ThemedText>
           </View>
           <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
@@ -73,13 +80,13 @@ export default function LoginChoiceScreen() {
 
       <Pressable onPress={() => router.push('/teacher-login')}>
         <Card style={styles.option}>
-          <View style={[styles.iconWrap, { backgroundColor: theme.backgroundSelected }]}>
-            <Ionicons name="briefcase-outline" size={26} color={theme.tint} />
+          <View style={[styles.iconWrap, { backgroundColor: theme.accent + '1C' }]}>
+            <Ionicons name="briefcase-outline" size={26} color={theme.accent} />
           </View>
           <View style={styles.optionText}>
-            <ThemedText type="smallBold">I&apos;m a Teacher</ThemedText>
+            <ThemedText type="smallBold" style={{ fontSize: 16 }}>I&apos;m a Teacher</ThemedText>
             <ThemedText type="small" themeColor="textSecondary">
-              Log in to manage your class&apos;s dashboard &amp; homework
+              Log in to manage dashboard &amp; homework
             </ThemedText>
           </View>
           <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
@@ -93,40 +100,50 @@ const styles = StyleSheet.create({
   brandHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.two,
-    marginBottom: Spacing.three,
-    marginTop: Spacing.one,
+    gap: Spacing.three,
+    marginBottom: Spacing.four,
+    marginTop: Spacing.two,
+    padding: Spacing.three,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
   },
   brandLogo: {
-    width: 44,
-    height: 44,
-    borderRadius: Radius.sm,
+    width: 48,
+    height: 48,
+    borderRadius: Radius.md,
+  },
+  brandTextCol: {
+    flex: 1,
+    gap: 2,
   },
   brandTitle: {
-    fontSize: 18,
-    flex: 1,
+    fontSize: 17,
+  },
+  titleWrap: {
+    marginBottom: Spacing.three,
   },
   title: {
     marginBottom: Spacing.one,
   },
   subtitle: {
-    marginBottom: Spacing.four,
+    fontSize: 14,
   },
   option: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: Spacing.three,
+    paddingVertical: Spacing.four,
     marginBottom: Spacing.three,
   },
   iconWrap: {
     width: 52,
     height: 52,
-    borderRadius: Radius.md,
+    borderRadius: 26,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: Spacing.three,
   },
   optionText: {
     flex: 1,
-    gap: 2,
+    gap: 3,
   },
 });

@@ -13,6 +13,10 @@ import { useTheme } from '@/hooks/use-theme';
 import { ThemedText } from './ThemedText';
 import { ThemeToggle } from './ThemeToggle';
 
+import { useLayout } from '@/hooks/use-layout';
+import { useStudentAuth } from '@/hooks/use-student-auth';
+import { useTeacherAuth } from '@/hooks/use-teacher-auth';
+
 const logoSource = require('../../../assets/images/icon.png');
 
 /** Top-level header: circular logo, school name, address subtitle, bell icon.
@@ -23,10 +27,16 @@ export function AppHeader() {
   const insets = useSafeAreaInsets();
   const theme = useTheme();
   const brand = useBrand();
+  const { instituteMode } = useLayout();
+  const { loggedIn: teacherLoggedIn } = useTeacherAuth();
+  const { loggedIn: studentLoggedIn } = useStudentAuth();
   const { data: settings } = useFetch(fetchSettings);
   const [imgError, setImgError] = useState(false);
-  // No hardcoded fallback — showing "Saarthak GIMSSS" while /settings is
-  // still loading, then swapping to the real school name, reads as a bug.
+
+  if (instituteMode && !teacherLoggedIn && !studentLoggedIn) {
+    return null;
+  }
+
   const schoolName = settings?.school_name;
   const address = settings?.address;
 

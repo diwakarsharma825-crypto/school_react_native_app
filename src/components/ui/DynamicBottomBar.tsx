@@ -38,7 +38,7 @@ export function DynamicBottomBar() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const pathname = usePathname();
-  const { bottomTabs } = useLayout();
+  const { bottomTabs, instituteMode } = useLayout();
   const { loggedIn: teacherLoggedIn, profile } = useTeacherAuth();
   const { loggedIn: studentLoggedIn, access } = useStudentAuth();
   const [loginSheetOpen, setLoginSheetOpen] = useState(false);
@@ -53,6 +53,7 @@ export function DynamicBottomBar() {
   }, [menuOpen, menuAnim]);
 
   if (bottomTabs.length === 0) return null;
+  if (instituteMode && !teacherLoggedIn && !studentLoggedIn) return null;
 
   // A teacher without gallery permission doesn't see the shared Gallery
   // tab at all — every other role/user still does, this only strips it
