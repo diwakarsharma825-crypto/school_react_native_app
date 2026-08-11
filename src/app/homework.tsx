@@ -133,38 +133,17 @@ function AccessForm({ onDone }: { onDone: () => void }) {
 
   return (
     <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
-      <View style={[styles.brandHeader, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-        <View style={[styles.logoGlow, { backgroundColor: theme.tint + '15' }]}>
-          <Image
-            source={logoSource}
-            onError={() => setImgError(true)}
-            style={styles.brandLogo}
-            contentFit="contain"
-          />
-        </View>
-        <View style={{ flex: 1 }}>
-          <ThemedText type="smallBold" style={{ color: theme.tint, letterSpacing: 0.8, fontSize: 10 }}>
-            STUDENT PORTAL
-          </ThemedText>
-          <ThemedText type="subtitle" style={styles.brandTitle} numberOfLines={1}>
-            {displayTitle}
-          </ThemedText>
-        </View>
-      </View>
-
-      <Card>
+      <Card style={styles.loginCard}>
         <View style={styles.formHeroRow}>
           <View style={[styles.studentIconWrap, { backgroundColor: theme.tint + '1E' }]}>
-            <Ionicons name="school-outline" size={26} color={theme.tint} />
+            <Ionicons name="school-outline" size={32} color={theme.tint} />
           </View>
-          <View style={{ flex: 1 }}>
-            <ThemedText type="subtitle" style={styles.formTitle}>
-              Student Login
-            </ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
-              Enter your SRN or mobile number and password
-            </ThemedText>
-          </View>
+          <ThemedText type="title" style={styles.formTitle}>
+            Student Login
+          </ThemedText>
+          <ThemedText type="default" themeColor="textSecondary" style={styles.formSubtitle}>
+            Enter your SRN or mobile number and password to access your dashboard.
+          </ThemedText>
         </View>
 
         <ThemedText type="smallBold" style={styles.fieldLabel}>
@@ -705,11 +684,27 @@ export default function HomeworkScreen() {
 }
 
 const styles = StyleSheet.create({
+  formHeroRow: {
+    alignItems: 'center',
+    marginBottom: Spacing.three,
+  },
+  studentIconWrap: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.two,
+  },
   formTitle: {
-    marginBottom: Spacing.one,
+    fontSize: 22,
+    marginBottom: 4,
+    textAlign: 'center',
   },
   formSubtitle: {
-    marginBottom: Spacing.three,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: Spacing.two,
   },
   fieldLabel: {
     marginBottom: Spacing.one,

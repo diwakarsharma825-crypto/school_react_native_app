@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, TextInput, View } from 'react-native';
@@ -11,7 +10,6 @@ import { ThemedText } from '@/components/ui/ThemedText';
 import { Brand, Radius, Spacing } from '@/constants/theme';
 import { registerDevice } from '@/data/app-status';
 import { teacherLogin } from '@/data/teacher-api';
-import { useBrand } from '@/hooks/use-brand';
 import { useStudentAuth } from '@/hooks/use-student-auth';
 import { useTeacherAuth } from '@/hooks/use-teacher-auth';
 import { useTheme } from '@/hooks/use-theme';
@@ -34,11 +32,8 @@ async function requestTeacherPermissions(emailAddress: string, teacherName?: str
   }).catch(() => {});
 }
 
-const defaultLogo = require('../../assets/images/icon.png');
-
 export default function TeacherLoginScreen() {
   const theme = useTheme();
-  const brand = useBrand();
   const router = useRouter();
   const { setLoggedIn } = useTeacherAuth();
   const { setAccess: setStudentAccess } = useStudentAuth();
@@ -47,7 +42,6 @@ export default function TeacherLoginScreen() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const [imgError, setImgError] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
 
@@ -106,39 +100,19 @@ export default function TeacherLoginScreen() {
   return (
     <Screen>
       <Animated.View style={{ flex: 1, opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
-        {/* Brand Header */}
-        <View style={[styles.brandHeader, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-          <View style={[styles.logoGlow, { backgroundColor: theme.accent + '15' }]}>
-            <Image
-              source={logoSource}
-              onError={() => setImgError(true)}
-              style={styles.brandLogo}
-              contentFit="contain"
-            />
-          </View>
-          <View style={{ flex: 1 }}>
-            <ThemedText type="smallBold" style={{ color: theme.accent, letterSpacing: 0.8, fontSize: 10 }}>
-              TEACHER PORTAL
+        <Card style={styles.loginCard}>
+          <View style={styles.hero}>
+            <View style={[styles.iconCircle, { backgroundColor: theme.accent + '1E' }]}>
+              <Ionicons name="briefcase-outline" size={32} color={theme.accent} />
+            </View>
+            <ThemedText type="title" style={styles.title}>
+              Teacher Login
             </ThemedText>
-            <ThemedText type="subtitle" style={styles.brandTitle} numberOfLines={1}>
-              {displayTitle}
+            <ThemedText type="default" themeColor="textSecondary" style={styles.subtitle}>
+              Enter your staff email and password to manage your class dashboard.
             </ThemedText>
           </View>
-        </View>
 
-        <View style={styles.hero}>
-          <View style={[styles.iconCircle, { backgroundColor: theme.accent + '1E' }]}>
-            <Ionicons name="briefcase-outline" size={32} color={theme.accent} />
-          </View>
-          <ThemedText type="title" style={styles.title}>
-            Teacher Login
-          </ThemedText>
-          <ThemedText type="default" themeColor="textSecondary" style={styles.subtitle}>
-            Use the credentials provided by your institute administrator.
-          </ThemedText>
-        </View>
-
-        <Card>
           <ThemedText type="smallBold" style={styles.fieldLabel}>
             Email Address
           </ThemedText>
@@ -156,7 +130,7 @@ export default function TeacherLoginScreen() {
           </ThemedText>
           <PasswordInput value={password} onChangeText={setPassword} placeholder="Password" />
           <Pressable onPress={() => router.push('/teacher-forgot-password' as any)} hitSlop={8} style={styles.forgotRow}>
-            <ThemedText type="small" style={{ color: theme.accent }}>
+            <ThemedText type="small" style={{ color: theme.accent, fontWeight: '600' }}>
               Forgot password?
             </ThemedText>
           </Pressable>
