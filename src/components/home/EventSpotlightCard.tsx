@@ -24,11 +24,12 @@ interface EventSpotlightCardProps {
  * gradient-overlaid hero tile rather than a plain list card, so events read
  * as a highlight rather than an afterthought next to the slider. */
 export function EventSpotlightCard({ title, date, place, imageUrl, coverMedia, images, onPress, width = 260 }: EventSpotlightCardProps) {
+  const theme = useTheme();
   return (
     <Pressable onPress={onPress} style={[styles.card, { width }]}>
       <EventMediaCarousel coverMedia={coverMedia} images={images} fallbackUrl={imageUrl} style={styles.image} />
       <LinearGradient colors={['transparent', 'rgba(0,0,0,0.85)']} style={styles.gradient}>
-        <View style={styles.dateBadge}>
+        <View style={[styles.dateBadge, { backgroundColor: theme.accent }]}>
           <Ionicons name="calendar" size={12} color={Brand.white} />
           <ThemedText type="small" style={styles.dateBadgeLabel}>
             {formatDateShort(date)}

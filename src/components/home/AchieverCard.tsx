@@ -6,6 +6,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AvatarFgPalette, AvatarPalette, Brand, Radius, Spacing } from '@/constants/theme';
 import type { Achiever } from '@/data/achievers';
+import { useTheme } from '@/hooks/use-theme';
 import { Card } from '../ui/Card';
 import { ThemedText } from '../ui/ThemedText';
 
@@ -17,6 +18,7 @@ interface AchieverCardProps {
 
 export function AchieverCard({ achiever, paletteIndex, width }: AchieverCardProps) {
   const router = useRouter();
+  const theme = useTheme();
   // Each student can be individually set to show a grade or marks (Student
   // admin → Show As) — no longer a single app-wide toggle.
   const showGrade = achiever.showAs === 'grade';
@@ -57,7 +59,7 @@ export function AchieverCard({ achiever, paletteIndex, width }: AchieverCardProp
             <ThemedText type="small" themeColor="textSecondary">
               {achiever.position}
             </ThemedText>
-            <View style={styles.classBadge}>
+            <View style={[styles.classBadge, { backgroundColor: theme.tint }]}>
               <ThemedText type="small" style={styles.classBadgeLabel}>
                 {achiever.classLabel}
               </ThemedText>
@@ -71,7 +73,7 @@ export function AchieverCard({ achiever, paletteIndex, width }: AchieverCardProp
                 {achiever.score} / {achiever.total}
               </ThemedText>
             )}
-            <View style={styles.percentPill}>
+            <View style={[styles.percentPill, { backgroundColor: theme.tint }]}>
               <ThemedText type="small" style={styles.percentLabel}>
                 {showGrade ? achiever.grade : `${achiever.percent}%`}
               </ThemedText>

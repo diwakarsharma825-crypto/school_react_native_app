@@ -181,7 +181,7 @@ export default function MoreScreen() {
 
   return (
     <Screen>
-      <View style={styles.brandCard}>
+      <View style={[styles.brandCard, { backgroundColor: theme.tint }]}>
         <Image source={brand.logoUrl ? { uri: brand.logoUrl } : logoSource} style={styles.logo} contentFit="cover" />
         {schoolName ? (
           <ThemedText type="subtitle" themeColor="textOnBrand" style={styles.brandName}>

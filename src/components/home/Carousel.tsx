@@ -68,7 +68,7 @@ export function Carousel({ sliders }: CarouselProps) {
                     {slide.subtitle}
                   </ThemedText>
                 ) : null}
-                <Pressable style={styles.cta} onPress={() => router.push('/contact')}>
+                <Pressable style={[styles.cta, { backgroundColor: theme.accent }]} onPress={() => router.push('/contact')}>
                   <ThemedText type="smallBold" style={styles.ctaText}>
                     Contact Us
                   </ThemedText>

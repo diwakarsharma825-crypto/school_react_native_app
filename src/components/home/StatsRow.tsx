@@ -41,6 +41,7 @@ function GlanceColumn({
   label: string;
   onPress: () => void;
 }) {
+  const theme = useTheme();
   const count = useCountUp(value);
   return (
     <View style={styles.column}>
@@ -53,7 +54,7 @@ function GlanceColumn({
       <ThemedText type="small" themeColor="textOnBrand" style={styles.label}>
         {label}
       </ThemedText>
-      <Pressable style={styles.viewPill} onPress={onPress}>
+      <Pressable style={[styles.viewPill, { backgroundColor: theme.accent }]} onPress={onPress}>
         <ThemedText type="small" style={styles.viewPillText}>
           View →
         </ThemedText>
@@ -61,10 +62,10 @@ function GlanceColumn({
     </View>
   );
 }
-
 export function StatsRow({ stats }: StatsRowProps) {
+  const theme = useTheme();
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, { backgroundColor: theme.tint }]}>
       <View style={styles.headingRow}>
         <View style={styles.dash} />
         <ThemedText type="smallBold" themeColor="textOnBrand" style={styles.heading}>
@@ -98,7 +99,6 @@ export function StatsRow({ stats }: StatsRowProps) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: Brand.blue,
     borderRadius: Radius.lg,
     padding: Spacing.four,
     marginTop: Spacing.three,
@@ -143,7 +143,6 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.two,
   },
   viewPill: {
-    backgroundColor: Brand.saffron,
     borderRadius: Radius.pill,
     paddingHorizontal: Spacing.two,
     paddingVertical: 4,
