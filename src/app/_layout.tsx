@@ -144,121 +144,98 @@ function RootLayoutInner() {
     setChecking(false);
   }, [probeConnectivity, checkStatus]);
 
-  if (offline) {
-    return (
-      <SafeAreaProvider>
-        <StatusBar style="light" />
-        <OfflineScreen onRetry={handleOfflineRetry} retrying={checking} />
-      </SafeAreaProvider>
-    );
-  }
-
-  if ((checking && !status) || onboarded === null) {
-    return <LaunchScreen />;
-  }
-
-  if (status && isUpdateRequired(getAppVersion(), status.minVersion)) {
-    return (
-      <SafeAreaProvider>
-        <StatusBar style="light" />
-        <UpdateRequiredScreen storeUrl={status.storeUrl} />
-      </SafeAreaProvider>
-    );
-  }
-
-  if (status && !status.enabled) {
-    return (
-      <SafeAreaProvider>
-        <StatusBar style="light" />
-        <LockScreen status={status} onRetry={checkStatus} retrying={checking} />
-      </SafeAreaProvider>
-    );
-  }
-
-  if (!onboarded) {
-    return (
-      <SafeAreaProvider>
-        <StatusBar style="dark" />
-        <OnboardingFlow onDone={() => setOnboarded(true)} />
-      </SafeAreaProvider>
-    );
-  }
-
   return (
-    <SafeAreaProvider>
-      <BrandProvider
-        value={{
-          logoUrl: status?.appLogoUrl ?? null,
-          primaryColor: status?.primaryColor ?? null,
-          accentColor: status?.accentColor ?? null,
-          splashColor: status?.splashColor ?? null,
-          headerColor: status?.headerColor ?? null,
-          achieversDisplay: status?.achieversDisplay ?? 'marks',
-        }}
-      >
-      <LayoutProvider
-        value={{
-          homeTiles: status?.homeTiles ?? DEFAULT_HOME_TILES,
-          bottomTabs: status?.bottomTabs ?? DEFAULT_BOTTOM_TABS,
-        }}
-      >
-      <SectionsProvider value={status?.enabledSections ?? ALL_SECTIONS_ENABLED}>
-        <StatusBar style="light" />
-        <View style={{ flex: 1, backgroundColor: theme.background }}>
-          <Stack
-            screenOptions={{
-              header: () => <DetailHeader title="" />,
-              contentStyle: { backgroundColor: theme.background },
+    <BrandProvider
+      value={{
+        logoUrl: status?.appLogoUrl ?? null,
+        primaryColor: status?.primaryColor ?? null,
+        accentColor: status?.accentColor ?? null,
+        splashColor: status?.splashColor ?? null,
+        headerColor: status?.headerColor ?? null,
+        achieversDisplay: status?.achieversDisplay ?? 'marks',
+      }}
+    >
+      {offline ? (
+        <SafeAreaProvider>
+          <StatusBar style="light" />
+          <OfflineScreen onRetry={handleOfflineRetry} retrying={checking} />
+        </SafeAreaProvider>
+      ) : (checking && !status) || onboarded === null ? (
+        <LaunchScreen />
+      ) : status && isUpdateRequired(getAppVersion(), status.minVersion) ? (
+        <SafeAreaProvider>
+          <StatusBar style="light" />
+          <UpdateRequiredScreen storeUrl={status.storeUrl} />
+        </SafeAreaProvider>
+      ) : status && !status.enabled ? (
+        <SafeAreaProvider>
+          <StatusBar style="light" />
+          <LockScreen status={status} onRetry={checkStatus} retrying={checking} />
+        </SafeAreaProvider>
+      ) : !onboarded ? (
+        <SafeAreaProvider>
+          <StatusBar style="dark" />
+          <OnboardingFlow onDone={() => setOnboarded(true)} />
+        </SafeAreaProvider>
+      ) : (
+        <SafeAreaProvider>
+          <LayoutProvider
+            value={{
+              homeTiles: status?.homeTiles ?? DEFAULT_HOME_TILES,
+              bottomTabs: status?.bottomTabs ?? DEFAULT_BOTTOM_TABS,
             }}
           >
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="event/[id]" options={{ header: () => <DetailHeader title="Event" /> }} />
-            <Stack.Screen name="news/[id]" options={{ header: () => <DetailHeader title="News" /> }} />
-            <Stack.Screen name="news/index" options={{ header: () => <DetailHeader title="Latest News" /> }} />
-            <Stack.Screen name="announcements" options={{ headerShown: false }} />
-            <Stack.Screen name="notices" options={{ header: () => <DetailHeader title="Announcements" /> }} />
-            <Stack.Screen name="result" options={{ header: () => <DetailHeader title="Result / Report Card" /> }} />
-            <Stack.Screen name="contact" options={{ header: () => <DetailHeader title="Contact Us" /> }} />
-            <Stack.Screen name="about" options={{ header: () => <DetailHeader title="About Us" /> }} />
-            <Stack.Screen name="teachers" options={{ header: () => <DetailHeader title="Our Teachers" /> }} />
-            <Stack.Screen name="top-students" options={{ header: () => <DetailHeader title="Top Students" /> }} />
-            <Stack.Screen name="achiever-detail" options={{ headerShown: false, animation: 'fade' }} />
-            <Stack.Screen name="disclosure" options={{ header: () => <DetailHeader title="Mandatory Disclosure" /> }} />
-            <Stack.Screen name="notifications" options={{ header: () => <DetailHeader title="Notifications" /> }} />
-            <Stack.Screen name="homework" options={{ header: () => <DetailHeader title="Homework" /> }} />
-            <Stack.Screen name="login" options={{ header: () => <DetailHeader title="Login" /> }} />
-            <Stack.Screen name="profile" options={{ header: () => <DetailHeader title="Profile" /> }} />
-            <Stack.Screen name="teacher-login" options={{ header: () => <DetailHeader title="Teacher Login" /> }} />
-            <Stack.Screen name="teacher-forgot-password" options={{ header: () => <DetailHeader title="Reset Password" /> }} />
-            <Stack.Screen name="teacher-profile-setup" options={{ header: () => <DetailHeader title="Complete Your Profile" /> }} />
-            <Stack.Screen name="teacher-dashboard" options={{ header: () => <DetailHeader title="Dashboard" /> }} />
-            <Stack.Screen name="student-dashboard" options={{ header: () => <DetailHeader title="Dashboard" /> }} />
-            <Stack.Screen name="teacher-homework" options={{ header: () => <DetailHeader title="Homework" /> }} />
-            <Stack.Screen name="teacher-homework-add" options={{ header: () => <DetailHeader title="Add Homework" /> }} />
-            <Stack.Screen name="teacher-event-add" options={{ header: () => <DetailHeader title="Event" /> }} />
-            <Stack.Screen name="teacher-events" options={{ header: () => <DetailHeader title="Manage Events" /> }} />
-            <Stack.Screen name="teacher-add-notice" options={{ header: () => <DetailHeader title="Notice" /> }} />
-            <Stack.Screen name="teacher-notices" options={{ header: () => <DetailHeader title="Manage Notices" /> }} />
-            <Stack.Screen name="teacher-add-student" options={{ header: () => <DetailHeader title="Add Student" /> }} />
-            <Stack.Screen name="teacher-attendance" options={{ header: () => <DetailHeader title="Attendance" /> }} />
-            <Stack.Screen name="teacher-export" options={{ header: () => <DetailHeader title="Export Reports" /> }} />
-            <Stack.Screen name="teacher-leaves" options={{ header: () => <DetailHeader title="Leave Requests" /> }} />
-            <Stack.Screen name="apply-leave" options={{ header: () => <DetailHeader title="Apply for Leave" /> }} />
-            <Stack.Screen name="teacher-fees" options={{ header: () => <DetailHeader title="Fee Dues" /> }} />
-            <Stack.Screen name="fees" options={{ header: () => <DetailHeader title="Fees" /> }} />
-            <Stack.Screen name="teacher-storage" options={{ header: () => <DetailHeader title="My Storage" /> }} />
-            <Stack.Screen name="student-attendance" options={{ header: () => <DetailHeader title="My Attendance" /> }} />
-            <Stack.Screen name="storage-usage" options={{ header: () => <DetailHeader title="Storage" /> }} />
-            <Stack.Screen name="change-password" options={{ header: () => <DetailHeader title="Change Password" /> }} />
-            <Stack.Screen name="gallery/[id]" options={{ header: () => <DetailHeader title="Album" /> }} />
-          </Stack>
-          <DynamicBottomBar />
-        </View>
-        {status?.trial ? <TrialBanner trial={status.trial} /> : null}
-      </SectionsProvider>
-      </LayoutProvider>
-      </BrandProvider>
-    </SafeAreaProvider>
+            <SectionsProvider value={status?.enabledSections ?? ALL_SECTIONS_ENABLED}>
+              <StatusBar style="light" />
+              <View style={{ flex: 1, backgroundColor: theme.background }}>
+                <Stack
+                  screenOptions={{
+                    header: () => <DetailHeader title="" />,
+                    contentStyle: { backgroundColor: theme.background },
+                  }}
+                >
+                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                  <Stack.Screen name="event/[id]" options={{ header: () => <DetailHeader title="Event" /> }} />
+                  <Stack.Screen name="news/[id]" options={{ header: () => <DetailHeader title="News" /> }} />
+                  <Stack.Screen name="news/index" options={{ header: () => <DetailHeader title="Latest News" /> }} />
+                  <Stack.Screen name="announcements" options={{ headerShown: false }} />
+                  <Stack.Screen name="notices" options={{ header: () => <DetailHeader title="Announcements" /> }} />
+                  <Stack.Screen name="result" options={{ header: () => <DetailHeader title="Result / Report Card" /> }} />
+                  <Stack.Screen name="contact" options={{ header: () => <DetailHeader title="Contact Us" /> }} />
+                  <Stack.Screen name="about" options={{ header: () => <DetailHeader title="About Us" /> }} />
+                  <Stack.Screen name="profile" options={{ header: () => <DetailHeader title="Profile" /> }} />
+                  <Stack.Screen name="teachers" options={{ header: () => <DetailHeader title="Our Teachers" /> }} />
+                  <Stack.Screen name="homework" options={{ header: () => <DetailHeader title="Homework" /> }} />
+                  <Stack.Screen name="apply-leave" options={{ header: () => <DetailHeader title="Apply Leave" /> }} />
+                  <Stack.Screen name="fees" options={{ header: () => <DetailHeader title="Fee Invoices" /> }} />
+                  <Stack.Screen name="teacher-login" options={{ header: () => <DetailHeader title="Teacher Login" /> }} />
+                  <Stack.Screen name="teacher-profile-setup" options={{ header: () => <DetailHeader title="Teacher Profile Setup" /> }} />
+                  <Stack.Screen name="teacher-dashboard" options={{ header: () => <DetailHeader title="Teacher Dashboard" /> }} />
+                  <Stack.Screen name="teacher-attendance" options={{ header: () => <DetailHeader title="Mark Attendance" /> }} />
+                  <Stack.Screen name="teacher-homework" options={{ header: () => <DetailHeader title="Manage Homework" /> }} />
+                  <Stack.Screen name="teacher-homework-add" options={{ header: () => <DetailHeader title="Add Homework" /> }} />
+                  <Stack.Screen name="teacher-events" options={{ header: () => <DetailHeader title="Manage Events" /> }} />
+                  <Stack.Screen name="teacher-event-add" options={{ header: () => <DetailHeader title="Add Event" /> }} />
+                  <Stack.Screen name="teacher-notices" options={{ header: () => <DetailHeader title="Manage Notices" /> }} />
+                  <Stack.Screen name="teacher-add-notice" options={{ header: () => <DetailHeader title="Add Notice" /> }} />
+                  <Stack.Screen name="teacher-leaves" options={{ header: () => <DetailHeader title="Leave Applications" /> }} />
+                  <Stack.Screen name="teacher-fees" options={{ header: () => <DetailHeader title="Fee Invoices" /> }} />
+                  <Stack.Screen name="teacher-export" options={{ header: () => <DetailHeader title="Export Roster" /> }} />
+                  <Stack.Screen name="teacher-storage" options={{ header: () => <DetailHeader title="Storage Usage" /> }} />
+                  <Stack.Screen name="teacher-import-result" options={{ header: () => <DetailHeader title="Import Result" /> }} />
+                  <Stack.Screen name="teacher-student-review" options={{ header: () => <DetailHeader title="Review Student" /> }} />
+                  <Stack.Screen name="teacher-add-student" options={{ header: () => <DetailHeader title="Add Student" /> }} />
+                  <Stack.Screen name="student-dashboard" options={{ header: () => <DetailHeader title="Student Dashboard" /> }} />
+                  <Stack.Screen name="student-attendance" options={{ header: () => <DetailHeader title="Attendance Record" /> }} />
+                </Stack>
+              </View>
+              <DynamicBottomBar />
+              <TrialBanner trial={status?.trial ?? { startDate: '', totalDays: 7, remainingDays: 7, ended: false, features: [] }} />
+            </SectionsProvider>
+          </LayoutProvider>
+        </SafeAreaProvider>
+      )}
+    </BrandProvider>
   );
 }
 
