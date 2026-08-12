@@ -26,6 +26,7 @@ import { useBrand } from '@/hooks/use-brand';
 import { useTheme } from '@/hooks/use-theme';
 import { useSectionEnabled } from '@/hooks/use-sections';
 import { SectionUnavailable } from '@/components/ui/SectionUnavailable';
+import { exportToPdf } from '@/lib/pdf-export';
 
 const defaultLogo = require('../../assets/images/icon.png');
 
@@ -82,6 +83,9 @@ function AccessForm({ onDone }: { onDone: () => void }) {
       const children: HomeworkAccess[] = results.map((result) => ({
         name: result.name,
         srn: result.srn,
+        rollNo: result.roll_no,
+        fatherName: result.father_name,
+        motherName: result.mother_name,
         className: result.class,
         section: result.section,
         phone: result.phone,
@@ -345,36 +349,114 @@ function HomeworkCalendar({ access, onLogout }: { access: HomeworkAccess; onLogo
       )}
 
       {/* View Toggle Bar */}
-      <View style={[styles.viewToggleContainer, { backgroundColor: theme.backgroundElement }]}>
-        <Pressable
-          onPress={() => setViewMode('calendar')}
-          style={[
-            styles.viewToggleButton,
-            viewMode === 'calendar' && { backgroundColor: theme.surface },
-          ]}
-        >
-          <Ionicons name="calendar-outline" size={16} color={viewMode === 'calendar' ? theme.tint : theme.textSecondary} />
-          <ThemedText
-            type="smallBold"
-            style={{ color: viewMode === 'calendar' ? theme.tint : theme.textSecondary }}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.two, marginBottom: Spacing.three }}>
+        <View style={[styles.viewToggleContainer, { backgroundColor: theme.backgroundElement, flex: 1, marginBottom: 0 }]}>
+          <Pressable
+            onPress={() => setViewMode('calendar')}
+            style={[
+              styles.viewToggleButton,
+              viewMode === 'calendar' && { backgroundColor: theme.dark ? theme.tint : theme.surface },
+            ]}
           >
-            Calendar View
-          </ThemedText>
-        </Pressable>
+            <Ionicons
+              name="calendar-outline"
+              size={16}
+              color={
+                viewMode === 'calendar'
+                  ? theme.dark
+                    ? '#FFFFFF'
+                    : theme.tint
+                  : theme.dark
+                  ? '#A0AEC0'
+                  : theme.textSecondary
+              }
+            />
+            <ThemedText
+              type="smallBold"
+              style={{
+                color:
+                  viewMode === 'calendar'
+                    ? theme.dark
+                      ? '#FFFFFF'
+                      : theme.tint
+                    : theme.dark
+                    ? '#A0AEC0'
+                    : theme.textSecondary,
+              }}
+            >
+              Calendar View
+            </ThemedText>
+          </Pressable>
+
+          <Pressable
+            onPress={() => setViewMode('list')}
+            style={[
+              styles.viewToggleButton,
+              viewMode === 'list' && { backgroundColor: theme.dark ? theme.tint : theme.surface },
+            ]}
+          >
+            <Ionicons
+              name="list-outline"
+              size={16}
+              color={
+                viewMode === 'list'
+                  ? theme.dark
+                    ? '#FFFFFF'
+                    : theme.tint
+                  : theme.dark
+                  ? '#A0AEC0'
+                  : theme.textSecondary
+              }
+            />
+            <ThemedText
+              type="smallBold"
+              style={{
+                color:
+                  viewMode === 'list'
+                    ? theme.dark
+                      ? '#FFFFFF'
+                      : theme.tint
+                    : theme.dark
+                    ? '#A0AEC0'
+                    : theme.textSecondary,
+              }}
+            >
+              List View
+            </ThemedText>
+          </Pressable>
+        </View>
 
         <Pressable
-          onPress={() => setViewMode('list')}
-          style={[
-            styles.viewToggleButton,
-            viewMode === 'list' && { backgroundColor: theme.surface },
-          ]}
+          onPress={() => {
+            const list = viewMode === 'calendar' ? entries : filteredList;
+            if (!list || list.length === 0) return;
+            const images = list.flatMap((e) => e.attachments.map((a) => a.photo_url));
+            exportToPdf({
+              title: `Homework Report (${access.className}${access.section ? ` - ${access.section}` : ''})`,
+              subtitle: `Student: ${access.name} (SRN: ${access.srn}) | ${viewMode === 'calendar' ? `Date: ${selectedDate}` : `Filtered Items: ${list.length}`}`,
+              columns: [
+                { header: 'Date', key: 'homework_date', width: '20%' },
+                { header: 'Subject', key: 'subject', width: '25%' },
+                { header: 'Chapter / Title', key: 'chapter', width: '25%' },
+                { header: 'Description', key: 'description', width: '30%' },
+              ],
+              rows: list,
+              images,
+            });
+          }}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 4,
+            backgroundColor: theme.tint,
+            paddingHorizontal: 12,
+            paddingVertical: 10,
+            borderRadius: Radius.pill,
+          }}
         >
-          <Ionicons name="list-outline" size={16} color={viewMode === 'list' ? theme.tint : theme.textSecondary} />
-          <ThemedText
-            type="smallBold"
-            style={{ color: viewMode === 'list' ? theme.tint : theme.textSecondary }}
-          >
-            List View
+          <Ionicons name="document-text-outline" size={15} color={Brand.white} />
+          <ThemedText type="smallBold" style={{ color: Brand.white }}>
+            PDF
           </ThemedText>
         </Pressable>
       </View>

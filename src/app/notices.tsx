@@ -13,6 +13,7 @@ import { fetchHolidays, fetchNews, fetchNotices } from '@/data/api';
 import { useFetch } from '@/hooks/use-fetch';
 import { useSectionEnabled } from '@/hooks/use-sections';
 import { formatDate, stripHtml } from '@/lib/format';
+import { exportToPdf } from '@/lib/pdf-export';
 
 type TabKey = 'news' | 'notice' | 'holiday';
 
@@ -64,22 +65,54 @@ export default function NoticesScreen() {
 
   return (
     <Screen refreshing={loading} onRefresh={current.refetch}>
-      <View style={[styles.segment, { backgroundColor: theme.backgroundElement }]}>
-        {TABS.map((tab) => {
-          const isActive = tab.key === active;
-          return (
-            <Pressable
-              key={tab.key}
-              onPress={() => setActive(tab.key)}
-              style={[styles.segmentItem, isActive && { backgroundColor: theme.surface, ...Shadow.card }]}
-            >
-              <Ionicons name={tab.icon} size={14} color={isActive ? tab.color : theme.textSecondary} />
-              <ThemedText type={isActive ? 'smallBold' : 'small'} themeColor={isActive ? 'text' : 'textSecondary'}>
-                {tab.label}
-              </ThemedText>
-            </Pressable>
-          );
-        })}
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.three }}>
+        <View style={[styles.segment, { backgroundColor: theme.backgroundElement, flex: 1, marginBottom: 0 }]}>
+          {TABS.map((tab) => {
+            const isActive = tab.key === active;
+            return (
+              <Pressable
+                key={tab.key}
+                onPress={() => setActive(tab.key)}
+                style={[styles.segmentItem, isActive && { backgroundColor: theme.surface, ...Shadow.card }]}
+              >
+                <Ionicons name={tab.icon} size={14} color={isActive ? tab.color : theme.textSecondary} />
+                <ThemedText type={isActive ? 'smallBold' : 'small'} themeColor={isActive ? 'text' : 'textSecondary'}>
+                  {tab.label}
+                </ThemedText>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        <Pressable
+          onPress={() =>
+            exportToPdf({
+              title: `School ${activeTab.label} Report`,
+              subtitle: `Category: ${activeTab.label} (${items.length} items)`,
+              columns: [
+                { header: 'Date', key: 'date', width: '20%' },
+                { header: 'Title', key: 'title', width: '30%' },
+                { header: 'Details', key: 'detail', width: '50%' },
+              ],
+              rows: items,
+            })
+          }
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 4,
+            backgroundColor: theme.tint,
+            paddingHorizontal: 12,
+            paddingVertical: 8,
+            borderRadius: Radius.pill,
+            marginLeft: 8,
+          }}
+        >
+          <Ionicons name="document-text-outline" size={15} color={Brand.white} />
+          <ThemedText type="smallBold" style={{ color: Brand.white }}>
+            PDF
+          </ThemedText>
+        </Pressable>
       </View>
 
       {loading && items.length === 0 ? (

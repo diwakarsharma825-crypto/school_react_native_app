@@ -17,6 +17,7 @@ import { useTeacherAuth } from '@/hooks/use-teacher-auth';
 import { useTheme } from '@/hooks/use-theme';
 import { useSectionEnabled } from '@/hooks/use-sections';
 import { SectionUnavailable } from '@/components/ui/SectionUnavailable';
+import { exportToPdf } from '@/lib/pdf-export';
 
 function pad(n: number) {
   return n < 10 ? `0${n}` : String(n);
@@ -138,24 +139,61 @@ export default function TeacherAttendanceScreen() {
       <DatePickerField label="Date" placeholder="Select date" value={date} onChange={setDate} minDate="2000-01-01" maxDate={todayStr()} />
 
       {students && students.length > 0 ? (
-        <View style={styles.markAllRow}>
-          {(['P', 'A', 'L'] as AttendanceStatus[]).map((s) => (
-            <Pressable
-              key={s}
-              onPress={() => markAll(s)}
-              style={[styles.markAllChip, { borderColor: STATUS_META[s].color, backgroundColor: STATUS_META[s].bg }]}
-            >
-              <Ionicons name={STATUS_META[s].icon} size={15} color={STATUS_META[s].color} />
-              <ThemedText type="small" style={{ color: STATUS_META[s].color }}>
-                All {STATUS_META[s].label}
-              </ThemedText>
-              <View style={[styles.markAllCount, { backgroundColor: STATUS_META[s].color }]}>
-                <ThemedText type="small" style={styles.markAllCountLabel}>
-                  {counts[s]}
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.two }}>
+          <View style={[styles.markAllRow, { flex: 1, marginBottom: 0 }]}>
+            {(['P', 'A', 'L'] as AttendanceStatus[]).map((s) => (
+              <Pressable
+                key={s}
+                onPress={() => markAll(s)}
+                style={[styles.markAllChip, { borderColor: STATUS_META[s].color, backgroundColor: STATUS_META[s].bg }]}
+              >
+                <Ionicons name={STATUS_META[s].icon} size={15} color={STATUS_META[s].color} />
+                <ThemedText type="small" style={{ color: STATUS_META[s].color }}>
+                  All {STATUS_META[s].label}
                 </ThemedText>
-              </View>
-            </Pressable>
-          ))}
+                <View style={[styles.markAllCount, { backgroundColor: STATUS_META[s].color }]}>
+                  <ThemedText type="small" style={styles.markAllCountLabel}>
+                    {counts[s]}
+                  </ThemedText>
+                </View>
+              </Pressable>
+            ))}
+          </View>
+
+          <Pressable
+            onPress={() => {
+              if (!students || students.length === 0) return;
+              exportToPdf({
+                title: `Class Attendance Sheet - ${selected?.class_name ?? ''}${selected?.section_name ? ` (${selected.section_name})` : ''}`,
+                subtitle: `Date: ${date} | Present: ${counts.P} | Absent: ${counts.A} | Leave: ${counts.L}`,
+                columns: [
+                  { header: 'Roll No', key: 'roll_no', width: '20%' },
+                  { header: 'Student Name', key: 'name', width: '40%' },
+                  { header: 'Status', key: 'statusLabel', width: '20%' },
+                  { header: 'Remarks', key: 'remarks', width: '20%' },
+                ],
+                rows: students.map((s) => ({
+                  ...s,
+                  statusLabel: STATUS_META[s.status!]?.label ?? s.status ?? 'Not Marked',
+                })),
+              });
+            }}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 4,
+              backgroundColor: theme.tint,
+              paddingHorizontal: 12,
+              paddingVertical: 8,
+              borderRadius: Radius.pill,
+              marginLeft: 8,
+            }}
+          >
+            <Ionicons name="document-text-outline" size={15} color={Brand.white} />
+            <ThemedText type="smallBold" style={{ color: Brand.white }}>
+              PDF
+            </ThemedText>
+          </Pressable>
         </View>
       ) : null}
 

@@ -27,6 +27,7 @@ import { useTeacherAuth } from '@/hooks/use-teacher-auth';
 import { useTheme } from '@/hooks/use-theme';
 import { useSectionEnabled } from '@/hooks/use-sections';
 import { SectionUnavailable } from '@/components/ui/SectionUnavailable';
+import { exportToPdf } from '@/lib/pdf-export';
 
 const FEE_TYPE_OPTIONS: { label: string; value: FeeType }[] = [
   { label: 'Monthly Fee', value: 'monthly' },
@@ -301,12 +302,42 @@ export default function TeacherFeesScreen() {
           <SelectField label="Class" placeholder="Select class" value={classId} options={classOptions} onChange={setClassId} />
         ) : null}
 
-        <Pressable onPress={() => setAddOpen(true)} style={[styles.addButton, { backgroundColor: theme.tint }]}>
-          <Ionicons name="add" size={16} color={Brand.white} />
-          <ThemedText type="smallBold" style={styles.addButtonLabel}>
-            Add Fee Due
-          </ThemedText>
-        </Pressable>
+        <View style={{ flexDirection: 'row', gap: Spacing.two, marginBottom: Spacing.three }}>
+          <Pressable onPress={() => setAddOpen(true)} style={[styles.addButton, { backgroundColor: theme.tint, flex: 1, marginBottom: 0 }]}>
+            <Ionicons name="add" size={16} color={Brand.white} />
+            <ThemedText type="smallBold" style={styles.addButtonLabel}>
+              Add Fee Due
+            </ThemedText>
+          </Pressable>
+
+          <Pressable
+            onPress={() => {
+              if (!invoices || invoices.length === 0) return;
+              exportToPdf({
+                title: `Class Fee Records - ${selected?.class_name ?? ''}${selected?.section_name ? ` (${selected.section_name})` : ''}`,
+                subtitle: `Filter: ${statusFilter.toUpperCase()} | Total Records: ${invoices.length}`,
+                columns: [
+                  { header: 'Student Name', key: 'student_name', width: '25%' },
+                  { header: 'Invoice Title', key: 'title', width: '25%' },
+                  { header: 'Amount', key: 'amountLabel', width: '15%' },
+                  { header: 'Due Date', key: 'due_date', width: '20%' },
+                  { header: 'Status', key: 'statusLabel', width: '15%' },
+                ],
+                rows: invoices.map((inv) => ({
+                  ...inv,
+                  amountLabel: `₹${inv.amount}`,
+                  statusLabel: STATUS_META[inv.status]?.label ?? inv.status,
+                })),
+              });
+            }}
+            style={[styles.addButton, { backgroundColor: theme.surface, borderColor: theme.tint, borderWidth: 1.5, flex: 1, marginBottom: 0 }]}
+          >
+            <Ionicons name="document-text-outline" size={16} color={theme.tint} />
+            <ThemedText type="smallBold" themeColor="tint">
+              Export PDF
+            </ThemedText>
+          </Pressable>
+        </View>
 
         <View style={[styles.filterRow, { borderColor: theme.border }]}>
           {(['due', 'paid', 'all'] as const).map((s) => (

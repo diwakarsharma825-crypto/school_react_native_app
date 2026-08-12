@@ -48,6 +48,9 @@ export async function fetchHomeworkForDate(
 export interface StudentChild {
   name: string;
   srn: string;
+  roll_no?: string;
+  father_name?: string;
+  mother_name?: string;
   class: string;
   section: string;
   phone: string;

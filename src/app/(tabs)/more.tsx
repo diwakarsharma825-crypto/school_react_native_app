@@ -111,6 +111,7 @@ export default function MoreScreen() {
         await clearHomeworkAccess();
         setStudentAccess(null);
       }
+      router.replace('/');
     });
   }
 

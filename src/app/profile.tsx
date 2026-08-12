@@ -122,6 +122,10 @@ export default function ProfileScreen() {
   }
 
   if (studentLoggedIn && access) {
+    const classTitle = access.className.toLowerCase().startsWith('class')
+      ? `${access.className}${access.section ? ` - ${access.section}` : ''}`
+      : `Class ${access.className}${access.section ? ` - ${access.section}` : ''}`;
+
     return (
       <Screen>
         <Card style={styles.headerCard}>
@@ -129,21 +133,24 @@ export default function ProfileScreen() {
             <Image source={{ uri: access.photoUrl }} style={styles.avatarPhoto} contentFit="cover" />
           ) : (
             <View style={[styles.avatar, { backgroundColor: theme.backgroundSelected }]}>
-              <Ionicons name="school" size={28} color={theme.tint} />
+              <Ionicons name="school" size={32} color={theme.tint} />
             </View>
           )}
           <ThemedText type="subtitle" style={styles.name}>
             {access.name}
           </ThemedText>
           <ThemedText type="small" themeColor="textSecondary">
-            Class {access.className} - {access.section}
+            {classTitle}
           </ThemedText>
         </Card>
 
         <Card style={styles.section}>
           <InfoRow icon="id-card-outline" label="SRN" value={access.srn} />
+          {access.rollNo ? <InfoRow icon="numbers-outline" label="Roll No" value={access.rollNo} /> : null}
+          {access.fatherName ? <InfoRow icon="person-outline" label="Father's Name" value={access.fatherName} /> : null}
+          {access.motherName ? <InfoRow icon="heart-outline" label="Mother's Name" value={access.motherName} /> : null}
           {access.phone ? <InfoRow icon="call-outline" label="Phone" value={access.phone} /> : null}
-          {access.gender ? <InfoRow icon="person-outline" label="Gender" value={access.gender} /> : null}
+          {access.gender ? <InfoRow icon="people-outline" label="Gender" value={access.gender} /> : null}
           {access.dob ? <InfoRow icon="calendar-outline" label="Date of Birth" value={formatDob(access.dob)} /> : null}
         </Card>
       </Screen>

@@ -177,6 +177,9 @@ export function OnboardingFlow({ onDone }: OnboardingFlowProps) {
         const children: HomeworkAccess[] = results.map((result) => ({
           name: result.name,
           srn: result.srn,
+          rollNo: result.roll_no,
+          fatherName: result.father_name,
+          motherName: result.mother_name,
           className: result.class,
           section: result.section,
           phone: result.phone,

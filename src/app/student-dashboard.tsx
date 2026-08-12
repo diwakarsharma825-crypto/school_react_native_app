@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
@@ -101,19 +102,31 @@ export default function StudentDashboardScreen() {
       {allChildren.length > 1 ? (
         <ChildSwitcherCard siblings={allChildren} activeSrn={access.srn} onSwitch={switchChild} sessionLabel={sessionLabel} />
       ) : (
-        <Card style={styles.headerCard}>
-          <ThemedText type="smallBold">{access.name}</ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">
-            {`${/\bclass\b/i.test(access.className) ? access.className : `Class ${access.className}`}${
-              access.section ? ` - ${access.section}` : ''
-            } · SRN ${access.srn}`}
-          </ThemedText>
-          {sessionLabel ? (
-            <ThemedText type="small" themeColor="tint">
-              Session: {sessionLabel}
-            </ThemedText>
-          ) : null}
-        </Card>
+        <Pressable onPress={() => router.push('/profile')}>
+          <Card style={[styles.headerCard, { flexDirection: 'row', alignItems: 'center' }]}>
+            {access.photoUrl ? (
+              <Image source={{ uri: access.photoUrl }} style={{ width: 44, height: 44, borderRadius: 22, marginRight: 12 }} contentFit="cover" />
+            ) : (
+              <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: theme.backgroundSelected, alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                <Ionicons name="school" size={20} color={theme.tint} />
+              </View>
+            )}
+            <View style={{ flex: 1 }}>
+              <ThemedText type="smallBold">{access.name}</ThemedText>
+              <ThemedText type="small" themeColor="textSecondary">
+                {`${/\bclass\b/i.test(access.className) ? access.className : `Class ${access.className}`}${
+                  access.section ? ` - ${access.section}` : ''
+                } · SRN ${access.srn}`}
+              </ThemedText>
+              {sessionLabel ? (
+                <ThemedText type="small" themeColor="tint">
+                  Session: {sessionLabel}
+                </ThemedText>
+              ) : null}
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
+          </Card>
+        </Pressable>
       )}
 
       <View style={styles.statsRow}>

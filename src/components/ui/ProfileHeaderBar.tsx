@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import { router } from 'expo-router';
 import React, { useState } from 'react';
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
 
@@ -41,33 +42,39 @@ export function ProfileHeaderBar({ icon, name, photoUrl, contact, subtitle, sess
 
   return (
     <View style={[styles.bar, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-      {photoUrl ? (
-        <Image source={{ uri: photoUrl }} style={styles.avatarPhoto} contentFit="cover" />
-      ) : (
-        <View style={[styles.avatar, { backgroundColor: theme.backgroundSelected }]}>
-          <Ionicons name={icon} size={20} color={theme.tint} />
+      <Pressable
+        onPress={() => router.push('/profile')}
+        style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}
+      >
+        {photoUrl ? (
+          <Image source={{ uri: photoUrl }} style={styles.avatarPhoto} contentFit="cover" />
+        ) : (
+          <View style={[styles.avatar, { backgroundColor: theme.backgroundSelected }]}>
+            <Ionicons name={icon} size={20} color={theme.tint} />
+          </View>
+        )}
+        <View style={styles.textCol}>
+          <ThemedText type="smallBold" numberOfLines={1}>
+            {name}
+          </ThemedText>
+          {contact ? (
+            <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+              {contact}
+            </ThemedText>
+          ) : null}
+          {subtitle ? (
+            <ThemedText type="small" themeColor="textSecondary">
+              {subtitle}
+            </ThemedText>
+          ) : null}
+          {sessionLabel ? (
+            <ThemedText type="small" themeColor="tint">
+              Session: {sessionLabel}
+            </ThemedText>
+          ) : null}
         </View>
-      )}
-      <View style={styles.textCol}>
-        <ThemedText type="smallBold" numberOfLines={1}>
-          {name}
-        </ThemedText>
-        {contact ? (
-          <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-            {contact}
-          </ThemedText>
-        ) : null}
-        {subtitle ? (
-          <ThemedText type="small" themeColor="textSecondary">
-            {subtitle}
-          </ThemedText>
-        ) : null}
-        {sessionLabel ? (
-          <ThemedText type="small" themeColor="tint">
-            Session: {sessionLabel}
-          </ThemedText>
-        ) : null}
-      </View>
+        <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} style={{ marginRight: 6 }} />
+      </Pressable>
       {menu.length > 0 ? (
         <Pressable onPress={() => setOpen(true)} hitSlop={10} style={styles.menuButton}>
           <Ionicons name="ellipsis-vertical" size={18} color={theme.textSecondary} />

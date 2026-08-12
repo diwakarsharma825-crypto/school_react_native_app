@@ -1,8 +1,10 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { Radius, Spacing } from '@/constants/theme';
+import { Brand, Radius, Spacing } from '@/constants/theme';
+import { exportToPdf } from '@/lib/pdf-export';
 import { Card } from '@/components/ui/Card';
 import { ChildSwitcherCard } from '@/components/ui/ChildSwitcherCard';
 import { DatePickerField } from '@/components/ui/DatePickerField';
@@ -108,13 +110,46 @@ export default function FeesScreen() {
         ))}
       </View>
 
-      <View style={styles.row}>
-        <View style={styles.rowItem}>
-          <DatePickerField label="Due From" placeholder="Any" value={dateFromFilter} onChange={setDateFromFilter} minDate="0000-00-00" />
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: Spacing.two, marginBottom: Spacing.two }}>
+        <View style={{ flex: 1 }}>
+          <ThemedText type="smallBold">Fee Statements</ThemedText>
         </View>
-        <View style={styles.rowItem}>
-          <DatePickerField label="Due To" placeholder="Any" value={dateToFilter} onChange={setDateToFilter} minDate={dateFromFilter ?? '0000-00-00'} />
-        </View>
+        <Pressable
+          onPress={() => {
+            if (!visibleInvoices || visibleInvoices.length === 0) return;
+            exportToPdf({
+              title: `Fee Invoices Report - ${access?.name ?? ''}`,
+              subtitle: `Class: ${access?.className ?? ''} | Filter: ${statusFilter.toUpperCase()} | Total Due: ₹${dueTotal}`,
+              columns: [
+                { header: 'Invoice No / Title', key: 'title', width: '30%' },
+                { header: 'Fee Type', key: 'typeLabel', width: '25%' },
+                { header: 'Due Date', key: 'due_date', width: '20%' },
+                { header: 'Amount', key: 'amountLabel', width: '15%' },
+                { header: 'Status', key: 'statusLabel', width: '10%' },
+              ],
+              rows: visibleInvoices.map((inv) => ({
+                ...inv,
+                typeLabel: FEE_TYPE_LABELS[inv.fee_type] || inv.fee_type,
+                amountLabel: `₹${inv.amount}`,
+                statusLabel: STATUS_META[inv.status]?.label ?? inv.status,
+              })),
+            });
+          }}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 4,
+            backgroundColor: theme.tint,
+            paddingHorizontal: 12,
+            paddingVertical: 6,
+            borderRadius: Radius.pill,
+          }}
+        >
+          <Ionicons name="document-text-outline" size={14} color={Brand.white} />
+          <ThemedText type="smallBold" style={{ color: Brand.white }}>
+            Export PDF
+          </ThemedText>
+        </Pressable>
       </View>
 
       {loading && !invoices ? (

@@ -12,6 +12,7 @@ import { ThemedText } from '@/components/ui/ThemedText';
 import { deleteTeacherEvent, fetchTeacherEvents, TeacherEvent, toggleTeacherEvent } from '@/data/teacher-api';
 import { TeacherGuard } from '@/components/ui/TeacherGuard';
 import { useTheme } from '@/hooks/use-theme';
+import { exportToPdf } from '@/lib/pdf-export';
 
 export default function TeacherEventsScreen() {
   const theme = useTheme();
@@ -57,15 +58,45 @@ export default function TeacherEventsScreen() {
   return (
     <TeacherGuard>
     <Screen>
-      <Pressable
-        onPress={() => router.push('/teacher-event-add' as any)}
-        style={[styles.addButton, { backgroundColor: theme.tint }]}
-      >
-        <Ionicons name="add" size={18} color={Brand.white} />
-        <ThemedText type="smallBold" style={styles.addButtonLabel}>
-          New Event
-        </ThemedText>
-      </Pressable>
+      <View style={{ flexDirection: 'row', gap: Spacing.two, marginBottom: Spacing.four }}>
+        <Pressable
+          onPress={() => router.push('/teacher-event-add' as any)}
+          style={[styles.addButton, { backgroundColor: theme.tint, flex: 1, marginBottom: 0 }]}
+        >
+          <Ionicons name="add" size={18} color={Brand.white} />
+          <ThemedText type="smallBold" style={styles.addButtonLabel}>
+            New Event
+          </ThemedText>
+        </Pressable>
+
+        <Pressable
+          onPress={() => {
+            if (!events || events.length === 0) return;
+            const allImages = events.flatMap((e) => e.media.filter((m) => m.type === 'image').map((m) => m.url));
+            exportToPdf({
+              title: 'Teacher Events Report',
+              subtitle: `Total Events: ${events.length}`,
+              columns: [
+                { header: 'From - To', key: 'dates', width: '25%' },
+                { header: 'Title', key: 'title', width: '30%' },
+                { header: 'Class', key: 'class_label', width: '20%' },
+                { header: 'Place / Note', key: 'note', width: '25%' },
+              ],
+              rows: events.map((e) => ({
+                ...e,
+                dates: `${e.event_from}${e.event_to && e.event_to !== e.event_from ? ` — ${e.event_to}` : ''}`,
+              })),
+              images: allImages,
+            });
+          }}
+          style={[styles.addButton, { backgroundColor: theme.surface, borderColor: theme.tint, borderWidth: 1.5, flex: 1, marginBottom: 0 }]}
+        >
+          <Ionicons name="document-text-outline" size={18} color={theme.tint} />
+          <ThemedText type="smallBold" themeColor="tint">
+            Export PDF
+          </ThemedText>
+        </Pressable>
+      </View>
 
       {loading ? (
         <Loading label="Loading events…" />

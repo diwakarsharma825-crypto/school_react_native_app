@@ -34,6 +34,9 @@ export async function clearPendingRegistration(): Promise<void> {
 export interface HomeworkAccess {
   name: string;
   srn: string;
+  rollNo?: string;
+  fatherName?: string;
+  motherName?: string;
   className: string;
   section: string;
   phone?: string;
