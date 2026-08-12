@@ -32,6 +32,7 @@ import { configureNotificationHandler, ensureNotificationChannel, getFcmPushToke
 import { isUpdateRequired } from '@/lib/version';
 import { LockScreen } from '@/components/ui/LockScreen';
 import { UpdateRequiredScreen } from '@/components/ui/UpdateRequiredScreen';
+import { AppHeader } from '@/components/ui/AppHeader';
 import { DetailHeader } from '@/components/ui/DetailHeader';
 import { SectionsProvider } from '@/hooks/use-sections';
 import { OnboardingFlow } from '@/components/onboarding/OnboardingFlow';
@@ -224,7 +225,7 @@ function RootLayoutInner() {
                   <Stack.Screen name="homework" options={{ header: () => <DetailHeader title="Homework" /> }} />
                   <Stack.Screen name="apply-leave" options={{ header: () => <DetailHeader title="Apply Leave" /> }} />
                   <Stack.Screen name="fees" options={{ header: () => <DetailHeader title="Fee Invoices" /> }} />
-                  <Stack.Screen name="login" options={{ header: () => <DetailHeader title="Login" hideBack={status?.instituteMode ?? false} /> }} />
+                  <Stack.Screen name="login" options={{ header: () => <AppHeader /> }} />
                   <Stack.Screen name="teacher-login" options={{ header: () => <DetailHeader title="Teacher Login" /> }} />
                   <Stack.Screen name="teacher-profile-setup" options={{ header: () => <DetailHeader title="Teacher Profile Setup" /> }} />
                   <Stack.Screen name="teacher-dashboard" options={{ header: () => <DetailHeader title="Teacher Dashboard" /> }} />
