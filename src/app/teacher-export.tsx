@@ -176,14 +176,16 @@ export default function TeacherExportScreen() {
       <Screen>
         <View style={[styles.hero, { backgroundColor: theme.tint }]}>
           <View style={styles.heroIcon}>
-            <Ionicons name="download-outline" size={26} color={Brand.white} />
+            <Ionicons name="download-outline" size={18} color={Brand.white} />
           </View>
-          <ThemedText type="title" style={styles.heroTitle}>
-            Section Database Exporter
-          </ThemedText>
-          <ThemedText type="small" style={styles.heroSubtitle}>
-            Select any section to export official database records — generate PDF reports with images or CSV files.
-          </ThemedText>
+          <View style={{ flex: 1 }}>
+            <ThemedText type="smallBold" style={styles.heroTitle}>
+              Section Database Exporter
+            </ThemedText>
+            <ThemedText type="small" style={styles.heroSubtitle} numberOfLines={1}>
+              Select any section to export database records (PDF / CSV).
+            </ThemedText>
+          </View>
         </View>
 
         <ThemedText type="smallBold" themeColor="textSecondary" style={styles.sectionLabel}>
@@ -294,26 +296,29 @@ export default function TeacherExportScreen() {
 
 const styles = StyleSheet.create({
   hero: {
-    borderRadius: Radius.lg,
-    padding: Spacing.four,
-    marginBottom: Spacing.four,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.three,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two + 2,
+    marginBottom: Spacing.two,
   },
   heroIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: Spacing.two,
   },
   heroTitle: {
     color: Brand.white,
-    marginBottom: 4,
+    fontSize: 15,
   },
   heroSubtitle: {
     color: 'rgba(255,255,255,0.85)',
-    lineHeight: 18,
+    fontSize: 12,
   },
   sectionLabel: {
     marginBottom: Spacing.two,
