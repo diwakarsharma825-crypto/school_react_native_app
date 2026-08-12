@@ -192,7 +192,7 @@ function StudentsTab({
     <>
       <PendingRegistrationsSection classId={classId} sectionId={sectionId} />
 
-      <View style={styles.toolbarRow}>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two, marginTop: Spacing.one, marginBottom: Spacing.four }}>
         <Pressable
           onPress={() =>
             router.push({
@@ -200,10 +200,18 @@ function StudentsTab({
               params: { classId: String(classId), sectionId: sectionId ? String(sectionId) : '' },
             } as any)
           }
-          style={[styles.addStudentButton, { backgroundColor: theme.tint }]}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 6,
+            backgroundColor: theme.tint,
+            paddingHorizontal: 14,
+            paddingVertical: 9,
+            borderRadius: Radius.md,
+          }}
         >
-          <Ionicons name="person-add-outline" size={15} color={Brand.white} />
-          <ThemedText type="smallBold" style={styles.addStudentButtonLabel}>
+          <Ionicons name="person-add-outline" size={16} color={Brand.white} />
+          <ThemedText type="smallBold" style={{ color: Brand.white }}>
             Add Student
           </ThemedText>
         </Pressable>
@@ -215,9 +223,19 @@ function StudentsTab({
               params: { classId: String(classId), sectionId: sectionId ? String(sectionId) : '' },
             } as any)
           }
-          style={[styles.notifyClassButton, { borderColor: theme.tint }]}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 6,
+            backgroundColor: theme.surface,
+            borderColor: theme.tint,
+            borderWidth: 1.5,
+            paddingHorizontal: 14,
+            paddingVertical: 8,
+            borderRadius: Radius.md,
+          }}
         >
-          <Ionicons name="cloud-upload-outline" size={15} color={theme.tint} />
+          <Ionicons name="cloud-upload-outline" size={16} color={theme.tint} />
           <ThemedText type="smallBold" themeColor="tint">
             Import Excel
           </ThemedText>
@@ -225,6 +243,7 @@ function StudentsTab({
 
         <ExportPdfButton
           variant="outline"
+          style={{ borderRadius: Radius.md, paddingVertical: 8, paddingHorizontal: 14 }}
           onPress={() => {
             if (!filteredStudents || filteredStudents.length === 0) return;
             const images = filteredStudents.map((s) => s.photo_url).filter(Boolean) as string[];
@@ -245,16 +264,43 @@ function StudentsTab({
         />
 
         {canAlert ? (
-          <Pressable onPress={() => setNotifyTarget(null)} style={[styles.notifyClassButton, { borderColor: theme.tint }]}>
-            <Ionicons name="notifications-outline" size={15} color={theme.tint} />
+          <Pressable
+            onPress={() => setNotifyTarget(null)}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 6,
+              backgroundColor: theme.surface,
+              borderColor: theme.tint,
+              borderWidth: 1.5,
+              paddingHorizontal: 14,
+              paddingVertical: 8,
+              borderRadius: Radius.md,
+            }}
+          >
+            <Ionicons name="notifications-outline" size={16} color={theme.tint} />
             <ThemedText type="smallBold" themeColor="tint">
               Notify Class
             </ThemedText>
           </Pressable>
         ) : null}
+
         {canImportResult ? (
-          <Pressable onPress={() => router.push('/teacher-import-result' as any)} style={[styles.notifyClassButton, { borderColor: theme.tint }]}>
-            <Ionicons name="document-attach-outline" size={15} color={theme.tint} />
+          <Pressable
+            onPress={() => router.push('/teacher-import-result' as any)}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 6,
+              backgroundColor: theme.surface,
+              borderColor: theme.tint,
+              borderWidth: 1.5,
+              paddingHorizontal: 14,
+              paddingVertical: 8,
+              borderRadius: Radius.md,
+            }}
+          >
+            <Ionicons name="document-attach-outline" size={16} color={theme.tint} />
             <ThemedText type="smallBold" themeColor="tint">
               Import Result
             </ThemedText>
@@ -398,19 +444,21 @@ function StudentsTab({
                       {s.phone ? ` · ${s.phone}` : ''}
                     </ThemedText>
                   </View>
-                  {editable && canAlert ? (
+                  {canAlert ? (
                     <Pressable
-                      onPress={() => setNotifyTarget({ ref: String(s.id), name: s.name })}
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        setNotifyTarget({ ref: String(s.id), name: s.name });
+                      }}
                       hitSlop={8}
                       style={styles.notifyBellButton}
                     >
                       <Ionicons name="notifications-outline" size={18} color={theme.tint} />
                     </Pressable>
                   ) : null}
-                  {editable ? <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} /> : null}
+                  <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
                 </Card>
               );
-              if (!editable) return <View key={s.id}>{rowContent}</View>;
               return (
                 <Pressable
                   key={s.id}
