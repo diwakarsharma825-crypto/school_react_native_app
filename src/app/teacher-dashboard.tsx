@@ -1086,6 +1086,8 @@ interface TeacherQuickLink {
 }
 
 const TEACHER_QUICK_LINKS: TeacherQuickLink[] = [
+  { label: 'Students', icon: 'people-outline', bg: '#E0F2FE', fg: '#0284C7', route: '/teacher-students' },
+  { label: 'Homework', icon: 'book-outline', bg: '#E0E7FF', fg: '#4338CA', route: '/teacher-homework', permKey: 'homework' },
   { label: 'Attendance', icon: 'checkmark-done-outline', bg: '#DFF1E1', fg: '#2E7D32', route: '/teacher-attendance', permKey: 'attendance' },
   { label: 'Leaves', icon: 'calendar-clear-outline', bg: '#FBEFD3', fg: '#B8860B', route: '/teacher-leaves', permKey: 'leave' },
   { label: 'Fees', icon: 'cash-outline', bg: '#FBE2E2', fg: '#C62828', route: '/teacher-fees', permKey: 'fees' },
@@ -1163,7 +1165,6 @@ export default function TeacherDashboardScreen() {
   const router = useRouter();
   const { profile, checking, loggedIn } = useTeacherAuth();
   const [classId, setClassId] = useState<string | null>(null);
-  const [tab, setTab] = useState<Tab>('students');
   const theme = useTheme();
   const [sessionLabel, setSessionLabel] = useState<string | undefined>(undefined);
 
@@ -1174,20 +1175,12 @@ export default function TeacherDashboardScreen() {
   }, []);
 
   const classes = profile?.classes ?? [];
-  const homeworkSectionEnabled = useSectionEnabled('homework');
-  const canSeeHomework = homeworkSectionEnabled && profile?.permissions?.homework !== false;
 
   useEffect(() => {
     if (classes.length > 0 && !classId) {
       setClassId(String(classes[0].class_id));
     }
   }, [classes, classId]);
-
-  useEffect(() => {
-    if (!canSeeHomework && tab === 'homework') {
-      setTab('students');
-    }
-  }, [canSeeHomework, tab]);
 
   useEffect(() => {
     if (!loggedIn) return;
@@ -1198,13 +1191,6 @@ export default function TeacherDashboardScreen() {
       .catch(() => {});
   }, [loggedIn]);
 
-  const selected = classes.find((c) => String(c.class_id) === classId);
-
-  // Only redirect while this screen is actually focused — React Navigation
-  // keeps earlier stack screens mounted underneath the current one, so a
-  // plain render-time redirect here was firing from the background after
-  // logging out elsewhere, which is what looked like "teacher login keeps
-  // reappearing" even after navigating away.
   useFocusEffect(
     useCallback(() => {
       if (checking) return;
@@ -1234,9 +1220,6 @@ export default function TeacherDashboardScreen() {
 
   return (
     <Screen>
-      {/* No menu here — the bottom-nav "Teacher" tab already opens the same
-          Dashboard/Profile/Change Password/Log out menu, so a second ⋮
-          button on this screen was a redundant control. */}
       <ProfileHeaderBar
         icon="briefcase"
         name={profile.name ?? 'Teacher'}
@@ -1251,40 +1234,6 @@ export default function TeacherDashboardScreen() {
       ) : null}
 
       <TeacherQuickLinks permissions={profile.permissions} />
-
-      {canSeeHomework ? (
-        <View style={[styles.tabRow, { borderColor: theme.border }]}>
-          <Pressable
-            onPress={() => setTab('students')}
-            style={[styles.tabButton, tab === 'students' && { backgroundColor: theme.tint }]}
-          >
-            <ThemedText type="smallBold" themeColor={tab === 'students' ? 'textOnBrand' : 'textSecondary'}>
-              Students
-            </ThemedText>
-          </Pressable>
-          <Pressable
-            onPress={() => setTab('homework')}
-            style={[styles.tabButton, tab === 'homework' && { backgroundColor: theme.tint }]}
-          >
-            <ThemedText type="smallBold" themeColor={tab === 'homework' ? 'textOnBrand' : 'textSecondary'}>
-              Homework Calendar
-            </ThemedText>
-          </Pressable>
-        </View>
-      ) : null}
-
-      {selected ? (
-        tab === 'students' || !canSeeHomework ? (
-          <StudentsTab
-            classId={selected.class_id}
-            sectionId={selected.section_id ?? undefined}
-            classLabel={selected.class_name}
-            sectionLabel={selected.section_name ?? undefined}
-          />
-        ) : (
-          <HomeworkTab classId={selected.class_id} sectionId={selected.section_id ?? undefined} />
-        )
-      ) : null}
     </Screen>
   );
 }
