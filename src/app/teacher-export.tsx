@@ -10,11 +10,19 @@ import { Screen } from '@/components/ui/Screen';
 import { SelectField } from '@/components/ui/SelectField';
 import { TeacherGuard } from '@/components/ui/TeacherGuard';
 import { ThemedText } from '@/components/ui/ThemedText';
-import { exportAttendance, exportHomework } from '@/data/teacher-api';
+import {
+  exportAttendance,
+  exportHomework,
+  fetchTeacherFeeInvoices,
+  fetchTeacherLeaveApplications,
+  fetchTeacherNotices,
+  fetchTeacherStudents,
+} from '@/data/teacher-api';
 import { useTeacherAuth } from '@/hooks/use-teacher-auth';
 import { useTheme } from '@/hooks/use-theme';
+import { exportToPdf } from '@/lib/pdf-export';
 
-type ExportKind = 'homework' | 'attendance';
+type ExportKind = 'homework' | 'attendance' | 'notices' | 'leaves' | 'fees' | 'roster';
 type ExportFormat = 'pdf' | 'csv';
 
 function pad(n: number) {
@@ -29,6 +37,15 @@ function daysAgoStr(n: number) {
   t.setDate(t.getDate() - n);
   return `${t.getFullYear()}-${pad(t.getMonth() + 1)}-${pad(t.getDate())}`;
 }
+
+const SECTIONS: { key: ExportKind; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { key: 'homework', label: 'Homework', icon: 'book' },
+  { key: 'attendance', label: 'Attendance', icon: 'checkmark-done' },
+  { key: 'notices', label: 'Notices', icon: 'megaphone' },
+  { key: 'leaves', label: 'Leaves', icon: 'calendar-clear' },
+  { key: 'fees', label: 'Fees', icon: 'cash' },
+  { key: 'roster', label: 'Roster', icon: 'people' },
+];
 
 export default function TeacherExportScreen() {
   const theme = useTheme();
@@ -49,7 +66,7 @@ export default function TeacherExportScreen() {
   const [error, setError] = useState<string | null>(null);
 
   async function handleExport() {
-    if (!classId) {
+    if (!classId && (kind === 'homework' || kind === 'attendance' || kind === 'leaves' || kind === 'fees' || kind === 'roster')) {
       setError('Please choose a class.');
       return;
     }
@@ -61,27 +78,96 @@ export default function TeacherExportScreen() {
     setError(null);
     try {
       const selected = classes.find((c) => String(c.class_id) === classId);
-      const params = {
-        classId: Number(classId),
-        sectionId: selected?.section_id ?? undefined,
-        dateFrom,
-        dateTo,
-        format,
-      };
-      const { uri } = kind === 'homework' ? await exportHomework(params) : await exportAttendance(params);
-      const canShare = await Sharing.isAvailableAsync();
-      if (canShare) {
-        await Sharing.shareAsync(uri, {
-          mimeType: format === 'pdf' ? 'application/pdf' : 'text/csv',
-          dialogTitle: kind === 'homework' ? 'Share Homework Export' : 'Share Attendance Export',
+      const classIdNum = Number(classId);
+      const sectionIdNum = selected?.section_id;
+
+      if (kind === 'homework') {
+        const params = { classId: classIdNum, sectionId: sectionIdNum, dateFrom, dateTo, format };
+        const { uri } = await exportHomework(params);
+        await shareFile(uri, 'Homework Report', format);
+      } else if (kind === 'attendance') {
+        const params = { classId: classIdNum, sectionId: sectionIdNum, dateFrom, dateTo, format };
+        const { uri } = await exportAttendance(params);
+        await shareFile(uri, 'Attendance Report', format);
+      } else if (kind === 'notices') {
+        const notices = await fetchTeacherNotices();
+        await exportToPdf({
+          title: 'Notices & Announcements Database Report',
+          subtitle: `Total Notices: ${notices.length}`,
+          columns: [
+            { header: 'Date', key: 'date', width: '20%' },
+            { header: 'Title', key: 'title', width: '30%' },
+            { header: 'Notice Body', key: 'notice', width: '40%' },
+            { header: 'Status', key: 'statusLabel', width: '10%' },
+          ],
+          rows: notices.map((n) => ({
+            ...n,
+            statusLabel: Number(n.is_view_on_web) === 1 ? 'Active' : 'Inactive',
+          })),
         });
-      } else {
-        Alert.alert('Export ready', `Saved to ${uri}`);
+      } else if (kind === 'leaves') {
+        const leaves = await fetchTeacherLeaveApplications(classIdNum, sectionIdNum);
+        const filtered = leaves.filter((l) => l.date_from >= dateFrom && l.date_from <= dateTo);
+        await exportToPdf({
+          title: `Class Student Leaves Report - ${selected?.class_name ?? ''}${selected?.section_name ? ` (${selected.section_name})` : ''}`,
+          subtitle: `Date Range: ${dateFrom} to ${dateTo} | Total: ${filtered.length}`,
+          columns: [
+            { header: 'Student Name', key: 'student_name', width: '25%' },
+            { header: 'SRN', key: 'student_srn', width: '15%' },
+            { header: 'Leave Type', key: 'leave_type', width: '15%' },
+            { header: 'From - To', key: 'dates', width: '20%' },
+            { header: 'Reason', key: 'reason', width: '15%' },
+            { header: 'Status', key: 'status', width: '10%' },
+          ],
+          rows: filtered.map((l) => ({ ...l, dates: `${l.date_from} to ${l.date_to}` })),
+        });
+      } else if (kind === 'fees') {
+        const fees = await fetchTeacherFeeInvoices(classIdNum, sectionIdNum, undefined, undefined, dateFrom, dateTo);
+        await exportToPdf({
+          title: `Fee Dues & Statements - ${selected?.class_name ?? ''}${selected?.section_name ? ` (${selected.section_name})` : ''}`,
+          subtitle: `Date Range: ${dateFrom} to ${dateTo} | Total Records: ${fees.length}`,
+          columns: [
+            { header: 'Student Name', key: 'student_name', width: '25%' },
+            { header: 'Title', key: 'title', width: '25%' },
+            { header: 'Amount', key: 'amountLabel', width: '15%' },
+            { header: 'Due Date', key: 'due_date', width: '20%' },
+            { header: 'Status', key: 'status', width: '15%' },
+          ],
+          rows: fees.map((f) => ({ ...f, amountLabel: `₹${f.amount}` })),
+        });
+      } else if (kind === 'roster') {
+        const roster = await fetchTeacherStudents(classIdNum, sectionIdNum);
+        const images = roster.map((s) => s.photo_url).filter(Boolean) as string[];
+        await exportToPdf({
+          title: `Class Student Roster - ${selected?.class_name ?? ''}${selected?.section_name ? ` (${selected.section_name})` : ''}`,
+          subtitle: `Total Enrolled Students: ${roster.length}`,
+          columns: [
+            { header: 'Roll No', key: 'roll_no', width: '15%' },
+            { header: 'Student Name', key: 'name', width: '30%' },
+            { header: 'SRN', key: 'srn', width: '15%' },
+            { header: 'Father Name', key: 'father_name', width: '25%' },
+            { header: 'Phone', key: 'phone', width: '15%' },
+          ],
+          rows: roster,
+          images,
+        });
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not export.');
+      setError(e instanceof Error ? e.message : 'Could not export database records.');
     } finally {
       setExporting(false);
+    }
+  }
+
+  async function shareFile(uri: string, title: string, fmt: ExportFormat) {
+    const canShare = await Sharing.isAvailableAsync();
+    if (canShare) {
+      await Sharing.shareAsync(uri, {
+        mimeType: fmt === 'pdf' ? 'application/pdf' : 'text/csv',
+        dialogTitle: `Share ${title}`,
+      });
+    } else {
+      Alert.alert('Export ready', `Saved to ${uri}`);
     }
   }
 
@@ -93,43 +179,37 @@ export default function TeacherExportScreen() {
             <Ionicons name="download-outline" size={26} color={Brand.white} />
           </View>
           <ThemedText type="title" style={styles.heroTitle}>
-            Export Reports
+            Section Database Exporter
           </ThemedText>
           <ThemedText type="small" style={styles.heroSubtitle}>
-            Download homework or attendance for any date range — share as PDF or open in Excel.
+            Select any section to export official database records — generate PDF reports with images or CSV files.
           </ThemedText>
         </View>
 
         <ThemedText type="smallBold" themeColor="textSecondary" style={styles.sectionLabel}>
-          WHAT TO EXPORT
+          SELECT SECTION TO EXPORT
         </ThemedText>
-        <View style={styles.kindRow}>
-          <Pressable
-            onPress={() => setKind('homework')}
-            style={[
-              styles.kindCard,
-              { borderColor: theme.border },
-              kind === 'homework' && { borderColor: theme.tint, backgroundColor: theme.backgroundSelected },
-            ]}
-          >
-            <View style={[styles.kindIcon, { backgroundColor: kind === 'homework' ? theme.tint : theme.backgroundElement }]}>
-              <Ionicons name="book" size={20} color={kind === 'homework' ? Brand.white : theme.textSecondary} />
-            </View>
-            <ThemedText type="smallBold">Homework</ThemedText>
-          </Pressable>
-          <Pressable
-            onPress={() => setKind('attendance')}
-            style={[
-              styles.kindCard,
-              { borderColor: theme.border },
-              kind === 'attendance' && { borderColor: theme.tint, backgroundColor: theme.backgroundSelected },
-            ]}
-          >
-            <View style={[styles.kindIcon, { backgroundColor: kind === 'attendance' ? theme.tint : theme.backgroundElement }]}>
-              <Ionicons name="checkmark-done" size={20} color={kind === 'attendance' ? Brand.white : theme.textSecondary} />
-            </View>
-            <ThemedText type="smallBold">Attendance</ThemedText>
-          </Pressable>
+
+        <View style={styles.kindGrid}>
+          {SECTIONS.map((sec) => {
+            const isSelected = kind === sec.key;
+            return (
+              <Pressable
+                key={sec.key}
+                onPress={() => setKind(sec.key)}
+                style={[
+                  styles.kindCard,
+                  { borderColor: theme.border },
+                  isSelected && { borderColor: theme.tint, backgroundColor: theme.backgroundSelected },
+                ]}
+              >
+                <View style={[styles.kindIcon, { backgroundColor: isSelected ? theme.tint : theme.backgroundElement }]}>
+                  <Ionicons name={sec.icon} size={18} color={isSelected ? Brand.white : theme.textSecondary} />
+                </View>
+                <ThemedText type="smallBold">{sec.label}</ThemedText>
+              </Pressable>
+            );
+          })}
         </View>
 
         <Card style={styles.card}>
@@ -203,7 +283,7 @@ export default function TeacherExportScreen() {
           >
             <Ionicons name="share-outline" size={18} color={Brand.white} />
             <ThemedText type="smallBold" style={styles.exportButtonLabel}>
-              {exporting ? 'Preparing…' : 'Export & Share'}
+              {exporting ? 'Fetching Data & Exporting…' : 'Export & Share Records'}
             </ThemedText>
           </Pressable>
         </Card>
@@ -239,23 +319,25 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.two,
     letterSpacing: 0.5,
   },
-  kindRow: {
+  kindGrid: {
     flexDirection: 'row',
-    gap: Spacing.three,
+    flexWrap: 'wrap',
+    gap: Spacing.two,
     marginBottom: Spacing.four,
   },
   kindCard: {
-    flex: 1,
+    width: '31%',
     alignItems: 'center',
-    gap: Spacing.two,
-    paddingVertical: Spacing.three,
+    gap: 4,
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.one,
     borderRadius: Radius.md,
     borderWidth: 1.5,
   },
   kindIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
   },
