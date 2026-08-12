@@ -3,21 +3,10 @@ import { Tabs } from 'expo-router';
 import React from 'react';
 
 import { AppHeader } from '@/components/ui/AppHeader';
-import { DetailHeader } from '@/components/ui/DetailHeader';
 import { TabHeader } from '@/components/ui/TabHeader';
-import { useLayout } from '@/hooks/use-layout';
-import { useStudentAuth } from '@/hooks/use-student-auth';
-import { useTeacherAuth } from '@/hooks/use-teacher-auth';
 import { useTheme } from '@/hooks/use-theme';
 
 function IndexHeader() {
-  const { instituteMode } = useLayout();
-  const { loggedIn: studentLoggedIn } = useStudentAuth();
-  const { loggedIn: teacherLoggedIn } = useTeacherAuth();
-
-  if (instituteMode && !studentLoggedIn && !teacherLoggedIn) {
-    return <DetailHeader title="Login" hideBack={true} />;
-  }
   return <AppHeader />;
 }
 
