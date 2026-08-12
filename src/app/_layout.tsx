@@ -240,6 +240,7 @@ function RootLayoutInner() {
                   <Stack.Screen name="teacher-export" options={{ header: () => <DetailHeader title="Export Roster" /> }} />
                   <Stack.Screen name="teacher-storage" options={{ header: () => <DetailHeader title="Storage Usage" /> }} />
                   <Stack.Screen name="teacher-import-result" options={{ header: () => <DetailHeader title="Import Result" /> }} />
+                  <Stack.Screen name="teacher-import-students" options={{ header: () => <DetailHeader title="Import Students (Excel)" /> }} />
                   <Stack.Screen name="teacher-student-review" options={{ header: () => <DetailHeader title="Review Student" /> }} />
                   <Stack.Screen name="teacher-add-student" options={{ header: () => <DetailHeader title="Add Student" /> }} />
                   <Stack.Screen name="student-dashboard" options={{ header: () => <DetailHeader title="Student Dashboard" /> }} />

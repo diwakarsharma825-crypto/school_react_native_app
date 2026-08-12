@@ -75,7 +75,6 @@ export function DynamicBottomBar() {
   // rows with no permKey (Dashboard, Export) are always shown. "My
   // Storage" lives under More → Account now, not here.
   const rawTeacherMenuItems: (MenuItem & { permKey?: keyof NonNullable<typeof profile>['permissions'] })[] = [
-    { label: 'Dashboard', icon: 'grid-outline', onPress: () => router.push('/teacher-dashboard') },
     { label: 'Manage Notices', icon: 'megaphone-outline', onPress: () => router.push('/teacher-notices' as any), permKey: 'notices' },
     { label: 'Manage Events', icon: 'calendar-outline', onPress: () => router.push('/teacher-events' as any), permKey: 'events' },
     { label: 'Attendance', icon: 'checkmark-done-outline', onPress: () => router.push('/teacher-attendance' as any), permKey: 'attendance' },
@@ -87,7 +86,6 @@ export function DynamicBottomBar() {
   const menuItems: MenuItem[] = teacherLoggedIn
     ? rawTeacherMenuItems.filter((item) => !item.permKey || profile?.permissions?.[item.permKey] !== false)
     : [
-        { label: 'Dashboard', icon: 'grid-outline', onPress: () => router.push('/student-dashboard' as any) },
         { label: 'Homework', icon: 'book-outline', onPress: () => router.push('/homework') },
         { label: 'My Attendance', icon: 'checkmark-done-outline', onPress: () => router.push('/student-attendance' as any) },
         { label: 'Apply Leave', icon: 'calendar-clear-outline', onPress: () => router.push('/apply-leave' as any) },

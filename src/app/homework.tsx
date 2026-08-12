@@ -576,9 +576,9 @@ function HomeworkCalendar({ access, onLogout }: { access: HomeworkAccess; onLogo
             groupedList.map((group) => (
               <View key={group.date} style={styles.dateGroupWrap}>
                 <View style={styles.dateGroupHeader}>
-                  <View style={[styles.dateGroupBadge, { backgroundColor: theme.backgroundSelected }]}>
-                    <Ionicons name="calendar-outline" size={14} color={theme.tint} />
-                    <ThemedText type="smallBold" style={{ color: theme.tint, marginLeft: 6 }}>
+                  <View style={[styles.dateGroupBadge, { backgroundColor: theme.dark ? theme.surface : theme.backgroundSelected, borderColor: theme.border, borderWidth: theme.dark ? 1 : 0 }]}>
+                    <Ionicons name="calendar-outline" size={14} color={theme.dark ? '#FFFFFF' : theme.tint} />
+                    <ThemedText type="smallBold" style={{ color: theme.dark ? '#FFFFFF' : theme.tint, marginLeft: 6 }}>
                       {formatDateHeader(group.date)}
                     </ThemedText>
                   </View>

@@ -200,14 +200,30 @@ function StudentsTab({
           }
           style={[styles.addStudentButton, { backgroundColor: theme.tint }]}
         >
-          <Ionicons name="person-add-outline" size={16} color={Brand.white} />
+          <Ionicons name="person-add-outline" size={15} color={Brand.white} />
           <ThemedText type="smallBold" style={styles.addStudentButtonLabel}>
             Add Student
           </ThemedText>
         </Pressable>
+
+        <Pressable
+          onPress={() =>
+            router.push({
+              pathname: '/teacher-import-students',
+              params: { classId: String(classId), sectionId: sectionId ? String(sectionId) : '' },
+            } as any)
+          }
+          style={[styles.notifyClassButton, { borderColor: theme.tint }]}
+        >
+          <Ionicons name="document-text-outline" size={15} color={theme.tint} />
+          <ThemedText type="smallBold" themeColor="tint">
+            Import Excel
+          </ThemedText>
+        </Pressable>
+
         {canAlert ? (
           <Pressable onPress={() => setNotifyTarget(null)} style={[styles.notifyClassButton, { borderColor: theme.tint }]}>
-            <Ionicons name="notifications-outline" size={16} color={theme.tint} />
+            <Ionicons name="notifications-outline" size={15} color={theme.tint} />
             <ThemedText type="smallBold" themeColor="tint">
               Notify Class
             </ThemedText>
@@ -215,7 +231,7 @@ function StudentsTab({
         ) : null}
         {canImportResult ? (
           <Pressable onPress={() => router.push('/teacher-import-result' as any)} style={[styles.notifyClassButton, { borderColor: theme.tint }]}>
-            <Ionicons name="document-attach-outline" size={16} color={theme.tint} />
+            <Ionicons name="document-attach-outline" size={15} color={theme.tint} />
             <ThemedText type="smallBold" themeColor="tint">
               Import Result
             </ThemedText>
@@ -257,26 +273,21 @@ function StudentsTab({
 
           <View style={styles.countRow}>
             <ThemedText type="smallBold" themeColor="textSecondary" style={styles.rosterCount}>
-              {students.length} {students.length === 1 ? 'STUDENT' : 'STUDENTS'}
+              {students.length} {students.length === 1 ? 'STUDENT' : 'STUDENTS'} ({activeCount} active · {inactiveCount} inactive)
             </ThemedText>
-            <View style={styles.countRowRight}>
-              <ThemedText type="small" themeColor="textSecondary">
-                {activeCount} active · {inactiveCount} inactive
-              </ThemedText>
-              <View style={[styles.viewToggle, { borderColor: theme.border }]}>
-                <Pressable
-                  onPress={() => setViewMode('list')}
-                  style={[styles.viewToggleButton, viewMode === 'list' && { backgroundColor: theme.tint }]}
-                >
-                  <Ionicons name="list" size={15} color={viewMode === 'list' ? Brand.white : theme.textSecondary} />
-                </Pressable>
-                <Pressable
-                  onPress={() => setViewMode('grid')}
-                  style={[styles.viewToggleButton, viewMode === 'grid' && { backgroundColor: theme.tint }]}
-                >
-                  <Ionicons name="grid" size={15} color={viewMode === 'grid' ? Brand.white : theme.textSecondary} />
-                </Pressable>
-              </View>
+            <View style={[styles.viewToggle, { borderColor: theme.border }]}>
+              <Pressable
+                onPress={() => setViewMode('list')}
+                style={[styles.viewToggleButton, viewMode === 'list' && { backgroundColor: theme.tint }]}
+              >
+                <Ionicons name="list" size={15} color={viewMode === 'list' ? Brand.white : theme.textSecondary} />
+              </Pressable>
+              <Pressable
+                onPress={() => setViewMode('grid')}
+                style={[styles.viewToggleButton, viewMode === 'grid' && { backgroundColor: theme.tint }]}
+              >
+                <Ionicons name="grid" size={15} color={viewMode === 'grid' ? Brand.white : theme.textSecondary} />
+              </Pressable>
             </View>
           </View>
 

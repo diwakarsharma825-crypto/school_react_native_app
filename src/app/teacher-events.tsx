@@ -100,18 +100,42 @@ export default function TeacherEventsScreen() {
                     <ThemedText type="smallBold" numberOfLines={1} style={styles.titleText}>
                       {e.title}
                     </ThemedText>
-                    <View style={[styles.statusTag, { backgroundColor: active ? '#DFF1E1' : '#F1E9D9' }]}>
-                      <ThemedText type="small" style={{ color: active ? '#2E7D32' : '#9A7B2E' }}>
+                    <View
+                      style={[
+                        styles.statusTag,
+                        {
+                          backgroundColor: active
+                            ? theme.dark
+                              ? '#1B4D24'
+                              : '#DFF1E1'
+                            : theme.dark
+                            ? '#3E351A'
+                            : '#F1E9D9',
+                        },
+                      ]}
+                    >
+                      <ThemedText
+                        type="smallBold"
+                        style={{
+                          color: active
+                            ? theme.dark
+                              ? '#81C784'
+                              : '#2E7D32'
+                            : theme.dark
+                            ? '#FFD54F'
+                            : '#9A7B2E',
+                        }}
+                      >
                         {active ? 'Active' : 'Inactive'}
                       </ThemedText>
                     </View>
                   </View>
-                  <ThemedText type="small" themeColor="textSecondary">
+                  <ThemedText type="small" style={{ color: theme.dark ? '#FFFFFF' : theme.textSecondary }}>
                     {e.event_from}
                     {e.event_to && e.event_to !== e.event_from ? ` — ${e.event_to}` : ''}
                   </ThemedText>
                   {e.class_label ? (
-                    <ThemedText type="small" themeColor="textSecondary">
+                    <ThemedText type="small" style={{ color: theme.dark ? '#FFFFFF' : theme.textSecondary }}>
                       {e.class_label}
                     </ThemedText>
                   ) : null}
@@ -135,14 +159,14 @@ export default function TeacherEventsScreen() {
                   }
                   style={styles.actionButton}
                 >
-                  <Ionicons name="create-outline" size={16} color={theme.tint} />
-                  <ThemedText type="small" themeColor="tint">
+                  <Ionicons name="create-outline" size={16} color={theme.dark ? '#FFFFFF' : theme.tint} />
+                  <ThemedText type="small" style={{ color: theme.dark ? '#FFFFFF' : theme.tint, fontWeight: '600' }}>
                     Edit
                   </ThemedText>
                 </Pressable>
                 <Pressable onPress={() => toggleActive(e, !active)} style={styles.actionButton}>
-                  <Ionicons name={active ? 'eye-off-outline' : 'eye-outline'} size={16} color={theme.textSecondary} />
-                  <ThemedText type="small" themeColor="textSecondary">
+                  <Ionicons name={active ? 'eye-off-outline' : 'eye-outline'} size={16} color={theme.dark ? '#FFFFFF' : theme.textSecondary} />
+                  <ThemedText type="small" style={{ color: theme.dark ? '#FFFFFF' : theme.textSecondary }}>
                     {active ? 'Deactivate' : 'Activate'}
                   </ThemedText>
                 </Pressable>

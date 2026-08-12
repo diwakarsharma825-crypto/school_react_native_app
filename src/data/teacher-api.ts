@@ -1018,6 +1018,61 @@ export async function importTeacherResult(
   return { message: json.data?.message || json.message || 'Results imported successfully.' };
 }
 
+export async function downloadStudentTemplate(): Promise<{ uri: string; filename: string }> {
+  const token = await getTeacherToken();
+  const url = `${BASE_URL}/teacher_student_template`;
+  const response = await fetch(url, {
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  });
+  if (!response.ok) {
+    throw new Error('Could not download student import template.');
+  }
+
+  const filename = 'student_import_template.csv';
+  const blob = await response.blob();
+  const reader = new FileReader();
+  const base64 = await new Promise<string>((resolve) => {
+    reader.onload = () => resolve((reader.result as string).split(',')[1] ?? '');
+    reader.readAsDataURL(blob);
+  });
+
+  const uri = `${FileSystem.cacheDirectory || FileSystem.documentDirectory}${filename}`;
+  await FileSystem.writeAsStringAsync(uri, base64, { encoding: FileSystem.EncodingType.Base64 });
+  return { uri, filename };
+}
+
+export async function importTeacherStudents(
+  file: { uri: string; name: string; mimeType?: string | null },
+  classId?: number,
+  sectionId?: number
+): Promise<{ message: string }> {
+  const token = await getTeacherToken();
+  const body = new FormData();
+  if (classId) body.append('class_id', String(classId));
+  if (sectionId) body.append('section_id', String(sectionId));
+
+  const filename = file.name || 'students.csv';
+  try {
+    const fileObj = await createFileBlob(file.uri, file.mimeType, filename);
+    body.append('fileURL', fileObj as unknown as Blob, filename);
+    body.append('file', fileObj as unknown as Blob, filename);
+  } catch {
+    const type = file.mimeType || 'text/csv';
+    body.append('fileURL', { uri: file.uri, name: filename, type } as any);
+    body.append('file', { uri: file.uri, name: filename, type } as any);
+  }
+
+  const response = await fetch(`${BASE_URL}/teacher_import_students`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    body,
+  });
+
+  const json = (await response.json()) as ApiEnvelope<{ message: string }>;
+  if (!json.status) throw new Error(json.message || 'Import failed.');
+  return { message: json.data?.message || json.message || 'Students imported successfully.' };
+}
+
 export type LeaveStatus = 'pending' | 'approved' | 'rejected';
 
 export interface TeacherLeaveApplication {
