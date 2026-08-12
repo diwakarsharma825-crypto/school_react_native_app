@@ -114,7 +114,7 @@ export function SelectField({ label, placeholder, value, options, onChange, sear
 const styles = StyleSheet.create({
   label: {
     marginBottom: Spacing.one,
-    marginTop: Spacing.three,
+    marginTop: Spacing.one,
   },
   select: {
     flexDirection: 'row',

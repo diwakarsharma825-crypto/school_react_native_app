@@ -30,18 +30,15 @@ interface ProfileHeaderBarProps {
    * shown as its own line so it's always clear which session is active. */
   sessionLabel?: string;
   menu: ProfileMenuItem[];
+  style?: any;
 }
 
-/** Shared "who's logged in" bar for the teacher Dashboard and student
- * Homework screens — icon + name + contact info (+ optional subtitle, e.g.
- * class/section), with a menu button that opens Profile/Dashboard/Logout
- * instead of a plain "Log out" link buried at the bottom of the screen. */
-export function ProfileHeaderBar({ icon, name, photoUrl, contact, subtitle, sessionLabel, menu }: ProfileHeaderBarProps) {
+export function ProfileHeaderBar({ icon, name, photoUrl, contact, subtitle, sessionLabel, menu, style }: ProfileHeaderBarProps) {
   const theme = useTheme();
   const [open, setOpen] = useState(false);
 
   return (
-    <View style={[styles.bar, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+    <View style={[styles.bar, { backgroundColor: theme.surface, borderColor: theme.border }, style]}>
       <Pressable
         onPress={() => router.push('/profile')}
         style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}
@@ -113,7 +110,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: Radius.lg,
     padding: Spacing.three,
-    marginBottom: Spacing.four,
+    marginBottom: Spacing.two,
   },
   avatar: {
     width: 40,
