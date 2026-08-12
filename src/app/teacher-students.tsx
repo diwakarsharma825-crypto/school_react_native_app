@@ -162,14 +162,16 @@ export default function TeacherStudentsScreen() {
       <Screen>
         <View style={[styles.hero, { backgroundColor: theme.tint }]}>
           <View style={styles.heroIcon}>
-            <Ionicons name="people" size={24} color={Brand.white} />
+            <Ionicons name="people" size={18} color={Brand.white} />
           </View>
-          <ThemedText type="title" style={styles.heroTitle}>
-            Student Management
-          </ThemedText>
-          <ThemedText type="small" style={styles.heroSubtitle}>
-            Manage enrolled students, verify registrations, import Excel rosters, and export reports.
-          </ThemedText>
+          <View style={{ flex: 1 }}>
+            <ThemedText type="smallBold" style={styles.heroTitle}>
+              Student Management
+            </ThemedText>
+            <ThemedText type="small" style={styles.heroSubtitle} numberOfLines={1}>
+              Manage enrolled students, verify registrations, and export reports.
+            </ThemedText>
+          </View>
         </View>
 
         {classes.length > 1 ? (
@@ -435,26 +437,29 @@ export default function TeacherStudentsScreen() {
 
 const styles = StyleSheet.create({
   hero: {
-    borderRadius: Radius.lg,
-    padding: Spacing.four,
-    marginBottom: Spacing.four,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.three,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two + 2,
+    marginBottom: Spacing.two,
   },
   heroIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: Spacing.two,
   },
   heroTitle: {
     color: Brand.white,
-    marginBottom: 4,
+    fontSize: 15,
   },
   heroSubtitle: {
     color: 'rgba(255,255,255,0.85)',
-    lineHeight: 18,
+    fontSize: 12,
   },
   pendingSection: {
     borderWidth: 1,
