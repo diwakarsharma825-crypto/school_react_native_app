@@ -17,6 +17,7 @@ import {
   fetchStudentLeaveApplications,
 } from '@/data/homework-api';
 import { useStudentAuth } from '@/hooks/use-student-auth';
+import { useTheme } from '@/hooks/use-theme';
 
 interface QuickLink {
   label: string;
@@ -27,11 +28,11 @@ interface QuickLink {
 }
 
 const QUICK_LINKS: QuickLink[] = [
-  { label: 'Homework', icon: 'book-outline', bg: '#E3EEFD', fg: '#2E6FBE', route: '/homework' },
-  { label: 'Attendance', icon: 'checkmark-done-outline', bg: '#DFF1E1', fg: '#2E7D32', route: '/student-attendance' },
-  { label: 'Apply Leave', icon: 'calendar-clear-outline', bg: '#FBEFD3', fg: '#B8860B', route: '/apply-leave' },
-  { label: 'Fees', icon: 'cash-outline', bg: '#FBE2E2', fg: '#C62828', route: '/fees' },
-  { label: 'Result', icon: 'school-outline', bg: '#EDE3FD', fg: '#6A3EBE', route: '/result' },
+  { label: 'Homework', icon: 'book-outline', bg: '#EBF8FF', fg: '#2B6CB0', route: '/homework' },
+  { label: 'Attendance', icon: 'checkmark-done-outline', bg: '#E6FFFA', fg: '#234E52', route: '/student-attendance' },
+  { label: 'Apply Leave', icon: 'calendar-clear-outline', bg: '#FEFCBF', fg: '#744210', route: '/apply-leave' },
+  { label: 'Fees', icon: 'cash-outline', bg: '#FED7D7', fg: '#742A2A', route: '/fees' },
+  { label: 'Result', icon: 'school-outline', bg: '#E9D8FD', fg: '#553C9A', route: '/result' },
 ];
 
 /** Student-side landing screen, mirroring the teacher Dashboard and the
@@ -39,6 +40,7 @@ const QUICK_LINKS: QuickLink[] = [
  * than inventing a new layout — active-child header, a few at-a-glance
  * stats, then quick links into every student feature. */
 export default function StudentDashboardScreen() {
+  const theme = useTheme();
   const router = useRouter();
   const { checking, loggedIn, access, allChildren, switchChild } = useStudentAuth();
 
