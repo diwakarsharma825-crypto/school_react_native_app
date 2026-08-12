@@ -15,6 +15,8 @@ import { useStudentAuth } from '@/hooks/use-student-auth';
 import { useTheme } from '@/hooks/use-theme';
 import { useSectionEnabled } from '@/hooks/use-sections';
 import { SectionUnavailable } from '@/components/ui/SectionUnavailable';
+import { ExportPdfButton } from '@/components/ui/ExportPdfButton';
+import { exportToPdf } from '@/lib/pdf-export';
 
 const LEAVE_TYPES = [
   { label: 'Sick Leave', value: 'Sick' },
@@ -192,9 +194,33 @@ export default function ApplyLeaveScreen() {
         </Pressable>
       </Card>
 
-      <ThemedText type="smallBold" style={styles.historyTitle}>
-        Your Leave History
-      </ThemedText>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: Spacing.four, marginBottom: Spacing.two }}>
+        <ThemedText type="smallBold" style={[styles.historyTitle, { marginTop: 0, marginBottom: 0 }]}>
+          Your Leave History
+        </ThemedText>
+        {history && history.length > 0 ? (
+          <ExportPdfButton
+            variant="compact"
+            onPress={() => {
+              exportToPdf({
+                title: `Leave Applications Report - ${access?.name ?? ''}`,
+                subtitle: `Class: ${access?.className ?? ''} | Total Requests: ${history.length}`,
+                columns: [
+                  { header: 'Type', key: 'leave_type', width: '20%' },
+                  { header: 'From - To', key: 'dates', width: '30%' },
+                  { header: 'Reason', key: 'reason', width: '30%' },
+                  { header: 'Status', key: 'statusLabel', width: '20%' },
+                ],
+                rows: history.map((h) => ({
+                  ...h,
+                  dates: `${h.date_from} to ${h.date_to}`,
+                  statusLabel: STATUS_META[h.status]?.label ?? h.status,
+                })),
+              });
+            }}
+          />
+        ) : null}
+      </View>
       {loadingHistory && !history ? (
         <Loading label="Loading…" />
       ) : historyError ? (

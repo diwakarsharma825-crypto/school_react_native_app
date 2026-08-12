@@ -17,6 +17,7 @@ import { useTeacherAuth } from '@/hooks/use-teacher-auth';
 import { useTheme } from '@/hooks/use-theme';
 import { useSectionEnabled } from '@/hooks/use-sections';
 import { SectionUnavailable } from '@/components/ui/SectionUnavailable';
+import { ExportPdfButton } from '@/components/ui/ExportPdfButton';
 import { exportToPdf } from '@/lib/pdf-export';
 
 function pad(n: number) {
@@ -160,7 +161,9 @@ export default function TeacherAttendanceScreen() {
             ))}
           </View>
 
-          <Pressable
+          <ExportPdfButton
+            variant="compact"
+            style={{ marginLeft: 8 }}
             onPress={() => {
               if (!students || students.length === 0) return;
               exportToPdf({
@@ -178,22 +181,7 @@ export default function TeacherAttendanceScreen() {
                 })),
               });
             }}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 4,
-              backgroundColor: theme.tint,
-              paddingHorizontal: 12,
-              paddingVertical: 8,
-              borderRadius: Radius.pill,
-              marginLeft: 8,
-            }}
-          >
-            <Ionicons name="document-text-outline" size={15} color={Brand.white} />
-            <ThemedText type="smallBold" style={{ color: Brand.white }}>
-              PDF
-            </ThemedText>
-          </Pressable>
+          />
         </View>
       ) : null}
 

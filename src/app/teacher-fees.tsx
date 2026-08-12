@@ -27,6 +27,7 @@ import { useTeacherAuth } from '@/hooks/use-teacher-auth';
 import { useTheme } from '@/hooks/use-theme';
 import { useSectionEnabled } from '@/hooks/use-sections';
 import { SectionUnavailable } from '@/components/ui/SectionUnavailable';
+import { ExportPdfButton } from '@/components/ui/ExportPdfButton';
 import { exportToPdf } from '@/lib/pdf-export';
 
 const FEE_TYPE_OPTIONS: { label: string; value: FeeType }[] = [
@@ -310,7 +311,9 @@ export default function TeacherFeesScreen() {
             </ThemedText>
           </Pressable>
 
-          <Pressable
+          <ExportPdfButton
+            variant="outline"
+            style={{ flex: 1, marginBottom: 0 }}
             onPress={() => {
               if (!invoices || invoices.length === 0) return;
               exportToPdf({
@@ -330,13 +333,7 @@ export default function TeacherFeesScreen() {
                 })),
               });
             }}
-            style={[styles.addButton, { backgroundColor: theme.surface, borderColor: theme.tint, borderWidth: 1.5, flex: 1, marginBottom: 0 }]}
-          >
-            <Ionicons name="document-text-outline" size={16} color={theme.tint} />
-            <ThemedText type="smallBold" themeColor="tint">
-              Export PDF
-            </ThemedText>
-          </Pressable>
+          />
         </View>
 
         <View style={[styles.filterRow, { borderColor: theme.border }]}>

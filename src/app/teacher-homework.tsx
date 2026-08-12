@@ -11,6 +11,8 @@ import { EmptyState, ErrorState, Loading } from '@/components/ui/states';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { deleteHomework, fetchHomeworkDates, fetchHomeworkForDate, HomeworkEntry } from '@/data/teacher-api';
 import { useTheme } from '@/hooks/use-theme';
+import { ExportPdfButton } from '@/components/ui/ExportPdfButton';
+import { exportToPdf } from '@/lib/pdf-export';
 
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -126,18 +128,39 @@ export default function TeacherHomeworkScreen() {
       </Card>
 
       <View style={styles.entriesHeader}>
-        <ThemedText type="smallBold">Homework — {selectedDate}</ThemedText>
-        <Pressable
-          onPress={() =>
-            router.push({
-              pathname: '/teacher-homework-add',
-              params: { classId: String(classIdNum), sectionId: sectionIdNum ? String(sectionIdNum) : '', date: selectedDate },
-            })
-          }
-          style={[styles.addButton, { backgroundColor: theme.tint }]}
-        >
-          <Ionicons name="add" size={18} color={Brand.white} />
-        </Pressable>
+        <ThemedText type="smallBold" style={{ flex: 1 }}>Homework — {selectedDate}</ThemedText>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.two }}>
+          {entries.length > 0 ? (
+            <ExportPdfButton
+              variant="compact"
+              onPress={() => {
+                const images = entries.flatMap((e) => e.attachments.map((a) => a.photo_url));
+                exportToPdf({
+                  title: `Teacher Homework Report - Date: ${selectedDate}`,
+                  subtitle: `Class ID: ${classIdNum} | Entries: ${entries.length}`,
+                  columns: [
+                    { header: 'Subject', key: 'subject', width: '25%' },
+                    { header: 'Chapter / Title', key: 'chapter', width: '25%' },
+                    { header: 'Description', key: 'description', width: '50%' },
+                  ],
+                  rows: entries,
+                  images,
+                });
+              }}
+            />
+          ) : null}
+          <Pressable
+            onPress={() =>
+              router.push({
+                pathname: '/teacher-homework-add',
+                params: { classId: String(classIdNum), sectionId: sectionIdNum ? String(sectionIdNum) : '', date: selectedDate },
+              })
+            }
+            style={[styles.addButton, { backgroundColor: theme.tint }]}
+          >
+            <Ionicons name="add" size={18} color={Brand.white} />
+          </Pressable>
+        </View>
       </View>
 
       {loadingEntries ? (

@@ -11,6 +11,7 @@ import { ThemedText } from '@/components/ui/ThemedText';
 import { deleteTeacherNotice, fetchTeacherNotices, TeacherNotice, toggleTeacherNotice } from '@/data/teacher-api';
 import { TeacherGuard } from '@/components/ui/TeacherGuard';
 import { useTheme } from '@/hooks/use-theme';
+import { ExportPdfButton } from '@/components/ui/ExportPdfButton';
 import { exportToPdf } from '@/lib/pdf-export';
 
 export default function TeacherNoticesScreen() {
@@ -68,7 +69,9 @@ export default function TeacherNoticesScreen() {
           </ThemedText>
         </Pressable>
 
-        <Pressable
+        <ExportPdfButton
+          variant="outline"
+          style={{ flex: 1, marginBottom: 0 }}
           onPress={() => {
             if (!notices || notices.length === 0) return;
             exportToPdf({
@@ -86,13 +89,7 @@ export default function TeacherNoticesScreen() {
               })),
             });
           }}
-          style={[styles.addButton, { backgroundColor: theme.surface, borderColor: theme.tint, borderWidth: 1.5, flex: 1, marginBottom: 0 }]}
-        >
-          <Ionicons name="document-text-outline" size={18} color={theme.tint} />
-          <ThemedText type="smallBold" themeColor="tint">
-            Export PDF
-          </ThemedText>
-        </Pressable>
+        />
       </View>
 
       {loading ? (

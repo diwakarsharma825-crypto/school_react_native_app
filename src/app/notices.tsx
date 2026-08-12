@@ -13,6 +13,7 @@ import { fetchHolidays, fetchNews, fetchNotices } from '@/data/api';
 import { useFetch } from '@/hooks/use-fetch';
 import { useSectionEnabled } from '@/hooks/use-sections';
 import { formatDate, stripHtml } from '@/lib/format';
+import { ExportPdfButton } from '@/components/ui/ExportPdfButton';
 import { exportToPdf } from '@/lib/pdf-export';
 
 type TabKey = 'news' | 'notice' | 'holiday';
@@ -84,7 +85,8 @@ export default function NoticesScreen() {
           })}
         </View>
 
-        <Pressable
+        <ExportPdfButton
+          variant="compact"
           onPress={() =>
             exportToPdf({
               title: `School ${activeTab.label} Report`,
@@ -97,22 +99,8 @@ export default function NoticesScreen() {
               rows: items,
             })
           }
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 4,
-            backgroundColor: theme.tint,
-            paddingHorizontal: 12,
-            paddingVertical: 8,
-            borderRadius: Radius.pill,
-            marginLeft: 8,
-          }}
-        >
-          <Ionicons name="document-text-outline" size={15} color={Brand.white} />
-          <ThemedText type="smallBold" style={{ color: Brand.white }}>
-            PDF
-          </ThemedText>
-        </Pressable>
+          style={{ marginLeft: 8 }}
+        />
       </View>
 
       {loading && items.length === 0 ? (

@@ -13,6 +13,7 @@ import { fetchEvents } from '@/data/api';
 import { useFetch } from '@/hooks/use-fetch';
 import { useSectionEnabled } from '@/hooks/use-sections';
 import { useTheme } from '@/hooks/use-theme';
+import { ExportPdfButton } from '@/components/ui/ExportPdfButton';
 import { exportToPdf } from '@/lib/pdf-export';
 
 export default function EventsScreen() {
@@ -34,7 +35,8 @@ export default function EventsScreen() {
     <Screen refreshing={loading} onRefresh={refetch}>
       {data && data.length > 0 ? (
         <View style={{ alignItems: 'flex-end', marginBottom: Spacing.three }}>
-          <Pressable
+          <ExportPdfButton
+            variant="compact"
             onPress={() => {
               const allImages = data.map((e) => e.image_url || e.cover_media?.url).filter(Boolean) as string[];
               exportToPdf({
@@ -49,21 +51,7 @@ export default function EventsScreen() {
                 images: allImages,
               });
             }}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 4,
-              backgroundColor: theme.tint,
-              paddingHorizontal: 12,
-              paddingVertical: 8,
-              borderRadius: Radius.pill,
-            }}
-          >
-            <Ionicons name="document-text-outline" size={15} color={Brand.white} />
-            <ThemedText type="smallBold" style={{ color: Brand.white }}>
-              Export PDF
-            </ThemedText>
-          </Pressable>
+          />
         </View>
       ) : null}
 

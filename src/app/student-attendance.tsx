@@ -14,6 +14,7 @@ import { useStudentAuth } from '@/hooks/use-student-auth';
 import { useTheme } from '@/hooks/use-theme';
 import { useSectionEnabled } from '@/hooks/use-sections';
 import { SectionUnavailable } from '@/components/ui/SectionUnavailable';
+import { ExportPdfButton } from '@/components/ui/ExportPdfButton';
 import { exportToPdf } from '@/lib/pdf-export';
 
 const MONTH_NAMES = [
@@ -151,7 +152,9 @@ export default function StudentAttendanceScreen() {
             <ThemedText type="small" themeColor="textOnBrand" style={styles.summaryLabel}>
               Present this month
             </ThemedText>
-            <Pressable
+            <ExportPdfButton
+              variant="compact"
+              style={{ marginTop: 6, backgroundColor: 'rgba(255,255,255,0.25)' }}
               onPress={() => {
                 if (!days || days.length === 0) return;
                 exportToPdf({
@@ -168,22 +171,7 @@ export default function StudentAttendanceScreen() {
                   })),
                 });
               }}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 4,
-                backgroundColor: 'rgba(255,255,255,0.25)',
-                paddingHorizontal: 10,
-                paddingVertical: 4,
-                borderRadius: Radius.pill,
-                marginTop: 6,
-              }}
-            >
-              <Ionicons name="document-text-outline" size={14} color={Brand.white} />
-              <ThemedText type="smallBold" style={{ color: Brand.white }}>
-                Export PDF
-              </ThemedText>
-            </Pressable>
+            />
           </View>
           <View style={styles.summaryPills}>
             <View style={[styles.pill, { backgroundColor: STATUS_META.P.bg }]}>

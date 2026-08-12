@@ -26,6 +26,7 @@ import { useBrand } from '@/hooks/use-brand';
 import { useTheme } from '@/hooks/use-theme';
 import { useSectionEnabled } from '@/hooks/use-sections';
 import { SectionUnavailable } from '@/components/ui/SectionUnavailable';
+import { ExportPdfButton } from '@/components/ui/ExportPdfButton';
 import { exportToPdf } from '@/lib/pdf-export';
 
 const defaultLogo = require('../../assets/images/icon.png');
@@ -426,7 +427,8 @@ function HomeworkCalendar({ access, onLogout }: { access: HomeworkAccess; onLogo
           </Pressable>
         </View>
 
-        <Pressable
+        <ExportPdfButton
+          variant="compact"
           onPress={() => {
             const list = viewMode === 'calendar' ? entries : filteredList;
             if (!list || list.length === 0) return;
@@ -444,21 +446,7 @@ function HomeworkCalendar({ access, onLogout }: { access: HomeworkAccess; onLogo
               images,
             });
           }}
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 4,
-            backgroundColor: theme.tint,
-            paddingHorizontal: 12,
-            paddingVertical: 10,
-            borderRadius: Radius.pill,
-          }}
-        >
-          <Ionicons name="document-text-outline" size={15} color={Brand.white} />
-          <ThemedText type="smallBold" style={{ color: Brand.white }}>
-            PDF
-          </ThemedText>
-        </Pressable>
+        />
       </View>
 
       {viewMode === 'calendar' ? (

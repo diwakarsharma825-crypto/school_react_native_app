@@ -14,6 +14,8 @@ import { useTeacherAuth } from '@/hooks/use-teacher-auth';
 import { useTheme } from '@/hooks/use-theme';
 import { useSectionEnabled } from '@/hooks/use-sections';
 import { SectionUnavailable } from '@/components/ui/SectionUnavailable';
+import { ExportPdfButton } from '@/components/ui/ExportPdfButton';
+import { exportToPdf } from '@/lib/pdf-export';
 
 const STATUS_META: Record<LeaveStatus, { label: string; color: string; bg: string }> = {
   pending: { label: 'Pending', color: '#B8860B', bg: '#FBEFD3' },
@@ -81,18 +83,45 @@ export default function TeacherLeavesScreen() {
           <SelectField label="Class" placeholder="Select class" value={classId} options={classOptions} onChange={setClassId} />
         ) : null}
 
-        <View style={[styles.filterRow, { borderColor: theme.border }]}>
-          {STATUS_FILTERS.map((f) => (
-            <Pressable
-              key={f.value}
-              onPress={() => setStatusFilter(f.value)}
-              style={[styles.filterButton, statusFilter === f.value && { backgroundColor: theme.tint }]}
-            >
-              <ThemedText type="small" themeColor={statusFilter === f.value ? 'textOnBrand' : 'textSecondary'}>
-                {f.label}
-              </ThemedText>
-            </Pressable>
-          ))}
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.three }}>
+          <View style={[styles.filterRow, { borderColor: theme.border, flex: 1, marginBottom: 0, marginRight: Spacing.two }]}>
+            {STATUS_FILTERS.map((f) => (
+              <Pressable
+                key={f.value}
+                onPress={() => setStatusFilter(f.value)}
+                style={[styles.filterButton, statusFilter === f.value && { backgroundColor: theme.tint }]}
+              >
+                <ThemedText type="small" themeColor={statusFilter === f.value ? 'textOnBrand' : 'textSecondary'}>
+                  {f.label}
+                </ThemedText>
+              </Pressable>
+            ))}
+          </View>
+
+          {applications && applications.length > 0 ? (
+            <ExportPdfButton
+              variant="compact"
+              onPress={() => {
+                exportToPdf({
+                  title: `Student Leave Requests - ${selected?.class_name ?? ''}${selected?.section_name ? ` (${selected.section_name})` : ''}`,
+                  subtitle: `Filter: ${statusFilter.toUpperCase()} | Total Applications: ${applications.length}`,
+                  columns: [
+                    { header: 'Student Name', key: 'student_name', width: '25%' },
+                    { header: 'SRN / Class', key: 'student_srn', width: '15%' },
+                    { header: 'Leave Type', key: 'leave_type', width: '15%' },
+                    { header: 'From - To', key: 'dates', width: '20%' },
+                    { header: 'Reason', key: 'reason', width: '15%' },
+                    { header: 'Status', key: 'statusLabel', width: '10%' },
+                  ],
+                  rows: applications.map((app) => ({
+                    ...app,
+                    dates: `${app.date_from} to ${app.date_to}`,
+                    statusLabel: STATUS_META[app.status]?.label ?? app.status,
+                  })),
+                });
+              }}
+            />
+          ) : null}
         </View>
 
         {loading ? (

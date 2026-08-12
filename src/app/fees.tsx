@@ -4,6 +4,7 @@ import React, { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Brand, Radius, Spacing } from '@/constants/theme';
+import { ExportPdfButton } from '@/components/ui/ExportPdfButton';
 import { exportToPdf } from '@/lib/pdf-export';
 import { Card } from '@/components/ui/Card';
 import { ChildSwitcherCard } from '@/components/ui/ChildSwitcherCard';
@@ -114,7 +115,8 @@ export default function FeesScreen() {
         <View style={{ flex: 1 }}>
           <ThemedText type="smallBold">Fee Statements</ThemedText>
         </View>
-        <Pressable
+        <ExportPdfButton
+          variant="compact"
           onPress={() => {
             if (!visibleInvoices || visibleInvoices.length === 0) return;
             exportToPdf({
@@ -135,21 +137,7 @@ export default function FeesScreen() {
               })),
             });
           }}
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 4,
-            backgroundColor: theme.tint,
-            paddingHorizontal: 12,
-            paddingVertical: 6,
-            borderRadius: Radius.pill,
-          }}
-        >
-          <Ionicons name="document-text-outline" size={14} color={Brand.white} />
-          <ThemedText type="smallBold" style={{ color: Brand.white }}>
-            Export PDF
-          </ThemedText>
-        </Pressable>
+        />
       </View>
 
       {loading && !invoices ? (

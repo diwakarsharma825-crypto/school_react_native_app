@@ -14,6 +14,8 @@ import { EmptyState, ErrorState, Loading } from '@/components/ui/states';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { Brand, Radius, Spacing } from '@/constants/theme';
 import { fetchCurrentAcademicYear } from '@/data/api';
+import { ExportPdfButton } from '@/components/ui/ExportPdfButton';
+import { exportToPdf } from '@/lib/pdf-export';
 import {
   deleteHomework,
   fetchHomeworkDates,
@@ -215,11 +217,32 @@ function StudentsTab({
           }
           style={[styles.notifyClassButton, { borderColor: theme.tint }]}
         >
-          <Ionicons name="document-text-outline" size={15} color={theme.tint} />
+          <Ionicons name="cloud-upload-outline" size={15} color={theme.tint} />
           <ThemedText type="smallBold" themeColor="tint">
             Import Excel
           </ThemedText>
         </Pressable>
+
+        <ExportPdfButton
+          variant="outline"
+          onPress={() => {
+            if (!filteredStudents || filteredStudents.length === 0) return;
+            const images = filteredStudents.map((s) => s.photo_url).filter(Boolean) as string[];
+            exportToPdf({
+              title: `Class Roster Report - ${classLabel}${sectionLabel ? ` (${sectionLabel})` : ''}`,
+              subtitle: `Total Students: ${filteredStudents.length}${query ? ` | Filter: "${query}"` : ''}`,
+              columns: [
+                { header: 'Roll No', key: 'roll_no', width: '15%' },
+                { header: 'Student Name', key: 'name', width: '30%' },
+                { header: 'SRN', key: 'srn', width: '15%' },
+                { header: 'Father Name', key: 'father_name', width: '25%' },
+                { header: 'Mobile Phone', key: 'phone', width: '15%' },
+              ],
+              rows: filteredStudents,
+              images,
+            });
+          }}
+        />
 
         {canAlert ? (
           <Pressable onPress={() => setNotifyTarget(null)} style={[styles.notifyClassButton, { borderColor: theme.tint }]}>
