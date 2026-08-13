@@ -131,6 +131,8 @@ export function DynamicBottomBar() {
           const label = isLoginSlot ? (teacherLoggedIn ? 'Teacher' : studentLoggedIn ? 'Student' : tab.label) : tab.label;
           const icon = isLoginSlot ? (loggedIn ? 'person-circle' : 'log-in') : tab.icon;
 
+          const activeColor = isActive ? (theme.dark ? '#FFFFFF' : theme.tint) : theme.textSecondary;
+
           return (
             <Pressable
               key={`${tab.target}-${tab.label}`}
@@ -149,13 +151,12 @@ export function DynamicBottomBar() {
               <Ionicons
                 name={(isActive ? icon : `${icon}-outline`) as keyof typeof Ionicons.glyphMap}
                 size={22}
-                color={isActive ? theme.tint : theme.textSecondary}
+                color={activeColor}
               />
               <ThemedText
                 type="small"
-                themeColor={isActive ? 'tint' : 'textSecondary'}
+                style={[styles.label, { color: activeColor }]}
                 numberOfLines={1}
-                style={styles.label}
               >
                 {label}
               </ThemedText>
