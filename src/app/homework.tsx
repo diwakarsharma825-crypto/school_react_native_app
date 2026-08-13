@@ -437,12 +437,16 @@ function HomeworkCalendar({ access, onLogout }: { access: HomeworkAccess; onLogo
               title: `Homework Report (${access.className}${access.section ? ` - ${access.section}` : ''})`,
               subtitle: `Student: ${access.name} (SRN: ${access.srn}) | ${viewMode === 'calendar' ? `Date: ${selectedDate}` : `Filtered Items: ${list.length}`}`,
               columns: [
-                { header: 'Date', key: 'homework_date', width: '20%' },
-                { header: 'Subject', key: 'subject', width: '25%' },
-                { header: 'Chapter / Title', key: 'chapter', width: '25%' },
+                { header: 'Date', key: 'homework_date', width: '15%' },
+                { header: 'Subject', key: 'subject', width: '20%' },
+                { header: 'Chapter / Title', key: 'chapter', width: '20%' },
                 { header: 'Description', key: 'description', width: '30%' },
+                { header: 'Attachment Link', key: 'attachmentLink', width: '15%' },
               ],
-              rows: list,
+              rows: list.map((e) => ({
+                ...e,
+                attachmentLink: e.attachments && e.attachments.length > 0 ? e.attachments[0].photo_url : 'No attachment',
+              })),
               images,
             });
           }}

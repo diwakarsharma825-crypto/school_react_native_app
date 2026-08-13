@@ -139,11 +139,15 @@ export default function TeacherHomeworkScreen() {
                   title: `Teacher Homework Report - Date: ${selectedDate}`,
                   subtitle: `Class ID: ${classIdNum} | Entries: ${entries.length}`,
                   columns: [
-                    { header: 'Subject', key: 'subject', width: '25%' },
-                    { header: 'Chapter / Title', key: 'chapter', width: '25%' },
-                    { header: 'Description', key: 'description', width: '50%' },
+                    { header: 'Subject', key: 'subject', width: '20%' },
+                    { header: 'Chapter / Title', key: 'chapter', width: '20%' },
+                    { header: 'Description', key: 'description', width: '40%' },
+                    { header: 'Attachment Link', key: 'attachmentLink', width: '20%' },
                   ],
-                  rows: entries,
+                  rows: entries.map((e) => ({
+                    ...e,
+                    attachmentLink: e.attachments && e.attachments.length > 0 ? e.attachments[0].photo_url : 'No attachment',
+                  })),
                   images,
                 });
               }}

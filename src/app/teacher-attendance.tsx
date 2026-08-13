@@ -140,8 +140,35 @@ export default function TeacherAttendanceScreen() {
       <DatePickerField label="Date" placeholder="Select date" value={date} onChange={setDate} minDate="2000-01-01" maxDate={todayStr()} />
 
       {students && students.length > 0 ? (
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.two }}>
-          <View style={[styles.markAllRow, { flex: 1, marginBottom: 0 }]}>
+        <View style={{ marginTop: Spacing.two, marginBottom: Spacing.two }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.two }}>
+            <ThemedText type="smallBold" themeColor="textSecondary" style={{ letterSpacing: 0.5 }}>
+              MARK ALL STUDENTS
+            </ThemedText>
+            <ExportPdfButton
+              variant="outline"
+              style={{ borderRadius: Radius.md, paddingVertical: 6, paddingHorizontal: 12 }}
+              onPress={() => {
+                if (!students || students.length === 0) return;
+                exportToPdf({
+                  title: `Class Attendance Sheet - ${selected?.class_name ?? ''}${selected?.section_name ? ` (${selected.section_name})` : ''}`,
+                  subtitle: `Date: ${date} | Present: ${counts.P} | Absent: ${counts.A} | Leave: ${counts.L}`,
+                  columns: [
+                    { header: 'Roll No', key: 'roll_no', width: '20%' },
+                    { header: 'Student Name', key: 'name', width: '40%' },
+                    { header: 'Status', key: 'statusLabel', width: '20%' },
+                    { header: 'Remarks', key: 'remarks', width: '20%' },
+                  ],
+                  rows: students.map((s) => ({
+                    ...s,
+                    statusLabel: STATUS_META[s.status!]?.label ?? s.status ?? 'Not Marked',
+                  })),
+                });
+              }}
+            />
+          </View>
+
+          <View style={[styles.markAllRow, { marginTop: 0 }]}>
             {(['P', 'A', 'L'] as AttendanceStatus[]).map((s) => (
               <Pressable
                 key={s}
@@ -149,7 +176,7 @@ export default function TeacherAttendanceScreen() {
                 style={[styles.markAllChip, { borderColor: STATUS_META[s].color, backgroundColor: STATUS_META[s].bg }]}
               >
                 <Ionicons name={STATUS_META[s].icon} size={15} color={STATUS_META[s].color} />
-                <ThemedText type="small" style={{ color: STATUS_META[s].color }}>
+                <ThemedText type="small" style={{ color: STATUS_META[s].color, fontWeight: '600' }}>
                   All {STATUS_META[s].label}
                 </ThemedText>
                 <View style={[styles.markAllCount, { backgroundColor: STATUS_META[s].color }]}>
@@ -160,28 +187,6 @@ export default function TeacherAttendanceScreen() {
               </Pressable>
             ))}
           </View>
-
-          <ExportPdfButton
-            variant="compact"
-            style={{ marginLeft: 8 }}
-            onPress={() => {
-              if (!students || students.length === 0) return;
-              exportToPdf({
-                title: `Class Attendance Sheet - ${selected?.class_name ?? ''}${selected?.section_name ? ` (${selected.section_name})` : ''}`,
-                subtitle: `Date: ${date} | Present: ${counts.P} | Absent: ${counts.A} | Leave: ${counts.L}`,
-                columns: [
-                  { header: 'Roll No', key: 'roll_no', width: '20%' },
-                  { header: 'Student Name', key: 'name', width: '40%' },
-                  { header: 'Status', key: 'statusLabel', width: '20%' },
-                  { header: 'Remarks', key: 'remarks', width: '20%' },
-                ],
-                rows: students.map((s) => ({
-                  ...s,
-                  statusLabel: STATUS_META[s.status!]?.label ?? s.status ?? 'Not Marked',
-                })),
-              });
-            }}
-          />
         </View>
       ) : null}
 

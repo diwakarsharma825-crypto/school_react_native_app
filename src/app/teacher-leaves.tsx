@@ -83,24 +83,28 @@ export default function TeacherLeavesScreen() {
           <SelectField label="Class" placeholder="Select class" value={classId} options={classOptions} onChange={setClassId} />
         ) : null}
 
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.three }}>
-          <View style={[styles.filterRow, { borderColor: theme.border, flex: 1, marginBottom: 0, marginRight: Spacing.two }]}>
-            {STATUS_FILTERS.map((f) => (
-              <Pressable
-                key={f.value}
-                onPress={() => setStatusFilter(f.value)}
-                style={[styles.filterButton, statusFilter === f.value && { backgroundColor: theme.tint }]}
-              >
-                <ThemedText type="small" themeColor={statusFilter === f.value ? 'textOnBrand' : 'textSecondary'}>
-                  {f.label}
-                </ThemedText>
-              </Pressable>
-            ))}
-          </View>
+        <View style={[styles.filterRow, { borderColor: theme.border, width: '100%', marginBottom: Spacing.three }]}>
+          {STATUS_FILTERS.map((f) => (
+            <Pressable
+              key={f.value}
+              onPress={() => setStatusFilter(f.value)}
+              style={[styles.filterButton, { flex: 1, alignItems: 'center' }, statusFilter === f.value && { backgroundColor: theme.tint }]}
+            >
+              <ThemedText type="small" themeColor={statusFilter === f.value ? 'textOnBrand' : 'textSecondary'}>
+                {f.label}
+              </ThemedText>
+            </Pressable>
+          ))}
+        </View>
 
-          {applications && applications.length > 0 ? (
+        {applications && applications.length > 0 ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.three }}>
+            <ThemedText type="smallBold" themeColor="textSecondary" style={{ letterSpacing: 0.5 }}>
+              {applications.length} LEAVE {applications.length === 1 ? 'REQUEST' : 'REQUESTS'}
+            </ThemedText>
             <ExportPdfButton
-              variant="compact"
+              variant="outline"
+              style={{ borderRadius: Radius.md, paddingVertical: 6, paddingHorizontal: 12 }}
               onPress={() => {
                 exportToPdf({
                   title: `Student Leave Requests - ${selected?.class_name ?? ''}${selected?.section_name ? ` (${selected.section_name})` : ''}`,
@@ -121,8 +125,8 @@ export default function TeacherLeavesScreen() {
                 });
               }}
             />
-          ) : null}
-        </View>
+          </View>
+        ) : null}
 
         {loading ? (
           <Loading label="Loading leave requests…" />

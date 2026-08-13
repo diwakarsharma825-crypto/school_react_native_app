@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, Modal, Pressable, StyleSheet, View } from 'react-native';

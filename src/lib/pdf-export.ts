@@ -10,6 +10,7 @@ export interface PdfColumn {
 export interface ExportPdfOptions {
   title: string;
   subtitle?: string;
+  logoUrl?: string | null;
   columns?: PdfColumn[];
   rows?: Record<string, any>[];
   htmlBody?: string;
@@ -17,7 +18,7 @@ export interface ExportPdfOptions {
 }
 
 export async function exportToPdf(options: ExportPdfOptions): Promise<void> {
-  const { title, subtitle, columns = [], rows = [], htmlBody, images = [] } = options;
+  const { title, subtitle, logoUrl, columns = [], rows = [], htmlBody, images = [] } = options;
 
   let tableHtml = '';
   if (columns.length > 0 && rows.length > 0) {
@@ -26,10 +27,15 @@ export async function exportToPdf(options: ExportPdfOptions): Promise<void> {
       .map((r, idx) => {
         const tds = columns
           .map((c) => {
-            const val = r[c.key] ?? '';
+            let val = r[c.key] ?? '';
+            // If value is a web URL, format as clean clickable download link
+            if (typeof val === 'string' && (val.startsWith('http://') || val.startsWith('https://'))) {
+              val = `<a href="${val}" target="_blank" style="color: #2B6CB0; font-weight: 600; text-decoration: underline;">🔗 View / Download</a>`;
+            }
             return `<td>${val}</td>`;
           })
           .join('');
+
         return `<tr class="${idx % 2 === 0 ? 'even' : 'odd'}">${tds}</tr>`;
       })
       .join('');
@@ -50,15 +56,23 @@ export async function exportToPdf(options: ExportPdfOptions): Promise<void> {
   if (images.length > 0) {
     const imgs = images
       .filter((url) => !!url)
-      .map((url) => `<div class="img-box"><img src="${url}" alt="Attachment" /></div>`)
+      .map(
+        (url) => `
+        <div class="img-box">
+          <img src="${url}" alt="Attachment" />
+          <a href="${url}" target="_blank" class="dl-btn">🔗 Download</a>
+        </div>`
+      )
       .join('');
     imagesHtml = `
       <div class="gallery-section">
-        <h3>Attached Media &amp; Images</h3>
+        <h3>Attached Media &amp; Photos</h3>
         <div class="gallery-grid">${imgs}</div>
       </div>
     `;
   }
+
+  const logoHtml = logoUrl && logoUrl.startsWith('http') ? `<img src="${logoUrl}" class="header-logo" alt="School Logo" />` : '';
 
   const fullHtml = `
     <!DOCTYPE html>
@@ -73,13 +87,21 @@ export async function exportToPdf(options: ExportPdfOptions): Promise<void> {
             color: #1A202C;
             background-color: #FFFFFF;
           }
-          .header {
+          .header-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
             border-bottom: 2px solid #2B6CB0;
             padding-bottom: 12px;
             margin-bottom: 20px;
           }
+          .header-logo {
+            max-height: 48px;
+            max-width: 120px;
+            object-fit: contain;
+          }
           .title {
-            font-size: 24px;
+            font-size: 22px;
             font-weight: bold;
             color: #2B6CB0;
             margin: 0 0 4px 0;
@@ -139,16 +161,26 @@ export async function exportToPdf(options: ExportPdfOptions): Promise<void> {
             margin-top: 8px;
           }
           .img-box {
-            width: 140px;
-            height: 140px;
+            width: 130px;
             border-radius: 8px;
             overflow: hidden;
             border: 1px solid #E2E8F0;
+            text-align: center;
+            padding-bottom: 6px;
+            background-color: #F7FAFC;
           }
           .img-box img {
             width: 100%;
-            height: 100%;
+            height: 110px;
             object-fit: cover;
+          }
+          .dl-btn {
+            display: inline-block;
+            margin-top: 4px;
+            font-size: 11px;
+            color: #2B6CB0;
+            font-weight: 600;
+            text-decoration: underline;
           }
           .footer {
             margin-top: 30px;
@@ -161,10 +193,13 @@ export async function exportToPdf(options: ExportPdfOptions): Promise<void> {
         </style>
       </head>
       <body>
-        <div class="header">
-          <div class="title">${title}</div>
-          ${subtitle ? `<div class="subtitle">${subtitle}</div>` : ''}
-          <div class="meta">Generated on ${new Date().toLocaleString()}</div>
+        <div class="header-row">
+          <div>
+            <div class="title">${title}</div>
+            ${subtitle ? `<div class="subtitle">${subtitle}</div>` : ''}
+            <div class="meta">Generated on ${new Date().toLocaleString()}</div>
+          </div>
+          ${logoHtml}
         </div>
         ${htmlBody ? htmlBody : ''}
         ${tableHtml}

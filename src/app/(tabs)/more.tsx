@@ -189,26 +189,68 @@ export default function MoreScreen() {
   const rawLogoUri = brand.logoUrl || settings?.logo_url || settings?.front_logo_url;
   const logoUri = !imgError && rawLogoUri ? rawLogoUri : null;
 
+  const userRole = teacherLoggedIn ? 'TEACHER' : studentLoggedIn ? 'STUDENT' : null;
+  const userName = teacherLoggedIn ? teacherProfile?.name ?? 'Teacher' : studentLoggedIn ? studentAccess?.name ?? 'Student' : '';
+  const userSubtitle = teacherLoggedIn
+    ? teacherProfile?.email ?? 'Teacher Account'
+    : studentLoggedIn
+      ? `Class ${studentAccess?.className ?? ''}${studentAccess?.section ? ` - ${studentAccess.section}` : ''} · SRN ${studentAccess?.srn ?? ''}`
+      : '';
+  const userPhoto = teacherLoggedIn ? (teacherProfile as any)?.photo_url : studentLoggedIn ? studentAccess?.photoUrl : null;
+
   return (
     <Screen>
-      <View style={[styles.brandCard, { backgroundColor: theme.tint }]}>
-        <Image
-          source={logoUri ? { uri: logoUri } : logoSource}
-          onError={() => setImgError(true)}
-          style={styles.logo}
-          contentFit="cover"
-        />
-        {schoolName ? (
-          <ThemedText type="subtitle" themeColor="textOnBrand" style={styles.brandName}>
-            {schoolName}
-          </ThemedText>
-        ) : null}
-        {address ? (
-          <ThemedText type="small" themeColor="textOnBrand" style={styles.brandAddress}>
-            {address}
-          </ThemedText>
-        ) : null}
-      </View>
+      {loggedIn ? (
+        <Card style={[styles.userCard, { borderColor: theme.border }]}>
+          <Pressable onPress={() => router.push('/profile')} style={styles.userCardInner}>
+            {userPhoto ? (
+              <Image source={{ uri: userPhoto }} style={styles.userAvatarPhoto} contentFit="cover" />
+            ) : (
+              <View style={[styles.userAvatarFallback, { backgroundColor: theme.tint }]}>
+                <Ionicons name={userRole === 'TEACHER' ? 'briefcase' : 'school'} size={26} color={Brand.white} />
+              </View>
+            )}
+            <View style={styles.userInfo}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <ThemedText type="subtitle" numberOfLines={1} style={{ flexShrink: 1 }}>
+                  {userName}
+                </ThemedText>
+                <View style={[styles.roleBadge, { backgroundColor: theme.tint + '1F', borderColor: theme.tint, borderWidth: 1 }]}>
+                  <ThemedText type="smallBold" style={{ color: theme.tint, fontSize: 10 }}>
+                    {userRole}
+                  </ThemedText>
+                </View>
+              </View>
+              <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+                {userSubtitle}
+              </ThemedText>
+              <ThemedText type="smallBold" themeColor="tint" style={{ marginTop: 2 }}>
+                View Full Profile &rarr;
+              </ThemedText>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
+          </Pressable>
+        </Card>
+      ) : (
+        <View style={[styles.brandCard, { backgroundColor: theme.tint }]}>
+          <Image
+            source={logoUri ? { uri: logoUri } : logoSource}
+            onError={() => setImgError(true)}
+            style={styles.logo}
+            contentFit="cover"
+          />
+          {schoolName ? (
+            <ThemedText type="subtitle" themeColor="textOnBrand" style={styles.brandName}>
+              {schoolName}
+            </ThemedText>
+          ) : null}
+          {address ? (
+            <ThemedText type="small" themeColor="textOnBrand" style={styles.brandAddress}>
+              {address}
+            </ThemedText>
+          ) : null}
+        </View>
+      )}
 
       {accountRows.length > 0 ? (
         <>
@@ -261,6 +303,36 @@ export default function MoreScreen() {
 }
 
 const styles = StyleSheet.create({
+  userCard: {
+    marginBottom: Spacing.four,
+    padding: Spacing.three,
+  },
+  userCardInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.three,
+  },
+  userAvatarPhoto: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+  },
+  userAvatarFallback: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  userInfo: {
+    flex: 1,
+    gap: 2,
+  },
+  roleBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: Radius.pill,
+  },
   brandCard: {
     backgroundColor: Brand.blue,
     borderRadius: Radius.lg,
