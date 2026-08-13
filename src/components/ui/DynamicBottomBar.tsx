@@ -58,10 +58,14 @@ export function DynamicBottomBar() {
   // A teacher without gallery permission doesn't see the shared Gallery
   // tab at all — every other role/user still does, this only strips it
   // from this one teacher's bar.
-  const visibleBottomTabs =
+  let visibleBottomTabs =
     teacherLoggedIn && profile?.permissions?.gallery === false
       ? bottomTabs.filter((t) => t.target !== 'gallery')
       : bottomTabs;
+
+  if (instituteMode) {
+    visibleBottomTabs = visibleBottomTabs.filter((t) => t.target !== 'login');
+  }
 
   const loggedIn = teacherLoggedIn || studentLoggedIn;
   const menuName = teacherLoggedIn ? profile?.name ?? 'Teacher' : access?.name ?? 'Student';
@@ -108,12 +112,6 @@ export function DynamicBottomBar() {
         {visibleBottomTabs.map((tab) => {
           const isLoginSlot = tab.target === 'login';
           const route = tab.target === 'url' ? null : isLoginSlot ? null : TARGET_ROUTES[tab.target];
-          // Every screen reachable from the Teacher/Student role menu needs
-          // to be recognized here, or the icon stops looking "active" the
-          // moment you navigate into it — student-side routes don't all
-          // share the '/teacher-' prefix (e.g. '/fees', '/apply-leave',
-          // '/student-attendance'), so list them explicitly instead of
-          // guessing at a shared prefix.
           const isActive = isLoginSlot
             ? loginSheetOpen ||
               menuOpen ||
@@ -139,8 +137,13 @@ export function DynamicBottomBar() {
               style={styles.item}
               onPress={() => {
                 if (isLoginSlot) {
-                  if (loggedIn) setMenuOpen(true);
-                  else setLoginSheetOpen(true);
+                  if (teacherLoggedIn) {
+                    router.push('/teacher-dashboard' as any);
+                  } else if (studentLoggedIn) {
+                    router.push('/student-dashboard' as any);
+                  } else {
+                    setLoginSheetOpen(true);
+                  }
                 } else if (tab.target === 'url' && tab.targetUrl) {
                   Linking.openURL(tab.targetUrl);
                 } else if (route) {
