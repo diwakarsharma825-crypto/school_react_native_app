@@ -37,6 +37,12 @@ export function ProfileHeaderBar({ icon, name, photoUrl, contact, subtitle, sess
   const theme = useTheme();
   const [open, setOpen] = useState(false);
 
+  const nameColor = theme.dark ? '#FFFFFF' : theme.text;
+  const iconColor = theme.dark ? '#FFFFFF' : theme.tint;
+  const iconBg = theme.dark ? theme.tint : theme.backgroundSelected;
+  const sessionColor = theme.dark ? '#60A5FA' : theme.tint;
+  const chevronColor = theme.dark ? '#FFFFFF' : theme.textSecondary;
+
   return (
     <View style={[styles.bar, { backgroundColor: theme.surface, borderColor: theme.border }, style]}>
       <Pressable
@@ -46,12 +52,12 @@ export function ProfileHeaderBar({ icon, name, photoUrl, contact, subtitle, sess
         {photoUrl ? (
           <Image source={{ uri: photoUrl }} style={styles.avatarPhoto} contentFit="cover" />
         ) : (
-          <View style={[styles.avatar, { backgroundColor: theme.backgroundSelected }]}>
-            <Ionicons name={icon} size={20} color={theme.tint} />
+          <View style={[styles.avatar, { backgroundColor: iconBg }]}>
+            <Ionicons name={icon} size={20} color={iconColor} />
           </View>
         )}
         <View style={styles.textCol}>
-          <ThemedText type="smallBold" numberOfLines={1}>
+          <ThemedText type="smallBold" numberOfLines={1} style={{ color: nameColor }}>
             {name}
           </ThemedText>
           {contact ? (
@@ -65,12 +71,12 @@ export function ProfileHeaderBar({ icon, name, photoUrl, contact, subtitle, sess
             </ThemedText>
           ) : null}
           {sessionLabel ? (
-            <ThemedText type="small" themeColor="tint">
+            <ThemedText type="small" style={{ color: sessionColor }}>
               Session: {sessionLabel}
             </ThemedText>
           ) : null}
         </View>
-        <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} style={{ marginRight: 6 }} />
+        <Ionicons name="chevron-forward" size={16} color={chevronColor} style={{ marginRight: 6 }} />
       </Pressable>
       {menu.length > 0 ? (
         <Pressable onPress={() => setOpen(true)} hitSlop={10} style={styles.menuButton}>
