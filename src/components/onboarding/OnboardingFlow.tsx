@@ -174,18 +174,18 @@ export function OnboardingFlow({ onDone }: OnboardingFlowProps) {
         // One phone can be the login for several sibling children — save
         // every one returned, the app defaults to the first.
         const results = await studentLogin(trimmedMobile, password);
-        const children: HomeworkAccess[] = results.map((result) => ({
+        const children: HomeworkAccess[] = results.map((result: any) => ({
           name: result.name,
-          srn: result.srn,
-          rollNo: result.roll_no,
-          fatherName: result.father_name,
-          motherName: result.mother_name,
-          className: result.class,
-          section: result.section,
-          phone: result.phone,
-          gender: result.gender,
-          dob: result.dob,
-          photoUrl: result.photo_url,
+          srn: String(result.srn ?? ''),
+          rollNo: result.roll_no || result.rollNo || result.roll_number || undefined,
+          fatherName: result.father_name || result.fatherName || result.father || undefined,
+          motherName: result.mother_name || result.motherName || result.mother || undefined,
+          className: result.class || result.className || result.class_name || '',
+          section: result.section || result.section_name || '',
+          phone: result.phone || result.mobile || result.mobile_no || result.contact || undefined,
+          gender: result.gender || undefined,
+          dob: result.dob || result.date_of_birth || undefined,
+          photoUrl: result.photo_url || result.photoUrl || result.image_url || undefined,
         }));
         await saveHomeworkChildren(children);
         await refreshStudentAuth();
