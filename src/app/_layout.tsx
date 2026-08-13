@@ -180,7 +180,14 @@ function RootLayoutInner() {
       ) : !onboarded && !status?.instituteMode ? (
         <SafeAreaProvider>
           <StatusBar style="dark" />
-          <OnboardingFlow onDone={() => setOnboarded(true)} />
+          <OnboardingFlow
+            onDone={() => {
+              setOnboarded(true);
+              setTimeout(() => {
+                router.replace('/(tabs)');
+              }, 50);
+            }}
+          />
         </SafeAreaProvider>
       ) : !instituteOnboarded && status?.instituteMode ? (
         <SafeAreaProvider>
@@ -189,7 +196,9 @@ function RootLayoutInner() {
             onDone={async () => {
               await markInstituteOnboardingComplete();
               setInstituteOnboarded(true);
-              router.replace('/login');
+              setTimeout(() => {
+                router.replace('/(tabs)');
+              }, 50);
             }}
           />
         </SafeAreaProvider>
