@@ -1,7 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
+
+import { Card } from '@/components/ui/Card';
 
 import { AchieverCard } from '@/components/home/AchieverCard';
 import { Carousel } from '@/components/home/Carousel';
@@ -115,6 +117,37 @@ export default function HomeScreen() {
           ) : (
             <EmptyState message="No banners available." />
           )}
+
+          {teacherLoggedIn ? (
+            <Card style={{ backgroundColor: theme.tint, marginBottom: Spacing.three, padding: Spacing.three }}>
+              <Pressable
+                onPress={() => router.push('/teacher-dashboard' as any)}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.three }}
+              >
+                <View
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 20,
+                    backgroundColor: 'rgba(255,255,255,0.2)',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Ionicons name="speedometer-outline" size={22} color="#FFFFFF" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <ThemedText type="smallBold" style={{ color: '#FFFFFF' }}>
+                    Teacher Dashboard
+                  </ThemedText>
+                  <ThemedText type="small" style={{ color: 'rgba(255,255,255,0.85)', fontSize: 12 }} numberOfLines={1}>
+                    Tap to manage homework, attendance & roster
+                  </ThemedText>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color="#FFFFFF" />
+              </Pressable>
+            </Card>
+          ) : null}
 
           <QuickActionGrid />
 

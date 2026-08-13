@@ -85,6 +85,7 @@ export default function MoreScreen() {
 
   const accountRows: Row[] = teacherLoggedIn
     ? [
+        { label: 'Teacher Dashboard', icon: 'speedometer-outline', onPress: () => router.push('/teacher-dashboard' as any) },
         {
           label: 'Change Password',
           icon: 'key-outline',
@@ -94,6 +95,7 @@ export default function MoreScreen() {
       ]
     : studentLoggedIn
       ? [
+          { label: 'Student Dashboard', icon: 'speedometer-outline', onPress: () => router.push('/student-dashboard' as any) },
           {
             label: 'Change Password',
             icon: 'key-outline',
