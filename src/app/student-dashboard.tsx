@@ -109,8 +109,8 @@ export default function StudentDashboardScreen() {
             {access.photoUrl ? (
               <Image source={{ uri: access.photoUrl }} style={{ width: 44, height: 44, borderRadius: 22, marginRight: 12 }} contentFit="cover" />
             ) : (
-              <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: theme.backgroundSelected, alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
-                <Ionicons name="school" size={20} color={theme.tint} />
+              <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: theme.dark ? theme.tint : theme.backgroundSelected, alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                <Ionicons name="school" size={20} color={theme.dark ? '#FFFFFF' : theme.tint} />
               </View>
             )}
             <View style={{ flex: 1 }}>
