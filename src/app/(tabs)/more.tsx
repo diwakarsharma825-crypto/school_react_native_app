@@ -71,8 +71,8 @@ export default function MoreScreen() {
   const { data: settings } = useFetch(fetchSettings);
   const sections = useSections();
   const brand = useBrand();
-  const { loggedIn: teacherLoggedIn, setLoggedIn: setTeacherLoggedIn } = useTeacherAuth();
-  const { loggedIn: studentLoggedIn, setAccess: setStudentAccess } = useStudentAuth();
+  const { loggedIn: teacherLoggedIn, setLoggedIn: setTeacherLoggedIn, profile: teacherProfile } = useTeacherAuth();
+  const { loggedIn: studentLoggedIn, setAccess: setStudentAccess, access: studentAccess } = useStudentAuth();
 
   function confirmLogout(onConfirm: () => void) {
     Alert.alert('Log out?', 'You can log back in anytime.', [
