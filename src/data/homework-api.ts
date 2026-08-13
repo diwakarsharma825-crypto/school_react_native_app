@@ -221,3 +221,8 @@ export async function fetchStudentFeeInvoices(srn: string, dateFrom?: string, da
   }).toString();
   return getJson<FeeInvoice[]>(`/student_fee_invoices?${qs}`);
 }
+
+export async function fetchStudentDetails(identifier: string): Promise<StudentChild> {
+  const qs = new URLSearchParams({ srn: identifier }).toString();
+  return getJson<StudentChild>(`/student_details?${qs}`);
+}

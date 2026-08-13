@@ -9,9 +9,11 @@ import { Card } from '@/components/ui/Card';
 import { Screen } from '@/components/ui/Screen';
 import { Loading } from '@/components/ui/states';
 import { ThemedText } from '@/components/ui/ThemedText';
+import { fetchStudentDetails } from '@/data/homework-api';
 import { useStudentAuth } from '@/hooks/use-student-auth';
 import { useTeacherAuth } from '@/hooks/use-teacher-auth';
 import { useTheme } from '@/hooks/use-theme';
+import { saveHomeworkChildren } from '@/lib/homework-access';
 
 /** YYYY-MM-DD → "12 Aug 2015" for display; falls back to the raw value if
  * it isn't in the expected shape. */
@@ -48,14 +50,50 @@ export default function ProfileScreen() {
   const theme = useTheme();
   const router = useRouter();
   const { checking: teacherChecking, loggedIn: teacherLoggedIn, profile: teacherProfile } = useTeacherAuth();
-  const { checking: studentChecking, loggedIn: studentLoggedIn, access } = useStudentAuth();
+  const { checking: studentChecking, loggedIn: studentLoggedIn, access, allChildren } = useStudentAuth();
+  const [liveAccess, setLiveAccess] = React.useState(access);
+
+  React.useEffect(() => {
+    setLiveAccess(access);
+  }, [access]);
 
   useFocusEffect(
     useCallback(() => {
       if (!teacherChecking && !studentChecking && !teacherLoggedIn && !studentLoggedIn) {
         router.replace('/login');
+        return;
       }
-    }, [teacherChecking, studentChecking, teacherLoggedIn, studentLoggedIn, router])
+      if (studentLoggedIn && access) {
+        const identifier = (access.srn && access.srn !== '0' && access.srn !== '0.0') ? access.srn : access.phone;
+        if (identifier) {
+          fetchStudentDetails(identifier)
+            .then((details) => {
+              if (details) {
+                const updated = {
+                  name: details.name || access.name,
+                  srn: details.srn || access.srn,
+                  rollNo: details.roll_no || access.rollNo,
+                  fatherName: details.father_name || access.fatherName,
+                  motherName: details.mother_name || access.motherName,
+                  className: details.class || access.className,
+                  section: details.section || access.section,
+                  phone: details.phone || access.phone,
+                  gender: details.gender || access.gender,
+                  dob: details.dob || access.dob,
+                  photoUrl: details.photo_url || access.photoUrl,
+                };
+                setLiveAccess(updated);
+                // Also update stored siblings in AsyncStorage
+                if (allChildren && allChildren.length > 0) {
+                  const newChildren = allChildren.map((c) => (c.srn === access.srn ? updated : c));
+                  saveHomeworkChildren(newChildren).catch(() => {});
+                }
+              }
+            })
+            .catch(() => {});
+        }
+      }
+    }, [teacherChecking, studentChecking, teacherLoggedIn, studentLoggedIn, access, allChildren, router])
   );
 
   if (teacherChecking || studentChecking) {
@@ -120,23 +158,25 @@ export default function ProfileScreen() {
     );
   }
 
-  if (studentLoggedIn && access) {
-    const classTitle = access.className.toLowerCase().startsWith('class')
-      ? `${access.className}${access.section ? ` - ${access.section}` : ''}`
-      : `Class ${access.className}${access.section ? ` - ${access.section}` : ''}`;
+  const activeStudent = liveAccess || access;
+
+  if (studentLoggedIn && activeStudent) {
+    const classTitle = activeStudent.className.toLowerCase().startsWith('class')
+      ? `${activeStudent.className}${activeStudent.section ? ` - ${activeStudent.section}` : ''}`
+      : `Class ${activeStudent.className}${activeStudent.section ? ` - ${activeStudent.section}` : ''}`;
 
     return (
       <Screen>
         <Card style={styles.headerCard}>
-          {access.photoUrl ? (
-            <Image source={{ uri: access.photoUrl }} style={styles.avatarPhoto} contentFit="cover" />
+          {activeStudent.photoUrl ? (
+            <Image source={{ uri: activeStudent.photoUrl }} style={styles.avatarPhoto} contentFit="cover" />
           ) : (
             <View style={[styles.avatar, { backgroundColor: theme.dark ? theme.tint : theme.backgroundSelected }]}>
               <Ionicons name="school" size={32} color={theme.dark ? '#FFFFFF' : theme.tint} />
             </View>
           )}
           <ThemedText type="subtitle" style={styles.name}>
-            {access.name}
+            {activeStudent.name}
           </ThemedText>
           <ThemedText type="small" themeColor="textSecondary">
             {classTitle}
@@ -144,14 +184,14 @@ export default function ProfileScreen() {
         </Card>
 
         <Card style={styles.section}>
-          <InfoRow icon="id-card-outline" label="SRN" value={access.srn || '—'} />
-          <InfoRow icon="numbers-outline" label="Roll No" value={access.rollNo || '—'} />
+          <InfoRow icon="id-card-outline" label="SRN" value={activeStudent.srn || '—'} />
+          <InfoRow icon="numbers-outline" label="Roll No" value={activeStudent.rollNo || '—'} />
           <InfoRow icon="school-outline" label="Class & Section" value={classTitle} />
-          <InfoRow icon="person-outline" label="Father's Name" value={access.fatherName || '—'} />
-          <InfoRow icon="heart-outline" label="Mother's Name" value={access.motherName || '—'} />
-          <InfoRow icon="call-outline" label="Phone" value={access.phone || '—'} />
-          <InfoRow icon="people-outline" label="Gender" value={access.gender || '—'} />
-          <InfoRow icon="calendar-outline" label="Date of Birth" value={access.dob ? formatDob(access.dob) : '—'} />
+          <InfoRow icon="person-outline" label="Father's Name" value={activeStudent.fatherName || '—'} />
+          <InfoRow icon="heart-outline" label="Mother's Name" value={activeStudent.motherName || '—'} />
+          <InfoRow icon="call-outline" label="Phone" value={activeStudent.phone || '—'} />
+          <InfoRow icon="people-outline" label="Gender" value={activeStudent.gender || '—'} />
+          <InfoRow icon="calendar-outline" label="Date of Birth" value={activeStudent.dob ? formatDob(activeStudent.dob) : '—'} />
         </Card>
       </Screen>
     );
