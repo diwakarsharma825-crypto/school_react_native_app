@@ -58,14 +58,10 @@ export function DynamicBottomBar() {
   // A teacher without gallery permission doesn't see the shared Gallery
   // tab at all — every other role/user still does, this only strips it
   // from this one teacher's bar.
-  let visibleBottomTabs =
+  const visibleBottomTabs =
     teacherLoggedIn && profile?.permissions?.gallery === false
       ? bottomTabs.filter((t) => t.target !== 'gallery')
       : bottomTabs;
-
-  if (instituteMode) {
-    visibleBottomTabs = visibleBottomTabs.filter((t) => t.target !== 'login');
-  }
 
   const loggedIn = teacherLoggedIn || studentLoggedIn;
   const menuName = teacherLoggedIn ? profile?.name ?? 'Teacher' : access?.name ?? 'Student';
@@ -79,7 +75,7 @@ export function DynamicBottomBar() {
   // rows with no permKey (Dashboard, Export) are always shown. "My
   // Storage" lives under More → Account now, not here.
   const rawTeacherMenuItems: (MenuItem & { permKey?: keyof NonNullable<typeof profile>['permissions'] })[] = [
-    { label: 'Teacher Dashboard', icon: 'speedometer-outline', onPress: () => router.push('/teacher-dashboard' as any) },
+    ...(!instituteMode ? [{ label: 'Teacher Dashboard', icon: 'speedometer-outline' as const, onPress: () => router.push('/teacher-dashboard' as any) }] : []),
     { label: 'Manage Notices', icon: 'megaphone-outline', onPress: () => router.push('/teacher-notices' as any), permKey: 'notices' },
     { label: 'Manage Events', icon: 'calendar-outline', onPress: () => router.push('/teacher-events' as any), permKey: 'events' },
     { label: 'Attendance', icon: 'checkmark-done-outline', onPress: () => router.push('/teacher-attendance' as any), permKey: 'attendance' },
@@ -91,6 +87,7 @@ export function DynamicBottomBar() {
   const menuItems: MenuItem[] = teacherLoggedIn
     ? rawTeacherMenuItems.filter((item) => !item.permKey || profile?.permissions?.[item.permKey] !== false)
     : [
+        ...(!instituteMode ? [{ label: 'Student Dashboard', icon: 'speedometer-outline' as const, onPress: () => router.push('/student-dashboard' as any) }] : []),
         { label: 'Homework', icon: 'book-outline', onPress: () => router.push('/homework') },
         { label: 'My Attendance', icon: 'checkmark-done-outline', onPress: () => router.push('/student-attendance' as any) },
         { label: 'Apply Leave', icon: 'calendar-clear-outline', onPress: () => router.push('/apply-leave' as any) },
@@ -137,13 +134,8 @@ export function DynamicBottomBar() {
               style={styles.item}
               onPress={() => {
                 if (isLoginSlot) {
-                  if (teacherLoggedIn) {
-                    router.push('/teacher-dashboard' as any);
-                  } else if (studentLoggedIn) {
-                    router.push('/student-dashboard' as any);
-                  } else {
-                    setLoginSheetOpen(true);
-                  }
+                  if (loggedIn) setMenuOpen(true);
+                  else setLoginSheetOpen(true);
                 } else if (tab.target === 'url' && tab.targetUrl) {
                   Linking.openURL(tab.targetUrl);
                 } else if (route) {
