@@ -24,10 +24,12 @@ function formatDob(value: string): string {
 
 function InfoRow({ icon, label, value }: { icon: keyof typeof Ionicons.glyphMap; label: string; value: string }) {
   const theme = useTheme();
+  const iconColor = theme.dark ? '#FFFFFF' : theme.tint;
+  const iconBg = theme.dark ? theme.tint : theme.backgroundSelected;
   return (
     <View style={styles.infoRow}>
-      <View style={[styles.infoIcon, { backgroundColor: theme.backgroundSelected }]}>
-        <Ionicons name={icon} size={16} color={theme.tint} />
+      <View style={[styles.infoIcon, { backgroundColor: iconBg }]}>
+        <Ionicons name={icon} size={16} color={iconColor} />
       </View>
       <View style={styles.infoText}>
         <ThemedText type="small" themeColor="textSecondary">
@@ -40,11 +42,8 @@ function InfoRow({ icon, label, value }: { icon: keyof typeof Ionicons.glyphMap;
 }
 
 /** "Who am I" screen reached by tapping the name/avatar row at the top of
- * the Teacher/Student role menu (the single entry point now — the old
- * duplicate "Profile" row under More → Account routed straight to
- * teacher-profile-setup.tsx and has been removed). Shows every field the
- * logged-in profile carries; a teacher also gets an Edit button here that
- * opens teacher-profile-setup.tsx for the actual class/section edits. */
+ * the Teacher/Student role menu. Shows every field the logged-in profile
+ * carries. */
 export default function ProfileScreen() {
   const theme = useTheme();
   const router = useRouter();
@@ -71,8 +70,8 @@ export default function ProfileScreen() {
     return (
       <Screen>
         <Card style={styles.headerCard}>
-          <View style={[styles.avatar, { backgroundColor: theme.backgroundSelected }]}>
-            <Ionicons name="briefcase" size={28} color={theme.tint} />
+          <View style={[styles.avatar, { backgroundColor: theme.dark ? theme.tint : theme.backgroundSelected }]}>
+            <Ionicons name="briefcase" size={28} color={theme.dark ? '#FFFFFF' : theme.tint} />
           </View>
           <ThemedText type="subtitle" style={styles.name}>
             {teacherProfile.name ?? 'Teacher'}
@@ -132,8 +131,8 @@ export default function ProfileScreen() {
           {access.photoUrl ? (
             <Image source={{ uri: access.photoUrl }} style={styles.avatarPhoto} contentFit="cover" />
           ) : (
-            <View style={[styles.avatar, { backgroundColor: theme.backgroundSelected }]}>
-              <Ionicons name="school" size={32} color={theme.tint} />
+            <View style={[styles.avatar, { backgroundColor: theme.dark ? theme.tint : theme.backgroundSelected }]}>
+              <Ionicons name="school" size={32} color={theme.dark ? '#FFFFFF' : theme.tint} />
             </View>
           )}
           <ThemedText type="subtitle" style={styles.name}>
@@ -145,13 +144,14 @@ export default function ProfileScreen() {
         </Card>
 
         <Card style={styles.section}>
-          <InfoRow icon="id-card-outline" label="SRN" value={access.srn} />
-          {access.rollNo ? <InfoRow icon="numbers-outline" label="Roll No" value={access.rollNo} /> : null}
-          {access.fatherName ? <InfoRow icon="person-outline" label="Father's Name" value={access.fatherName} /> : null}
-          {access.motherName ? <InfoRow icon="heart-outline" label="Mother's Name" value={access.motherName} /> : null}
-          {access.phone ? <InfoRow icon="call-outline" label="Phone" value={access.phone} /> : null}
-          {access.gender ? <InfoRow icon="people-outline" label="Gender" value={access.gender} /> : null}
-          {access.dob ? <InfoRow icon="calendar-outline" label="Date of Birth" value={formatDob(access.dob)} /> : null}
+          <InfoRow icon="id-card-outline" label="SRN" value={access.srn || '—'} />
+          <InfoRow icon="numbers-outline" label="Roll No" value={access.rollNo || '—'} />
+          <InfoRow icon="school-outline" label="Class & Section" value={classTitle} />
+          <InfoRow icon="person-outline" label="Father's Name" value={access.fatherName || '—'} />
+          <InfoRow icon="heart-outline" label="Mother's Name" value={access.motherName || '—'} />
+          <InfoRow icon="call-outline" label="Phone" value={access.phone || '—'} />
+          <InfoRow icon="people-outline" label="Gender" value={access.gender || '—'} />
+          <InfoRow icon="calendar-outline" label="Date of Birth" value={access.dob ? formatDob(access.dob) : '—'} />
         </Card>
       </Screen>
     );
