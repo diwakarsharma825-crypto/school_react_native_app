@@ -214,11 +214,11 @@ export default function MoreScreen() {
             )}
             <View style={styles.userInfo}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <ThemedText type="subtitle" numberOfLines={1} style={{ flexShrink: 1 }}>
+                <ThemedText type="subtitle" numberOfLines={1} style={{ flexShrink: 1, color: theme.dark ? '#FFFFFF' : theme.text }}>
                   {userName}
                 </ThemedText>
                 <View style={[styles.roleBadge, { backgroundColor: theme.tint + '1F', borderColor: theme.tint, borderWidth: 1 }]}>
-                  <ThemedText type="smallBold" style={{ color: theme.tint, fontSize: 10 }}>
+                  <ThemedText type="smallBold" style={{ color: theme.dark ? '#FFFFFF' : theme.tint, fontSize: 10 }}>
                     {userRole}
                   </ThemedText>
                 </View>
@@ -226,11 +226,11 @@ export default function MoreScreen() {
               <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
                 {userSubtitle}
               </ThemedText>
-              <ThemedText type="smallBold" themeColor="tint" style={{ marginTop: 2 }}>
+              <ThemedText type="smallBold" style={{ marginTop: 2, color: theme.dark ? '#FFFFFF' : theme.tint }}>
                 View Full Profile &rarr;
               </ThemedText>
             </View>
-            <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
+            <Ionicons name="chevron-forward" size={18} color={theme.dark ? '#FFFFFF' : theme.textSecondary} />
           </Pressable>
         </Card>
       ) : (

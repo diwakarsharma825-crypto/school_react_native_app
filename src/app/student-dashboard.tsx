@@ -114,7 +114,7 @@ export default function StudentDashboardScreen() {
               </View>
             )}
             <View style={{ flex: 1 }}>
-              <ThemedText type="smallBold">{access.name}</ThemedText>
+              <ThemedText type="smallBold" style={{ color: theme.dark ? '#FFFFFF' : theme.text }}>{access.name}</ThemedText>
               <ThemedText type="small" themeColor="textSecondary">
                 {`${/\bclass\b/i.test(access.className) ? access.className : `Class ${access.className}`}${
                   access.section ? ` - ${access.section}` : ''
@@ -126,7 +126,7 @@ export default function StudentDashboardScreen() {
                 </ThemedText>
               ) : null}
             </View>
-            <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
+            <Ionicons name="chevron-forward" size={18} color={theme.dark ? '#FFFFFF' : theme.textSecondary} />
           </Card>
         </Pressable>
       )}

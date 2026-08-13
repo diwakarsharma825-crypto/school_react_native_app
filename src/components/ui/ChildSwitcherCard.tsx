@@ -40,18 +40,22 @@ export function ChildSwitcherCard({ siblings, activeSrn, onSwitch, sessionLabel 
     if (next) onSwitch(next.srn);
   }
 
+  const nameColor = theme.dark ? '#FFFFFF' : theme.text;
+  const iconColor = theme.dark ? '#FFFFFF' : theme.tint;
+  const iconBg = theme.dark ? theme.tint : theme.backgroundSelected;
+
   return (
     <View style={[styles.bar, { backgroundColor: theme.surface, borderColor: theme.border }]}>
       {active.photoUrl ? (
         <Image source={{ uri: active.photoUrl }} style={styles.avatarPhoto} contentFit="cover" />
       ) : (
-        <View style={[styles.avatar, { backgroundColor: theme.backgroundSelected }]}>
-          <Ionicons name="school" size={20} color={theme.tint} />
+        <View style={[styles.avatar, { backgroundColor: iconBg }]}>
+          <Ionicons name="school" size={20} color={iconColor} />
         </View>
       )}
       <View style={styles.textCol}>
         <View style={styles.nameRow}>
-          <ThemedText type="smallBold" numberOfLines={1} style={styles.name}>
+          <ThemedText type="smallBold" numberOfLines={1} style={[styles.name, { color: nameColor }]}>
             {active.name}
           </ThemedText>
           <View style={styles.activePill}>
@@ -76,9 +80,9 @@ export function ChildSwitcherCard({ siblings, activeSrn, onSwitch, sessionLabel 
         ) : null}
       </View>
       {hasSiblings ? (
-        <Pressable onPress={switchNext} hitSlop={8} style={[styles.switchButton, { backgroundColor: theme.backgroundSelected }]}>
-          <Ionicons name="swap-horizontal" size={16} color={theme.tint} />
-          <ThemedText type="small" themeColor="tint" style={styles.switchLabel}>
+        <Pressable onPress={switchNext} hitSlop={8} style={[styles.switchButton, { backgroundColor: iconBg }]}>
+          <Ionicons name="swap-horizontal" size={16} color={iconColor} />
+          <ThemedText type="small" style={[styles.switchLabel, { color: iconColor }]}>
             Switch
           </ThemedText>
         </Pressable>
