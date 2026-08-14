@@ -124,8 +124,8 @@ function CategoryView({ type, onBack, onChanged }: { type: StorageCategory; onBa
   return (
     <>
       <Pressable onPress={onBack} style={styles.backRow} hitSlop={8}>
-        <Ionicons name="chevron-back" size={18} color={theme.tint} />
-        <ThemedText type="small" themeColor="tint">
+        <Ionicons name="chevron-back" size={18} color={theme.dark ? '#FFFFFF' : theme.tint} />
+        <ThemedText type="small" style={{ color: theme.dark ? '#FFFFFF' : theme.tint }}>
           All Storage
         </ThemedText>
       </Pressable>
@@ -271,16 +271,18 @@ export default function TeacherStorageScreen() {
                 {(Object.keys(CATEGORY_META) as StorageCategory[]).map((key) => (
                   <Pressable key={key} onPress={() => setActiveCategory(key)}>
                     <Card style={styles.categoryCard}>
-                      <View style={[styles.categoryIcon, { backgroundColor: theme.backgroundSelected }]}>
-                        <Ionicons name={CATEGORY_META[key].icon} size={20} color={theme.tint} />
+                      <View style={[styles.categoryIcon, { backgroundColor: theme.dark ? theme.tint : theme.backgroundSelected }]}>
+                        <Ionicons name={CATEGORY_META[key].icon} size={20} color={theme.dark ? '#FFFFFF' : theme.tint} />
                       </View>
                       <View style={styles.categoryInfo}>
-                        <ThemedText type="smallBold">{CATEGORY_META[key].label}</ThemedText>
+                        <ThemedText type="smallBold" style={{ color: theme.dark ? '#FFFFFF' : theme.text }}>
+                          {CATEGORY_META[key].label}
+                        </ThemedText>
                         <ThemedText type="small" themeColor="textSecondary">
                           {summary[key].count} items · {formatBytes(summary[key].bytes)}
                         </ThemedText>
                       </View>
-                      <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
+                      <Ionicons name="chevron-forward" size={18} color={theme.dark ? '#FFFFFF' : theme.textSecondary} />
                     </Card>
                   </Pressable>
                 ))}
