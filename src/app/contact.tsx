@@ -25,18 +25,23 @@ function ContactRow({
   showDivider: boolean;
 }) {
   const theme = useTheme();
+  const iconColor = theme.dark ? '#FFFFFF' : theme.tint;
+  const iconBg = theme.dark ? theme.tint : theme.backgroundSelected;
+  const valueColor = theme.dark ? '#FFFFFF' : theme.text;
+  const chevronColor = theme.dark ? '#FFFFFF' : theme.textSecondary;
+
   return (
     <Pressable onPress={onPress} style={[styles.row, showDivider && { borderBottomColor: theme.border, borderBottomWidth: StyleSheet.hairlineWidth }]}>
-      <View style={[styles.rowIconWrap, { backgroundColor: theme.backgroundSelected }]}>
-        <Ionicons name={icon} size={18} color={theme.tint} />
+      <View style={[styles.rowIconWrap, { backgroundColor: iconBg }]}>
+        <Ionicons name={icon} size={18} color={iconColor} />
       </View>
       <View style={styles.rowText}>
         <ThemedText type="small" themeColor="textSecondary">
           {label}
         </ThemedText>
-        <ThemedText type="smallBold">{value}</ThemedText>
+        <ThemedText type="smallBold" style={{ color: valueColor }}>{value}</ThemedText>
       </View>
-      <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
+      <Ionicons name="chevron-forward" size={18} color={chevronColor} />
     </Pressable>
   );
 }
