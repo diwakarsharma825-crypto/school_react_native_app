@@ -34,6 +34,11 @@ interface Row {
 function RowList({ rows }: { rows: Row[] }) {
   const theme = useTheme();
   if (rows.length === 0) return null;
+  const iconColor = theme.dark ? '#FFFFFF' : theme.tint;
+  const iconBg = theme.dark ? theme.tint : theme.backgroundElement;
+  const textColor = theme.dark ? '#FFFFFF' : theme.text;
+  const chevronColor = theme.dark ? '#FFFFFF' : theme.textSecondary;
+
   return (
     <Card style={styles.listCard}>
       {rows.map((item, idx) => (
@@ -46,17 +51,17 @@ function RowList({ rows }: { rows: Row[] }) {
           ]}
         >
           <View style={styles.rowLeft}>
-            <View style={[styles.rowIconWrap, { backgroundColor: theme.backgroundElement }]}>
-              <Ionicons name={item.icon} size={18} color={item.destructive ? '#C62828' : theme.tint} />
+            <View style={[styles.rowIconWrap, { backgroundColor: iconBg }]}>
+              <Ionicons name={item.icon} size={18} color={item.destructive ? '#C62828' : iconColor} />
             </View>
-            <ThemedText type="default" style={item.destructive ? { color: '#C62828' } : undefined}>
+            <ThemedText type="default" style={item.destructive ? { color: '#C62828' } : { color: textColor }}>
               {item.label}
             </ThemedText>
             {item.locked ? (
-              <Ionicons name="hourglass-outline" size={13} color={theme.textSecondary} style={styles.lockIcon} />
+              <Ionicons name="hourglass-outline" size={13} color={chevronColor} style={styles.lockIcon} />
             ) : null}
           </View>
-          <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
+          <Ionicons name="chevron-forward" size={18} color={chevronColor} />
         </Pressable>
       ))}
     </Card>

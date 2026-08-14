@@ -47,7 +47,7 @@ export function PrincipalCard({ photoUrl, message, name }: PrincipalCardProps) {
       </View>
       {isLong ? (
         <Pressable onPress={() => setExpanded((v) => !v)} hitSlop={8}>
-          <ThemedText type="smallBold" themeColor="tint" style={styles.readMore}>
+          <ThemedText type="smallBold" style={[styles.readMore, { color: theme.dark ? '#60A5FA' : theme.tint }]}>
             {expanded ? 'Read less ⌃' : 'Read more ⌄'}
           </ThemedText>
         </Pressable>
