@@ -75,7 +75,7 @@ export function DynamicBottomBar() {
   // rows with no permKey (Dashboard, Export) are always shown. "My
   // Storage" lives under More → Account now, not here.
   const rawTeacherMenuItems: (MenuItem & { permKey?: keyof NonNullable<typeof profile>['permissions'] })[] = [
-    ...(!instituteMode ? [{ label: 'Teacher Dashboard', icon: 'speedometer-outline' as const, onPress: () => router.push('/teacher-dashboard' as any) }] : []),
+    { label: 'Teacher Dashboard', icon: 'speedometer-outline', onPress: () => router.push('/teacher-dashboard' as any) },
     { label: 'Manage Notices', icon: 'megaphone-outline', onPress: () => router.push('/teacher-notices' as any), permKey: 'notices' },
     { label: 'Manage Events', icon: 'calendar-outline', onPress: () => router.push('/teacher-events' as any), permKey: 'events' },
     { label: 'Attendance', icon: 'checkmark-done-outline', onPress: () => router.push('/teacher-attendance' as any), permKey: 'attendance' },
@@ -87,7 +87,7 @@ export function DynamicBottomBar() {
   const menuItems: MenuItem[] = teacherLoggedIn
     ? rawTeacherMenuItems.filter((item) => !item.permKey || profile?.permissions?.[item.permKey] !== false)
     : [
-        ...(!instituteMode ? [{ label: 'Student Dashboard', icon: 'speedometer-outline' as const, onPress: () => router.push('/student-dashboard' as any) }] : []),
+        { label: 'Student Dashboard', icon: 'speedometer-outline', onPress: () => router.push('/student-dashboard' as any) },
         { label: 'Homework', icon: 'book-outline', onPress: () => router.push('/homework') },
         { label: 'My Attendance', icon: 'checkmark-done-outline', onPress: () => router.push('/student-attendance' as any) },
         { label: 'Apply Leave', icon: 'calendar-clear-outline', onPress: () => router.push('/apply-leave' as any) },
@@ -180,7 +180,8 @@ export function DynamicBottomBar() {
             <Pressable
               onPress={() => {
                 setMenuOpen(false);
-                router.push('/profile' as any);
+                if (teacherLoggedIn) router.push('/teacher-dashboard' as any);
+                else if (studentLoggedIn) router.push('/student-dashboard' as any);
               }}
               style={[styles.menuHeader, { borderBottomColor: theme.border }]}
             >
@@ -196,7 +197,7 @@ export function DynamicBottomBar() {
                   {menuName}
                 </ThemedText>
                 <ThemedText type="small" themeColor="textSecondary">
-                  View profile
+                  Open Dashboard
                 </ThemedText>
               </View>
               <Ionicons name="chevron-forward" size={16} color={theme.dark ? '#FFFFFF' : theme.textSecondary} />
