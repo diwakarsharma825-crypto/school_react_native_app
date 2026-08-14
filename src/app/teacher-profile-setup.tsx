@@ -187,7 +187,7 @@ export default function TeacherProfileSetupScreen() {
         </Pressable>
         {signatureUri || profile?.signature_url ? (
           <Pressable onPress={() => setSignaturePadVisible(true)} hitSlop={8} style={styles.redrawRow}>
-            <ThemedText type="small" themeColor="tint">
+            <ThemedText type="small" style={{ color: theme.dark ? '#60A5FA' : theme.tint }}>
               Redraw signature
             </ThemedText>
           </Pressable>
@@ -262,8 +262,8 @@ export default function TeacherProfileSetupScreen() {
       )}
       {!classesLocked ? (
         <Pressable onPress={addAssignment} style={styles.addRow}>
-          <Ionicons name="add-circle-outline" size={18} color={theme.tint} />
-          <ThemedText type="smallBold" themeColor="tint">
+          <Ionicons name="add-circle-outline" size={18} color={theme.dark ? '#60A5FA' : theme.tint} />
+          <ThemedText type="smallBold" style={{ color: theme.dark ? '#60A5FA' : theme.tint }}>
             Add another class
           </ThemedText>
         </Pressable>
