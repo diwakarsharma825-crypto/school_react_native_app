@@ -119,10 +119,16 @@ export default function ProfileScreen() {
           </ThemedText>
           <Pressable
             onPress={() => router.push('/teacher-profile-setup' as any)}
-            style={[styles.editButton, { borderColor: theme.tint }]}
+            style={[
+              styles.editButton,
+              {
+                borderColor: theme.dark ? '#60A5FA' : theme.tint,
+                backgroundColor: theme.dark ? 'rgba(96, 165, 250, 0.15)' : theme.surface,
+              },
+            ]}
           >
-            <Ionicons name="pencil-outline" size={16} color={theme.tint} />
-            <ThemedText type="smallBold" themeColor="tint">
+            <Ionicons name="pencil-outline" size={16} color={theme.dark ? '#FFFFFF' : theme.tint} />
+            <ThemedText type="smallBold" style={{ color: theme.dark ? '#FFFFFF' : theme.tint }}>
               Edit Profile
             </ThemedText>
           </Pressable>
