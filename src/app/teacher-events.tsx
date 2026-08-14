@@ -62,7 +62,7 @@ export default function TeacherEventsScreen() {
       <View style={{ flexDirection: 'row', gap: Spacing.two, marginBottom: Spacing.four }}>
         <Pressable
           onPress={() => router.push('/teacher-event-add' as any)}
-          style={[styles.addButton, { backgroundColor: theme.tint, flex: 1, marginBottom: 0 }]}
+          style={[styles.addButton, { backgroundColor: theme.dark ? '#2563EB' : theme.tint, flex: 1, marginBottom: 0 }]}
         >
           <Ionicons name="add" size={18} color={Brand.white} />
           <ThemedText type="smallBold" style={styles.addButtonLabel}>

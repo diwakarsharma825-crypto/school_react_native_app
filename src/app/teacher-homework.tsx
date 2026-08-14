@@ -160,7 +160,7 @@ export default function TeacherHomeworkScreen() {
                 params: { classId: String(classIdNum), sectionId: sectionIdNum ? String(sectionIdNum) : '', date: selectedDate },
               })
             }
-            style={[styles.addButton, { backgroundColor: theme.tint }]}
+            style={[styles.addButton, { backgroundColor: theme.dark ? '#2563EB' : theme.tint }]}
           >
             <Ionicons name="add" size={18} color={Brand.white} />
           </Pressable>

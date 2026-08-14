@@ -112,6 +112,11 @@ export default function TeacherStudentsScreen() {
   const canAlert = profile?.permissions?.alerts !== false;
   const canImportResult = profile?.permissions?.result !== false;
 
+  const btnBorderColor = theme.dark ? '#60A5FA' : theme.tint;
+  const btnBgColor = theme.dark ? 'rgba(96, 165, 250, 0.15)' : theme.surface;
+  const btnTextColor = theme.dark ? '#FFFFFF' : theme.tint;
+  const primaryBtnBg = theme.dark ? '#2563EB' : theme.tint;
+
   const [students, setStudents] = useState<RosterStudent[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -188,7 +193,7 @@ export default function TeacherStudentsScreen() {
                 params: { classId: String(classIdNum), sectionId: sectionIdNum ? String(sectionIdNum) : '' },
               } as any)
             }
-            style={[styles.actionBtn, { backgroundColor: theme.tint }]}
+            style={[styles.actionBtn, { backgroundColor: primaryBtnBg }]}
           >
             <Ionicons name="person-add-outline" size={16} color={Brand.white} />
             <ThemedText type="smallBold" style={{ color: Brand.white }}>
@@ -203,17 +208,17 @@ export default function TeacherStudentsScreen() {
                 params: { classId: String(classIdNum), sectionId: sectionIdNum ? String(sectionIdNum) : '' },
               } as any)
             }
-            style={[styles.actionBtn, styles.actionBtnOutline, { borderColor: theme.tint, backgroundColor: theme.surface }]}
+            style={[styles.actionBtn, styles.actionBtnOutline, { borderColor: btnBorderColor, backgroundColor: btnBgColor }]}
           >
-            <Ionicons name="cloud-upload-outline" size={16} color={theme.tint} />
-            <ThemedText type="smallBold" themeColor="tint">
+            <Ionicons name="cloud-upload-outline" size={16} color={btnTextColor} />
+            <ThemedText type="smallBold" style={{ color: btnTextColor }}>
               Import Excel
             </ThemedText>
           </Pressable>
 
           <ExportPdfButton
             variant="outline"
-            style={{ borderRadius: Radius.md, paddingVertical: 8, paddingHorizontal: 14 }}
+            style={styles.actionBtn}
             onPress={() => {
               if (!filteredStudents || filteredStudents.length === 0) return;
               const images = filteredStudents.map((s) => s.photo_url).filter(Boolean) as string[];
@@ -236,10 +241,10 @@ export default function TeacherStudentsScreen() {
           {canAlert ? (
             <Pressable
               onPress={() => setNotifyTarget(null)}
-              style={[styles.actionBtn, styles.actionBtnOutline, { borderColor: theme.tint, backgroundColor: theme.surface }]}
+              style={[styles.actionBtn, styles.actionBtnOutline, { borderColor: btnBorderColor, backgroundColor: btnBgColor }]}
             >
-              <Ionicons name="notifications-outline" size={16} color={theme.tint} />
-              <ThemedText type="smallBold" themeColor="tint">
+              <Ionicons name="notifications-outline" size={16} color={btnTextColor} />
+              <ThemedText type="smallBold" style={{ color: btnTextColor }}>
                 Notify Class
               </ThemedText>
             </Pressable>
@@ -248,10 +253,10 @@ export default function TeacherStudentsScreen() {
           {canImportResult ? (
             <Pressable
               onPress={() => router.push('/teacher-import-result' as any)}
-              style={[styles.actionBtn, styles.actionBtnOutline, { borderColor: theme.tint, backgroundColor: theme.surface }]}
+              style={[styles.actionBtn, styles.actionBtnOutline, { borderColor: btnBorderColor, backgroundColor: btnBgColor }]}
             >
-              <Ionicons name="document-attach-outline" size={16} color={theme.tint} />
-              <ThemedText type="smallBold" themeColor="tint">
+              <Ionicons name="document-attach-outline" size={16} color={btnTextColor} />
+              <ThemedText type="smallBold" style={{ color: btnTextColor }}>
                 Import Result
               </ThemedText>
             </Pressable>
@@ -496,11 +501,13 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.four,
   },
   actionBtn: {
+    width: '48.5%',
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
+    paddingHorizontal: Spacing.two,
+    paddingVertical: 10,
     borderRadius: Radius.md,
   },
   actionBtnOutline: {
