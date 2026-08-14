@@ -187,19 +187,19 @@ export function DynamicBottomBar() {
               {studentPhotoUrl ? (
                 <Image source={{ uri: studentPhotoUrl }} style={styles.menuAvatarPhoto} contentFit="cover" />
               ) : (
-                <View style={[styles.menuAvatar, { backgroundColor: theme.backgroundSelected }]}>
-                  <Ionicons name={menuIcon} size={18} color={theme.tint} />
+                <View style={[styles.menuAvatar, { backgroundColor: theme.dark ? theme.tint : theme.backgroundSelected }]}>
+                  <Ionicons name={menuIcon} size={18} color={theme.dark ? '#FFFFFF' : theme.tint} />
                 </View>
               )}
               <View style={styles.menuHeaderTextCol}>
-                <ThemedText type="smallBold" numberOfLines={1} style={styles.menuHeaderName}>
+                <ThemedText type="smallBold" numberOfLines={1} style={{ color: theme.dark ? '#FFFFFF' : theme.text }}>
                   {menuName}
                 </ThemedText>
                 <ThemedText type="small" themeColor="textSecondary">
                   View profile
                 </ThemedText>
               </View>
-              <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
+              <Ionicons name="chevron-forward" size={16} color={theme.dark ? '#FFFFFF' : theme.textSecondary} />
             </Pressable>
             {menuItems.map((item, i) => (
               <Pressable
@@ -210,8 +210,8 @@ export function DynamicBottomBar() {
                 }}
                 style={[styles.menuRow, i < menuItems.length - 1 && { borderBottomColor: theme.border, borderBottomWidth: 1 }]}
               >
-                <Ionicons name={item.icon} size={18} color={item.destructive ? '#C62828' : theme.text} />
-                <ThemedText type="default" style={item.destructive ? { color: '#C62828' } : undefined}>
+                <Ionicons name={item.icon} size={18} color={item.destructive ? '#C62828' : (theme.dark ? '#FFFFFF' : theme.text)} />
+                <ThemedText type="default" style={item.destructive ? { color: '#C62828' } : (theme.dark ? { color: '#FFFFFF' } : undefined)}>
                   {item.label}
                 </ThemedText>
               </Pressable>
