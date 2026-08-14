@@ -1021,19 +1021,38 @@ export async function importTeacherResult(
 export async function downloadStudentTemplate(): Promise<{ uri: string; filename: string }> {
   const token = await getTeacherToken();
   const url = `${BASE_URL}/teacher_student_template`;
-  const response = await fetch(url, {
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-  });
-  if (!response.ok) {
-    throw new Error('Could not download student import template.');
+  let blob: Blob | null = null;
+  try {
+    const response = await fetch(url, {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
+    if (response.ok) {
+      blob = await response.blob();
+    }
+  } catch {}
+
+  if (!blob || blob.size === 0) {
+    const header = 'Roll No,SRN,Student Name,Father Name,Mother Name,Mobile Phone,Gender,DOB\n';
+    const sample = '1,1001,Aman,Vijay Kumar,Pooja Rani,9076543210,Male,2010-01-15\n';
+    blob = new Blob([header + sample], { type: 'text/csv;charset=utf-8;' });
   }
 
   const filename = 'student_import_template.csv';
-  const blob = await response.blob();
+
+  if (Platform.OS === 'web') {
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(blobUrl);
+    return { uri: blobUrl, filename };
+  }
+
   const reader = new FileReader();
   const base64 = await new Promise<string>((resolve) => {
     reader.onload = () => resolve((reader.result as string).split(',')[1] ?? '');
-    reader.readAsDataURL(blob);
+    reader.readAsDataURL(blob!);
   });
 
   const uri = `${FileSystem.cacheDirectory || FileSystem.documentDirectory}${filename}`;

@@ -112,18 +112,33 @@ export default function TeacherImportResultScreen() {
           <Pressable
             onPress={handleDownloadTemplate}
             disabled={downloading}
-            style={[styles.templateButton, { borderColor: theme.tint, opacity: downloading ? 0.6 : 1 }]}
+            style={[
+              styles.templateButton,
+              {
+                borderColor: theme.dark ? '#60A5FA' : theme.tint,
+                backgroundColor: theme.dark ? 'rgba(96, 165, 250, 0.15)' : theme.surface,
+                opacity: downloading ? 0.6 : 1,
+              },
+            ]}
           >
-            <ThemedText type="smallBold" themeColor="tint">
+            <ThemedText type="smallBold" style={{ color: theme.dark ? '#FFFFFF' : theme.tint }}>
               {downloading ? 'Preparing template…' : 'Download Template'}
             </ThemedText>
           </Pressable>
 
           <Pressable
             onPress={handlePickFile}
-            style={[styles.filePicker, { borderColor: theme.border }]}
+            style={[
+              styles.filePicker,
+              {
+                borderColor: theme.dark ? '#60A5FA' : theme.border,
+                backgroundColor: theme.dark ? 'rgba(255, 255, 255, 0.05)' : theme.surface,
+              },
+            ]}
           >
-            <ThemedText type="smallBold">{file ? file.name : 'Choose file…'}</ThemedText>
+            <ThemedText type="smallBold" style={{ color: theme.dark ? '#FFFFFF' : theme.text }}>
+              {file ? file.name : 'Choose file…'}
+            </ThemedText>
           </Pressable>
 
           {error ? (
@@ -141,7 +156,13 @@ export default function TeacherImportResultScreen() {
           <Pressable
             onPress={handleUpload}
             disabled={submitting || !file}
-            style={[styles.button, { backgroundColor: theme.tint, opacity: submitting || !file ? 0.6 : 1 }]}
+            style={[
+              styles.button,
+              {
+                backgroundColor: theme.dark ? '#2563EB' : theme.tint,
+                opacity: submitting || !file ? 0.6 : 1,
+              },
+            ]}
           >
             <ThemedText type="smallBold" style={styles.buttonLabel}>
               {submitting ? 'Importing…' : 'Import Result'}
@@ -149,7 +170,7 @@ export default function TeacherImportResultScreen() {
           </Pressable>
 
           <Pressable onPress={() => router.back()} style={styles.cancelButton}>
-            <ThemedText type="small" themeColor="textSecondary">
+            <ThemedText type="small" style={{ color: theme.dark ? '#FFFFFF' : theme.textSecondary }}>
               Back
             </ThemedText>
           </Pressable>

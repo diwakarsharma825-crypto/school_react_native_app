@@ -116,9 +116,15 @@ export default function TeacherImportStudentsScreen() {
           <Pressable
             onPress={handleDownloadTemplate}
             disabled={downloading}
-            style={[styles.secondaryButton, { borderColor: theme.tint }]}
+            style={[
+              styles.secondaryButton,
+              {
+                borderColor: theme.dark ? '#60A5FA' : theme.tint,
+                backgroundColor: theme.dark ? 'rgba(96, 165, 250, 0.15)' : theme.surface,
+              },
+            ]}
           >
-            <ThemedText type="smallBold" themeColor="tint">
+            <ThemedText type="smallBold" style={{ color: theme.dark ? '#FFFFFF' : theme.tint }}>
               {downloading ? 'Downloading…' : '📥 Download Student Excel Template'}
             </ThemedText>
           </Pressable>
@@ -126,8 +132,17 @@ export default function TeacherImportStudentsScreen() {
           <ThemedText type="smallBold" style={styles.fieldLabel}>
             Upload Student File (.csv or .xlsx)
           </ThemedText>
-          <Pressable onPress={handlePickFile} style={[styles.filePicker, { borderColor: theme.border, backgroundColor: theme.surface }]}>
-            <ThemedText type="small" style={{ color: file ? theme.text : theme.textSecondary }}>
+          <Pressable
+            onPress={handlePickFile}
+            style={[
+              styles.filePicker,
+              {
+                borderColor: theme.dark ? '#60A5FA' : theme.border,
+                backgroundColor: theme.dark ? 'rgba(255, 255, 255, 0.05)' : theme.surface,
+              },
+            ]}
+          >
+            <ThemedText type="small" style={{ color: theme.dark ? '#FFFFFF' : (file ? theme.text : theme.textSecondary) }}>
               {file ? `📄 ${file.name}` : 'Tap to select CSV / Excel file…'}
             </ThemedText>
           </Pressable>
@@ -147,7 +162,13 @@ export default function TeacherImportStudentsScreen() {
           <Pressable
             onPress={handleUpload}
             disabled={submitting || !file}
-            style={[styles.primaryButton, { backgroundColor: theme.tint, opacity: submitting || !file ? 0.5 : 1 }]}
+            style={[
+              styles.primaryButton,
+              {
+                backgroundColor: theme.dark ? '#2563EB' : theme.tint,
+                opacity: submitting || !file ? 0.5 : 1,
+              },
+            ]}
           >
             <ThemedText type="smallBold" style={styles.primaryButtonLabel}>
               {submitting ? 'Importing Students…' : 'Upload & Import Students'}
