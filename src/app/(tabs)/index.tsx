@@ -64,6 +64,7 @@ const bannerStyles = {
 };
 
 export default function HomeScreen() {
+  const theme = useTheme();
   const { instituteMode } = useLayout();
   const { loggedIn: studentLoggedIn } = useStudentAuth();
   const { loggedIn: teacherLoggedIn } = useTeacherAuth();
