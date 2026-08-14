@@ -126,11 +126,7 @@ export default function TeacherLoginScreen() {
             Password
           </ThemedText>
           <PasswordInput value={password} onChangeText={setPassword} placeholder="Password" />
-          <Pressable onPress={() => router.push('/teacher-forgot-password' as any)} hitSlop={8} style={styles.forgotRow}>
-            <ThemedText type="small" style={{ color: theme.accent, fontWeight: '600' }}>
-              Forgot password?
-            </ThemedText>
-          </Pressable>
+
           {error ? (
             <ThemedText type="small" style={styles.error}>
               {error}
