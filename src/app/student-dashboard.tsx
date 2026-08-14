@@ -121,7 +121,7 @@ export default function StudentDashboardScreen() {
                 } · SRN ${access.srn}`}
               </ThemedText>
               {sessionLabel ? (
-                <ThemedText type="small" themeColor="tint">
+                <ThemedText type="small" style={{ color: theme.dark ? '#60A5FA' : theme.tint }}>
                   Session: {sessionLabel}
                 </ThemedText>
               ) : null}

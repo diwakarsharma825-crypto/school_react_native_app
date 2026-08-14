@@ -74,7 +74,7 @@ export function ChildSwitcherCard({ siblings, activeSrn, onSwitch, sessionLabel 
           {classLabel}
         </ThemedText>
         {sessionLabel ? (
-          <ThemedText type="small" themeColor="tint">
+          <ThemedText type="small" style={{ color: theme.dark ? '#60A5FA' : theme.tint }}>
             Session: {sessionLabel}
           </ThemedText>
         ) : null}
