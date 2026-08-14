@@ -1196,14 +1196,11 @@ export default function TeacherDashboardScreen() {
       if (checking) return;
       if (!loggedIn) {
         router.replace('/teacher-login');
-      } else if (!profile?.completed) {
-        router.replace('/teacher-profile-setup');
       }
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [checking, loggedIn, profile?.completed])
+    }, [checking, loggedIn])
   );
 
-  if (checking || !loggedIn || !profile?.completed) {
+  if (checking || !loggedIn) {
     return (
       <Screen scroll={false}>
         <Loading label="Checking login…" />
