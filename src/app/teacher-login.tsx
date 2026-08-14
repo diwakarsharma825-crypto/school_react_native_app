@@ -35,7 +35,7 @@ async function requestTeacherPermissions(emailAddress: string, teacherName?: str
 export default function TeacherLoginScreen() {
   const theme = useTheme();
   const router = useRouter();
-  const { setLoggedIn } = useTeacherAuth();
+  const { loggedIn: teacherLoggedIn, setLoggedIn } = useTeacherAuth();
   const { setAccess: setStudentAccess } = useStudentAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -44,6 +44,12 @@ export default function TeacherLoginScreen() {
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
+
+  useEffect(() => {
+    if (teacherLoggedIn) {
+      router.replace('/teacher-dashboard');
+    }
+  }, [teacherLoggedIn, router]);
 
   useEffect(() => {
     Animated.parallel([
