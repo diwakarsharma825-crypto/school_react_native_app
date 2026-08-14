@@ -1200,10 +1200,10 @@ export default function TeacherDashboardScreen() {
     }, [checking, loggedIn])
   );
 
-  if (checking || !loggedIn) {
+  if (checking || !loggedIn || !profile) {
     return (
       <Screen scroll={false}>
-        <Loading label="Checking login…" />
+        <Loading label="Loading teacher dashboard…" />
       </Screen>
     );
   }
@@ -1219,8 +1219,8 @@ export default function TeacherDashboardScreen() {
     <Screen>
       <ProfileHeaderBar
         icon="briefcase"
-        name={profile.name ?? 'Teacher'}
-        contact={profile.email}
+        name={profile?.name ?? 'Teacher'}
+        contact={profile?.email ?? null}
         subtitle={currentLabel}
         sessionLabel={sessionLabel}
         menu={[]}
@@ -1230,7 +1230,7 @@ export default function TeacherDashboardScreen() {
         <SelectField label="Class" placeholder="Select class" value={classId} options={classOptions} onChange={setClassId} />
       ) : null}
 
-      <TeacherQuickLinks permissions={profile.permissions} />
+      <TeacherQuickLinks permissions={profile?.permissions} />
     </Screen>
   );
 }
