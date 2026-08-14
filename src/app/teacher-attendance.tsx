@@ -28,10 +28,17 @@ function todayStr() {
   return `${t.getFullYear()}-${pad(t.getMonth() + 1)}-${pad(t.getDate())}`;
 }
 
-const STATUS_META: Record<AttendanceStatus, { label: string; color: string; bg: string; icon: keyof typeof Ionicons.glyphMap }> = {
-  P: { label: 'Present', color: '#2E7D32', bg: '#DFF1E1', icon: 'checkmark-circle' },
-  A: { label: 'Absent', color: '#C62828', bg: '#FBE2E2', icon: 'close-circle' },
-  L: { label: 'Leave', color: '#B8860B', bg: '#FBEFD3', icon: 'moon' },
+const STATUS_META: Record<AttendanceStatus, {
+  label: string;
+  color: string;
+  darkColor: string;
+  bg: string;
+  darkBg: string;
+  icon: keyof typeof Ionicons.glyphMap;
+}> = {
+  P: { label: 'Present', color: '#15803D', darkColor: '#4ADE80', bg: '#DCFCE7', darkBg: 'rgba(22, 101, 52, 0.35)', icon: 'checkmark-circle' },
+  A: { label: 'Absent', color: '#B91C1C', darkColor: '#F87171', bg: '#FEE2E2', darkBg: 'rgba(153, 27, 27, 0.35)', icon: 'close-circle' },
+  L: { label: 'Leave', color: '#B45309', darkColor: '#FBBF24', bg: '#FEF3C7', darkBg: 'rgba(146, 64, 14, 0.35)', icon: 'moon' },
 };
 
 export default function TeacherAttendanceScreen() {
@@ -75,12 +82,13 @@ export default function TeacherAttendanceScreen() {
   }
 
   const counts = useMemo(() => {
-    const c = { P: 0, A: 0, L: 0, unmarked: 0 };
-    (students ?? []).forEach((s) => {
-      if (s.status) c[s.status]++;
-      else c.unmarked++;
-    });
-    return c;
+    const res = { P: 0, A: 0, L: 0 };
+    if (students) {
+      students.forEach((s) => {
+        if (s.status && s.status in res) res[s.status as AttendanceStatus]++;
+      });
+    }
+    return res;
   }, [students]);
 
   function markAll(status: AttendanceStatus) {
@@ -88,54 +96,29 @@ export default function TeacherAttendanceScreen() {
   }
 
   async function handleSave() {
-    if (!students || !classId) return;
-    const marked = students.filter((s) => s.status);
-    const unmarked = students.filter((s) => !s.status);
-    if (marked.length === 0) {
-      Alert.alert('Nothing to save', 'Mark at least one student first.');
-      return;
-    }
-    // Only insist on a fully-marked roster for today — a past date is
-    // often being corrected (one student's status fixed, say), and a
-    // roster that's grown since then can never be "fully marked" for that
-    // old date in the first place. Save whatever's marked either way.
-    if (unmarked.length > 0 && date === todayStr()) {
-      Alert.alert(
-        'Some students aren’t marked',
-        `${unmarked.length} student${unmarked.length === 1 ? '' : 's'} still need a status. Mark everyone before saving, or continue to save just the rest.`,
-        [
-          { text: 'Keep marking', style: 'cancel' },
-          { text: 'Save anyway', onPress: () => doSave(marked) },
-        ]
-      );
-      return;
-    }
-    doSave(marked);
-  }
-
-  async function doSave(marked: AttendanceStudent[]) {
-    if (!classId) return;
+    if (!classId || !students) return;
     setSaving(true);
     try {
       await saveAttendance(
         Number(classId),
         selected?.section_id ?? undefined,
         date,
-        marked.map((s) => ({ studentRef: s.id, status: s.status!, remarks: s.remarks ?? undefined }))
+        students.map((s) => ({ studentRef: s.id, status: s.status!, remarks: s.remarks ?? undefined }))
       );
-      Alert.alert('Saved', 'Attendance has been saved.');
+      Alert.alert('Saved', 'Attendance has been recorded.');
+      load();
     } catch (e) {
-      Alert.alert('Could not save', e instanceof Error ? e.message : 'Please try again.');
+      Alert.alert('Error', 'Could not save attendance.');
     } finally {
       setSaving(false);
     }
   }
 
-  if (!enabled) return <SectionUnavailable />;
+  if (enabled === false) return <SectionUnavailable />;
 
   return (
     <TeacherGuard>
-    <Screen>
+    <Screen scroll>
       <SelectField label="Class" placeholder="Select class" value={classId} options={classOptions} onChange={setClassId} />
       <DatePickerField label="Date" placeholder="Select date" value={date} onChange={setDate} minDate="2000-01-01" maxDate={todayStr()} />
 
@@ -169,23 +152,39 @@ export default function TeacherAttendanceScreen() {
           </View>
 
           <View style={[styles.markAllRow, { marginTop: 0 }]}>
-            {(['P', 'A', 'L'] as AttendanceStatus[]).map((s) => (
-              <Pressable
-                key={s}
-                onPress={() => markAll(s)}
-                style={[styles.markAllChip, { borderColor: STATUS_META[s].color, backgroundColor: STATUS_META[s].bg }]}
-              >
-                <Ionicons name={STATUS_META[s].icon} size={15} color={STATUS_META[s].color} />
-                <ThemedText type="small" style={{ color: STATUS_META[s].color, fontWeight: '600' }}>
-                  All {STATUS_META[s].label}
-                </ThemedText>
-                <View style={[styles.markAllCount, { backgroundColor: STATUS_META[s].color }]}>
-                  <ThemedText type="small" style={styles.markAllCountLabel}>
-                    {counts[s]}
+            {(['P', 'A', 'L'] as AttendanceStatus[]).map((s) => {
+              const meta = STATUS_META[s];
+              const textColor = theme.dark ? '#FFFFFF' : meta.color;
+              const badgeColor = theme.dark ? meta.darkColor : meta.color;
+              const borderColor = theme.dark ? meta.darkColor : meta.color;
+              const bgColor = theme.dark ? meta.darkBg : meta.bg;
+
+              return (
+                <Pressable
+                  key={s}
+                  onPress={() => markAll(s)}
+                  style={({ pressed }) => [
+                    styles.markAllChip,
+                    {
+                      borderColor,
+                      backgroundColor: bgColor,
+                      opacity: pressed ? 0.75 : 1,
+                      transform: [{ scale: pressed ? 0.97 : 1 }],
+                    },
+                  ]}
+                >
+                  <Ionicons name={meta.icon} size={16} color={badgeColor} />
+                  <ThemedText type="smallBold" style={{ color: textColor, fontSize: 12 }}>
+                    All {meta.label}
                   </ThemedText>
-                </View>
-              </Pressable>
-            ))}
+                  <View style={[styles.markAllCount, { backgroundColor: badgeColor }]}>
+                    <ThemedText type="smallBold" style={styles.markAllCountLabel}>
+                      {counts[s]}
+                    </ThemedText>
+                  </View>
+                </Pressable>
+              );
+            })}
           </View>
         </View>
       ) : null}

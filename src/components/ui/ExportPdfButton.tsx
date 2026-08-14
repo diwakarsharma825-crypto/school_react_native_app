@@ -23,6 +23,11 @@ export function ExportPdfButton({
 }: ExportPdfButtonProps) {
   const theme = useTheme();
 
+  const outlineBorder = theme.dark ? '#60A5FA' : theme.tint;
+  const outlineBg = theme.dark ? 'rgba(96, 165, 250, 0.15)' : theme.surface;
+  const outlineText = theme.dark ? '#FFFFFF' : theme.tint;
+  const fillBg = theme.dark ? '#2563EB' : theme.tint;
+
   if (variant === 'compact') {
     return (
       <Pressable
@@ -30,7 +35,7 @@ export function ExportPdfButton({
         disabled={disabled}
         style={[
           styles.compact,
-          { backgroundColor: theme.tint, opacity: disabled ? 0.5 : 1 },
+          { backgroundColor: fillBg, opacity: disabled ? 0.5 : 1 },
           style,
         ]}
       >
@@ -49,12 +54,12 @@ export function ExportPdfButton({
         disabled={disabled}
         style={[
           styles.button,
-          { backgroundColor: theme.surface, borderColor: theme.tint, borderWidth: 1.5, opacity: disabled ? 0.5 : 1 },
+          { backgroundColor: outlineBg, borderColor: outlineBorder, borderWidth: 1.5, opacity: disabled ? 0.5 : 1 },
           style,
         ]}
       >
-        <Ionicons name="document-text-outline" size={16} color={theme.tint} />
-        <ThemedText type="smallBold" themeColor="tint">
+        <Ionicons name="document-text-outline" size={16} color={outlineText} />
+        <ThemedText type="smallBold" style={{ color: outlineText }}>
           {label}
         </ThemedText>
       </Pressable>
@@ -67,7 +72,7 @@ export function ExportPdfButton({
       disabled={disabled}
       style={[
         styles.button,
-        { backgroundColor: theme.tint, opacity: disabled ? 0.5 : 1 },
+        { backgroundColor: fillBg, opacity: disabled ? 0.5 : 1 },
         style,
       ]}
     >
