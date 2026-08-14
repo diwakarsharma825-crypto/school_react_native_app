@@ -49,9 +49,9 @@ export function SectionUnavailable() {
           </LinearGradient>
         </View>
 
-        <View style={[styles.pill, { backgroundColor: theme.backgroundSelected }]}>
-          <Ionicons name="sparkles-outline" size={13} color={theme.accent} />
-          <ThemedText type="small" themeColor="tint" style={styles.pillLabel}>
+        <View style={[styles.pill, { backgroundColor: theme.dark ? theme.tint : theme.backgroundSelected }]}>
+          <Ionicons name="sparkles-outline" size={13} color={theme.dark ? '#FFFFFF' : theme.accent} />
+          <ThemedText type="small" style={[styles.pillLabel, { color: theme.dark ? '#FFFFFF' : theme.tint }]}>
             In the works
           </ThemedText>
         </View>
