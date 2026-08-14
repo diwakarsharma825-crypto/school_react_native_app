@@ -45,6 +45,11 @@ export function LoginSheet({ visible, onClose }: LoginSheetProps) {
     });
   }
 
+  const titleColor = theme.dark ? '#FFFFFF' : theme.text;
+  const iconColor = theme.dark ? '#FFFFFF' : theme.tint;
+  const iconBg = theme.dark ? theme.tint : theme.backgroundSelected;
+  const chevronColor = theme.dark ? '#FFFFFF' : theme.textSecondary;
+
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
       <Animated.View style={[styles.backdrop, { opacity: backdropOpacity }]}>
@@ -54,7 +59,7 @@ export function LoginSheet({ visible, onClose }: LoginSheetProps) {
         style={[styles.sheet, { backgroundColor: theme.surface, transform: [{ translateY }] }]}
       >
         <View style={[styles.handle, { backgroundColor: theme.border }]} />
-        <ThemedText type="title" style={styles.title}>
+        <ThemedText type="title" style={[styles.title, { color: titleColor }]}>
           Who&apos;s using this?
         </ThemedText>
         <ThemedText type="default" themeColor="textSecondary" style={styles.subtitle}>
@@ -67,16 +72,16 @@ export function LoginSheet({ visible, onClose }: LoginSheetProps) {
           }
         >
           <View style={[styles.option, { backgroundColor: theme.backgroundElement }]}>
-            <View style={[styles.iconWrap, { backgroundColor: theme.backgroundSelected }]}>
-              <Ionicons name="school-outline" size={26} color={theme.tint} />
+            <View style={[styles.iconWrap, { backgroundColor: iconBg }]}>
+              <Ionicons name="school-outline" size={26} color={iconColor} />
             </View>
             <View style={styles.optionText}>
-              <ThemedText type="smallBold">I&apos;m a Student</ThemedText>
+              <ThemedText type="smallBold" style={{ color: titleColor }}>I&apos;m a Student</ThemedText>
               <ThemedText type="small" themeColor="textSecondary">
                 {studentLoggedIn ? 'Open your student dashboard' : "View your class's homework calendar"}
               </ThemedText>
             </View>
-            <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
+            <Ionicons name="chevron-forward" size={20} color={chevronColor} />
           </View>
         </Pressable>
 
@@ -86,16 +91,16 @@ export function LoginSheet({ visible, onClose }: LoginSheetProps) {
           }
         >
           <View style={[styles.option, { backgroundColor: theme.backgroundElement }]}>
-            <View style={[styles.iconWrap, { backgroundColor: theme.backgroundSelected }]}>
-              <Ionicons name="briefcase-outline" size={24} color={theme.tint} />
+            <View style={[styles.iconWrap, { backgroundColor: iconBg }]}>
+              <Ionicons name="briefcase-outline" size={24} color={iconColor} />
             </View>
             <View style={styles.optionText}>
-              <ThemedText type="smallBold">I&apos;m a Teacher</ThemedText>
+              <ThemedText type="smallBold" style={{ color: titleColor }}>I&apos;m a Teacher</ThemedText>
               <ThemedText type="small" themeColor="textSecondary">
                 {teacherLoggedIn ? 'Open your teacher dashboard' : 'Log in to manage your dashboard & homework'}
               </ThemedText>
             </View>
-            <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
+            <Ionicons name="chevron-forward" size={20} color={chevronColor} />
           </View>
         </Pressable>
       </Animated.View>

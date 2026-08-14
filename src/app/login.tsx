@@ -81,20 +81,21 @@ export default function LoginChoiceScreen() {
         <Pressable
           onPressIn={() => animatePress(studentScale, 0.97)}
           onPressOut={() => animatePress(studentScale, 1)}
-          onPress={() => router.push('/homework')}
+          onPress={() => router.push(studentLoggedIn ? ('/student-dashboard' as any) : '/homework')}
+          style={{ marginBottom: Spacing.three }}
         >
           <Animated.View style={{ transform: [{ scale: studentScale }] }}>
             <Card style={[styles.optionCard, { borderColor: theme.tint + '40' }, Shadow.card]}>
-              <View style={[styles.iconWrap, { backgroundColor: theme.tint + '1C' }]}>
-                <Ionicons name="school-outline" size={30} color={theme.tint} />
+              <View style={[styles.iconWrap, { backgroundColor: theme.dark ? theme.tint : theme.tint + '1E' }]}>
+                <Ionicons name="school-outline" size={28} color={theme.dark ? '#FFFFFF' : theme.tint} />
               </View>
               <View style={styles.optionText}>
                 <View style={styles.roleHeaderRow}>
-                  <ThemedText type="smallBold" style={{ fontSize: 17 }}>
+                  <ThemedText type="smallBold" style={{ fontSize: 17, color: theme.dark ? '#FFFFFF' : theme.text }}>
                     I&apos;m a Student
                   </ThemedText>
-                  <View style={[styles.roleChip, { backgroundColor: theme.tint + '1A' }]}>
-                    <ThemedText type="smallBold" style={{ color: theme.tint, fontSize: 10 }}>
+                  <View style={[styles.roleChip, { backgroundColor: theme.dark ? theme.tint + '33' : theme.tint + '1A' }]}>
+                    <ThemedText type="smallBold" style={{ color: theme.dark ? '#FFFFFF' : theme.tint, fontSize: 10 }}>
                       STUDENT
                     </ThemedText>
                   </View>
@@ -120,7 +121,7 @@ export default function LoginChoiceScreen() {
                   </View>
                 </View>
               </View>
-              <Ionicons name="chevron-forward" size={22} color={theme.tint} />
+              <Ionicons name="chevron-forward" size={22} color={theme.dark ? '#FFFFFF' : theme.tint} />
             </Card>
           </Animated.View>
         </Pressable>
@@ -129,20 +130,20 @@ export default function LoginChoiceScreen() {
         <Pressable
           onPressIn={() => animatePress(teacherScale, 0.97)}
           onPressOut={() => animatePress(teacherScale, 1)}
-          onPress={() => router.push('/teacher-login')}
+          onPress={() => router.push(teacherLoggedIn ? ('/teacher-dashboard' as any) : '/teacher-login')}
         >
           <Animated.View style={{ transform: [{ scale: teacherScale }] }}>
             <Card style={[styles.optionCard, { borderColor: theme.accent + '40' }, Shadow.card]}>
-              <View style={[styles.iconWrap, { backgroundColor: theme.accent + '1E' }]}>
-                <Ionicons name="briefcase-outline" size={28} color={theme.accent} />
+              <View style={[styles.iconWrap, { backgroundColor: theme.dark ? theme.accent : theme.accent + '1E' }]}>
+                <Ionicons name="briefcase-outline" size={28} color={theme.dark ? '#FFFFFF' : theme.accent} />
               </View>
               <View style={styles.optionText}>
                 <View style={styles.roleHeaderRow}>
-                  <ThemedText type="smallBold" style={{ fontSize: 17 }}>
+                  <ThemedText type="smallBold" style={{ fontSize: 17, color: theme.dark ? '#FFFFFF' : theme.text }}>
                     I&apos;m a Teacher
                   </ThemedText>
-                  <View style={[styles.roleChip, { backgroundColor: theme.accent + '1A' }]}>
-                    <ThemedText type="smallBold" style={{ color: theme.accent, fontSize: 10 }}>
+                  <View style={[styles.roleChip, { backgroundColor: theme.dark ? theme.accent + '33' : theme.accent + '1A' }]}>
+                    <ThemedText type="smallBold" style={{ color: theme.dark ? '#FFFFFF' : theme.accent, fontSize: 10 }}>
                       TEACHER
                     </ThemedText>
                   </View>
@@ -163,7 +164,7 @@ export default function LoginChoiceScreen() {
                   </View>
                 </View>
               </View>
-              <Ionicons name="chevron-forward" size={22} color={theme.accent} />
+              <Ionicons name="chevron-forward" size={22} color={theme.dark ? '#FFFFFF' : theme.accent} />
             </Card>
           </Animated.View>
         </Pressable>
