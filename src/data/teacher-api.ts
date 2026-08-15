@@ -884,9 +884,23 @@ async function downloadTeacherExport(path: string, params: ExportParams, baseNam
 
   const extension = params.format === 'csv' ? 'csv' : 'pdf';
   const filename = `${baseName}-${params.dateFrom}-to-${params.dateTo}.${extension}`;
-  const file = new FileSystem.File(FileSystem.Paths.cache, filename);
-  file.write(base64, { encoding: 'base64' });
-  return { uri: file.uri, filename };
+
+  if (Platform.OS === 'web') {
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+    return { uri: blobUrl, filename };
+  }
+
+  const cacheDir = FileSystem.cacheDirectory || FileSystem.documentDirectory || '';
+  const uri = `${cacheDir}${filename}`;
+  await FileSystem.writeAsStringAsync(uri, base64, { encoding: FileSystem.EncodingType.Base64 });
+  return { uri, filename };
 }
 
 export async function exportHomework(params: ExportParams) {

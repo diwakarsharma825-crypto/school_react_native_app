@@ -163,8 +163,8 @@ export default function MoreScreen() {
           },
         ]
       : []),
-    ...(loggedIn
-      ? [{ label: 'Storage', icon: 'server-outline' as const, onPress: () => router.push('/storage-usage' as any) }]
+    ...(teacherLoggedIn
+      ? [{ label: 'Storage', icon: 'server-outline' as const, onPress: () => router.push('/teacher-storage' as any) }]
       : []),
   ];
 

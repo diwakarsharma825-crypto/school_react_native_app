@@ -66,7 +66,7 @@ export default function NoticesScreen() {
 
   return (
     <Screen refreshing={loading} onRefresh={current.refetch}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.three }}>
+      <View style={{ marginBottom: Spacing.three }}>
         <View style={[styles.segment, { backgroundColor: theme.backgroundElement, flex: 1, marginBottom: 0 }]}>
           {TABS.map((tab) => {
             const isActive = tab.key === active;
@@ -84,23 +84,6 @@ export default function NoticesScreen() {
             );
           })}
         </View>
-
-        <ExportPdfButton
-          variant="compact"
-          onPress={() =>
-            exportToPdf({
-              title: `School ${activeTab.label} Report`,
-              subtitle: `Category: ${activeTab.label} (${items.length} items)`,
-              columns: [
-                { header: 'Date', key: 'date', width: '20%' },
-                { header: 'Title', key: 'title', width: '30%' },
-                { header: 'Details', key: 'detail', width: '50%' },
-              ],
-              rows: items,
-            })
-          }
-          style={{ marginLeft: 8 }}
-        />
       </View>
 
       {loading && items.length === 0 ? (

@@ -17,11 +17,27 @@ import { SectionUnavailable } from '@/components/ui/SectionUnavailable';
 import { ExportPdfButton } from '@/components/ui/ExportPdfButton';
 import { exportToPdf } from '@/lib/pdf-export';
 
-const STATUS_META: Record<LeaveStatus, { label: string; color: string; bg: string }> = {
-  pending: { label: 'Pending', color: '#B8860B', bg: '#FBEFD3' },
-  approved: { label: 'Approved', color: '#2E7D32', bg: '#DFF1E1' },
-  rejected: { label: 'Rejected', color: '#C62828', bg: '#FBE2E2' },
-};
+function getStatusMeta(status: LeaveStatus, isDark: boolean): { label: string; color: string; bg: string } {
+  if (status === 'approved') {
+    return {
+      label: 'Approved',
+      color: isDark ? '#86EFAC' : '#2E7D32',
+      bg: isDark ? 'rgba(34, 197, 94, 0.25)' : '#DCFCE7',
+    };
+  }
+  if (status === 'rejected') {
+    return {
+      label: 'Rejected',
+      color: isDark ? '#FCA5A5' : '#C62828',
+      bg: isDark ? 'rgba(239, 68, 68, 0.25)' : '#FEE2E2',
+    };
+  }
+  return {
+    label: 'Pending',
+    color: isDark ? '#FDE047' : '#B8860B',
+    bg: isDark ? 'rgba(234, 179, 8, 0.25)' : '#FEF3C7',
+  };
+}
 
 const STATUS_FILTERS: { label: string; value: LeaveStatus | 'all' }[] = [
   { label: 'Pending', value: 'pending' },
@@ -83,18 +99,38 @@ export default function TeacherLeavesScreen() {
           <SelectField label="Class" placeholder="Select class" value={classId} options={classOptions} onChange={setClassId} />
         ) : null}
 
-        <View style={[styles.filterRow, { borderColor: theme.border, width: '100%', marginBottom: Spacing.three }]}>
-          {STATUS_FILTERS.map((f) => (
-            <Pressable
-              key={f.value}
-              onPress={() => setStatusFilter(f.value)}
-              style={[styles.filterButton, { flex: 1, alignItems: 'center' }, statusFilter === f.value && { backgroundColor: theme.tint }]}
-            >
-              <ThemedText type="small" themeColor={statusFilter === f.value ? 'textOnBrand' : 'textSecondary'}>
-                {f.label}
-              </ThemedText>
-            </Pressable>
-          ))}
+        <View
+          style={[
+            styles.filterRow,
+            {
+              backgroundColor: theme.backgroundElement,
+              borderColor: theme.border,
+              width: '100%',
+              marginBottom: Spacing.three,
+              padding: 4,
+              borderRadius: Radius.md,
+            },
+          ]}
+        >
+          {STATUS_FILTERS.map((f) => {
+            const isActive = statusFilter === f.value;
+            const activeBg = theme.dark ? '#2563EB' : theme.tint;
+            return (
+              <Pressable
+                key={f.value}
+                onPress={() => setStatusFilter(f.value)}
+                style={[
+                  styles.filterButton,
+                  { flex: 1, alignItems: 'center', paddingVertical: 8, borderRadius: Radius.sm },
+                  isActive && { backgroundColor: activeBg },
+                ]}
+              >
+                <ThemedText type={isActive ? 'smallBold' : 'small'} style={{ color: isActive ? '#FFFFFF' : theme.textSecondary }}>
+                  {f.label}
+                </ThemedText>
+              </Pressable>
+            );
+          })}
         </View>
 
         {applications && applications.length > 0 ? (
@@ -120,7 +156,7 @@ export default function TeacherLeavesScreen() {
                   rows: applications.map((app) => ({
                     ...app,
                     dates: `${app.date_from} to ${app.date_to}`,
-                    statusLabel: STATUS_META[app.status]?.label ?? app.status,
+                    statusLabel: getStatusMeta(app.status, theme.dark).label,
                   })),
                 });
               }}
@@ -136,7 +172,7 @@ export default function TeacherLeavesScreen() {
           <EmptyState message="No leave requests here." icon="calendar-clear-outline" />
         ) : (
           applications.map((app) => {
-            const meta = STATUS_META[app.status];
+            const meta = getStatusMeta(app.status, theme.dark);
             return (
               <Card key={app.id} style={styles.appCard}>
                 <View style={styles.appTop}>

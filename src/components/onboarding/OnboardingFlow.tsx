@@ -248,15 +248,21 @@ export function OnboardingFlow({ onDone }: OnboardingFlowProps) {
       latitude: location?.latitude ?? null,
       longitude: location?.longitude ?? null,
     }).catch(() => {});
-    // If notification permission was granted in the step above, pick up the
-    // token now. If not, this simply returns null and the user can enable it
-    // later from system settings.
-    const pushToken = await getFcmPushToken();
-    if (pushToken) {
-      registerDevice({ pushToken, latitude: location?.latitude ?? null, longitude: location?.longitude ?? null }).catch(() => {});
-      if (needsPassword) registerStudentPushToken(trimmedMobile, pushToken).catch(() => {});
+    try {
+      const pushToken = await Promise.race([
+        getFcmPushToken(),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 1200)),
+      ]);
+      if (pushToken) {
+        registerDevice({ pushToken, latitude: location?.latitude ?? null, longitude: location?.longitude ?? null }).catch(() => {});
+        if (needsPassword) registerStudentPushToken(trimmedMobile, pushToken).catch(() => {});
+      }
+    } catch {
+      // ignore token error
+    } finally {
+      setFinishing(false);
+      onDone();
     }
-    onDone();
   }
 
   return (
@@ -475,8 +481,8 @@ function BelongingStep({
       />
       <RadioOption
         icon="business"
-        title="Other School"
-        description="I'm from a different school or institution."
+        title="Other School / Department"
+        description="I'm from a different school, tuition center, or department."
         selected={value === 'other'}
         onPress={() => onChange('other')}
       />

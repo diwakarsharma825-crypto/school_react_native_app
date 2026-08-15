@@ -180,8 +180,7 @@ export function DynamicBottomBar() {
             <Pressable
               onPress={() => {
                 setMenuOpen(false);
-                if (teacherLoggedIn) router.push('/teacher-dashboard' as any);
-                else if (studentLoggedIn) router.push('/student-dashboard' as any);
+                router.push('/profile' as any);
               }}
               style={[styles.menuHeader, { borderBottomColor: theme.border }]}
             >
@@ -195,9 +194,6 @@ export function DynamicBottomBar() {
               <View style={styles.menuHeaderTextCol}>
                 <ThemedText type="smallBold" numberOfLines={1} style={{ color: theme.dark ? '#FFFFFF' : theme.text }}>
                   {menuName}
-                </ThemedText>
-                <ThemedText type="small" themeColor="textSecondary">
-                  Open Dashboard
                 </ThemedText>
               </View>
               <Ionicons name="chevron-forward" size={16} color={theme.dark ? '#FFFFFF' : theme.textSecondary} />
