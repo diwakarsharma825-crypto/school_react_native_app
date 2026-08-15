@@ -166,7 +166,8 @@ export async function fetchTeacherProfile(): Promise<TeacherProfile> {
 export interface ClassPickerItem {
   id: number;
   name: string;
-  sections: { id: number; name: string }[];
+  sections?: { id: number; name: string }[];
+  section?: string;
 }
 
 export interface SubjectCatalogItem {
