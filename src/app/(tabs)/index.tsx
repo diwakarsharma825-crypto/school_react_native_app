@@ -119,7 +119,43 @@ export default function HomeScreen() {
             <EmptyState message="No banners available." />
           )}
 
-
+          {pendingRegistration ? (
+            <Card
+              style={{
+                backgroundColor: theme.dark ? 'rgba(234, 179, 8, 0.2)' : '#FEF3C7',
+                borderColor: '#F59E0B',
+                borderWidth: 1,
+                marginBottom: Spacing.three,
+                padding: Spacing.three,
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.three }}>
+                <View
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 18,
+                    backgroundColor: '#F59E0B',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Ionicons name="time-outline" size={20} color="#FFFFFF" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <ThemedText type="smallBold" style={{ color: theme.dark ? '#FDE047' : '#92400E' }}>
+                    Account Pending Activation
+                  </ThemedText>
+                  <ThemedText
+                    type="small"
+                    style={{ color: theme.dark ? 'rgba(255,255,255,0.85)' : '#B45309', fontSize: 12 }}
+                  >
+                    Registration for {pendingRegistration.name} ({pendingRegistration.className}) is submitted. Your class teacher needs to activate your account before you can view homework.
+                  </ThemedText>
+                </View>
+              </View>
+            </Card>
+          ) : null}
           <QuickActionGrid />
 
           <SectionHeader title="Principal's Message" />

@@ -85,9 +85,18 @@ export async function studentLogin(identifier: string, password: string): Promis
   }
 
   const response = await fetch(`${BASE_URL}/student_login`, { method: 'POST', body });
-  const json = (await response.json()) as ApiEnvelope<{ children: StudentChild[] }>;
-  if (!json.status) throw new Error(json.message || 'Login failed');
-  return json.data.children;
+  const text = await response.text();
+  let json: ApiEnvelope<{ children: StudentChild[] }> | null = null;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    throw new Error('Server response error. Please try again.');
+  }
+
+  if (!json || !json.status) {
+    throw new Error(json?.message || 'Your account is pending verification by your class teacher. Please check back soon.');
+  }
+  return json.data?.children || [];
 }
 
 /** First-time registration — creates a pending row in `result_students`
