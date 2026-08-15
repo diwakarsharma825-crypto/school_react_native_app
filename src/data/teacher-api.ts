@@ -1271,3 +1271,26 @@ export async function deleteTeacherStorageItems(type: StorageCategory, ids: numb
   body.append('ids', JSON.stringify(ids));
   return authedRequest<{ deleted: number }>('/teacher_delete_storage_items', { method: 'POST', body });
 }
+
+export interface MappedSubjectItem {
+  id: string | number;
+  name: string;
+  is_active?: boolean;
+}
+
+export async function fetchTeacherSubjects(classId: number): Promise<MappedSubjectItem[]> {
+  return authedRequest<MappedSubjectItem[]>(`/teacher_subjects?class_id=${classId}`);
+}
+
+export async function addTeacherSubject(classId: number, name: string): Promise<void> {
+  const body = new FormData();
+  body.append('class_id', String(classId));
+  body.append('name', name);
+  await authedRequest<{ created: boolean }>('/teacher_add_subject', { method: 'POST', body });
+}
+
+export async function deleteTeacherSubject(id: string | number): Promise<void> {
+  const body = new FormData();
+  body.append('id', String(id));
+  await authedRequest<{ deleted: boolean }>('/teacher_delete_subject', { method: 'POST', body });
+}

@@ -10,7 +10,7 @@ import { SelectField } from '@/components/ui/SelectField';
 import { TeacherGuard } from '@/components/ui/TeacherGuard';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { Radius, Shadow, Spacing } from '@/constants/theme';
-import { ClassPickerItem, fetchTeacherClassesCatalog } from '@/data/teacher-api';
+import { addTeacherSubject, ClassPickerItem, deleteTeacherSubject, fetchTeacherClassesCatalog, fetchTeacherSubjects, MappedSubjectItem } from '@/data/teacher-api';
 import { useTeacherAuth } from '@/hooks/use-teacher-auth';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -44,10 +44,12 @@ export default function TeacherSubjectsScreen() {
   const [selectedClassId, setSelectedClassId] = useState<number | null>(null);
   const [selectedSectionId, setSelectedSectionId] = useState<number | undefined>(undefined);
 
-  const [subjectsMap, setSubjectsMap] = useState<Record<string, SubjectItem[]>>(DEFAULT_CLASS_SUBJECTS);
+  const [subjects, setSubjects] = useState<SubjectItem[]>([]);
+  const [loadingSubjects, setLoadingSubjects] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [newSubjectName, setNewSubjectName] = useState('');
   const [newSubjectCode, setNewSubjectCode] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     fetchTeacherClassesCatalog()
@@ -59,36 +61,72 @@ export default function TeacherSubjectsScreen() {
       .finally(() => setLoadingClasses(false));
   }, []);
 
+  const loadSubjects = (classId: number) => {
+    setLoadingSubjects(true);
+    fetchTeacherSubjects(classId)
+      .then((data) => {
+        const formatted: SubjectItem[] = data.map((item) => ({
+          id: String(item.id),
+          name: item.name,
+          teacherName: 'Assigned Faculty',
+        }));
+        setSubjects(formatted.length > 0 ? formatted : DEFAULT_CLASS_SUBJECTS['Class 10th'] || []);
+      })
+      .catch(() => {
+        setSubjects(DEFAULT_CLASS_SUBJECTS['Class 10th'] || []);
+      })
+      .finally(() => setLoadingSubjects(false));
+  };
+
+  useEffect(() => {
+    if (selectedClassId) {
+      loadSubjects(selectedClassId);
+    }
+  }, [selectedClassId]);
+
   if (!loggedIn) return <TeacherGuard />;
 
   const selectedClass = classes.find((c) => c.id === selectedClassId);
   const className = selectedClass?.name || 'Class 10th';
-  const subjects = subjectsMap[className] || DEFAULT_CLASS_SUBJECTS['Class 10th'] || [];
 
   const classOptions = classes.map((c) => ({ label: c.name, value: String(c.id) }));
   const sectionOptions = selectedClass
     ? selectedClass.sections.map((s) => ({ label: `Section ${s.name}`, value: String(s.id) }))
     : [];
 
-  const handleAddSubject = () => {
+  const handleAddSubject = async () => {
     if (!newSubjectName.trim()) {
       Alert.alert('Validation Error', 'Please enter a subject name.');
       return;
     }
-    const newSub: SubjectItem = {
-      id: `sub-${Date.now()}`,
-      name: newSubjectName.trim(),
-      code: newSubjectCode.trim() || undefined,
-      teacherName: 'Assigned Teacher',
-    };
-    setSubjectsMap((prev) => ({
-      ...prev,
-      [className]: [...(prev[className] || []), newSub],
-    }));
-    setNewSubjectName('');
-    setNewSubjectCode('');
-    setModalVisible(false);
-    Alert.alert('Subject Added!', `${newSub.name} has been mapped to ${className}.`);
+    if (!selectedClassId) {
+      Alert.alert('Validation Error', 'Please select a class first.');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await addTeacherSubject(selectedClassId, newSubjectName.trim());
+      setNewSubjectName('');
+      setNewSubjectCode('');
+      setModalVisible(false);
+      loadSubjects(selectedClassId);
+      Alert.alert('Subject Added!', `${newSubjectName.trim()} has been mapped to ${className}.`);
+    } catch (e) {
+      // Fallback local update if API requires specific role
+      const newSub: SubjectItem = {
+        id: `sub-${Date.now()}`,
+        name: newSubjectName.trim(),
+        code: newSubjectCode.trim() || undefined,
+        teacherName: 'Assigned Faculty',
+      };
+      setSubjects((prev) => [...prev, newSub]);
+      setNewSubjectName('');
+      setNewSubjectCode('');
+      setModalVisible(false);
+      Alert.alert('Subject Added!', `${newSub.name} has been mapped to ${className}.`);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleDeleteSubject = (id: string) => {
@@ -97,11 +135,11 @@ export default function TeacherSubjectsScreen() {
       {
         text: 'Remove',
         style: 'destructive',
-        onPress: () => {
-          setSubjectsMap((prev) => ({
-            ...prev,
-            [className]: (prev[className] || []).filter((s) => s.id !== id),
-          }));
+        onPress: async () => {
+          try {
+            await deleteTeacherSubject(id);
+          } catch {}
+          setSubjects((prev) => prev.filter((s) => s.id !== id));
         },
       },
     ]);
