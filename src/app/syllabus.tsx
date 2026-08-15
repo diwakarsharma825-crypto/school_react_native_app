@@ -645,7 +645,7 @@ export default function SubjectSyllabusScreen() {
               </Pressable>
             </View>
 
-            <ScrollView style={{ maxHeight: 460 }} showsVerticalScrollIndicator={false}>
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: Spacing.two }} showsVerticalScrollIndicator={true}>
               {/* Chapter Number */}
               <View style={styles.inputGroup}>
                 <ThemedText type="smallBold" style={styles.fieldLabel}>
@@ -819,10 +819,10 @@ export default function SubjectSyllabusScreen() {
               </Pressable>
             </ScrollView>
 
-            {/* Modal Buttons */}
-            <View style={styles.modalActionRow}>
+            {/* Modal Buttons Pinned to Bottom */}
+            <View style={[styles.modalActionRow, { borderTopColor: theme.dark ? '#334155' : '#E2E8F0' }]}>
               <Pressable onPress={() => setModalVisible(false)} style={styles.modalCancelBtn}>
-                <ThemedText type="smallBold" style={{ color: theme.textSecondary }}>
+                <ThemedText type="smallBold" style={{ color: theme.dark ? '#94A3B8' : '#64748B' }}>
                   Cancel
                 </ThemedText>
               </Pressable>
@@ -995,21 +995,27 @@ const styles = StyleSheet.create({
   /* Modal Styles */
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.65)',
+    backgroundColor: 'rgba(0,0,0,0.7)',
     justifyContent: 'center',
+    alignItems: 'center',
     padding: Spacing.three,
   },
   modalCard: {
+    width: '100%',
+    maxWidth: 480,
+    maxHeight: '85%',
     borderRadius: Radius.large,
     borderWidth: 1,
     padding: Spacing.three,
+    display: 'flex',
+    flexDirection: 'column',
     ...Shadow.card,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: Spacing.three,
+    marginBottom: Spacing.two,
   },
   modalTitle: {
     fontSize: 18,
@@ -1064,13 +1070,15 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: Radius.medium,
     borderWidth: 1,
-    marginBottom: Spacing.three,
+    marginBottom: Spacing.two,
   },
   modalActionRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.two,
-    marginTop: Spacing.two,
+    paddingTop: Spacing.two,
+    marginTop: Spacing.one,
+    borderTopWidth: 1,
   },
   modalCancelBtn: {
     paddingHorizontal: 16,
