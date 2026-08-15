@@ -17,11 +17,13 @@ import {
 import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/states';
 import { Screen } from '@/components/ui/Screen';
+import { SectionUnavailable } from '@/components/ui/SectionUnavailable';
 import { SelectField } from '@/components/ui/SelectField';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { Radius, Shadow, Spacing } from '@/constants/theme';
 import { useLanguage } from '@/lib/i18n';
 import { useTheme } from '@/hooks/use-theme';
+import { useSectionEnabled } from '@/hooks/use-sections';
 import {
   addSyllabusChapterApi,
   ClassPickerItem,
@@ -64,6 +66,9 @@ const DEFAULT_SUBJECTS = [
 export default function SubjectSyllabusScreen() {
   const theme = useTheme();
   const { t } = useLanguage();
+  const enabled = useSectionEnabled('syllabus');
+
+  if (!enabled) return <SectionUnavailable />;
 
   // Class & Subject Options
   const [teacherClasses, setTeacherClasses] = useState<ClassPickerItem[]>(DEFAULT_CLASSES);

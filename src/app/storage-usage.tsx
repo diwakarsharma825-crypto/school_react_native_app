@@ -5,10 +5,12 @@ import { StyleSheet, View } from 'react-native';
 import { Brand, Radius, Spacing } from '@/constants/theme';
 import { Card } from '@/components/ui/Card';
 import { Screen } from '@/components/ui/Screen';
+import { SectionUnavailable } from '@/components/ui/SectionUnavailable';
 import { ErrorState, Loading } from '@/components/ui/states';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { fetchStorageUsage, StorageUsage } from '@/data/api';
 import { useTheme } from '@/hooks/use-theme';
+import { useSectionEnabled } from '@/hooks/use-sections';
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -31,6 +33,9 @@ const CATEGORY_META: Record<string, { label: string; icon: keyof typeof Ionicons
 
 export default function StorageUsageScreen() {
   const theme = useTheme();
+  const enabled = useSectionEnabled('teacher_storage');
+
+  if (!enabled) return <SectionUnavailable />;
   const [data, setData] = useState<StorageUsage | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);

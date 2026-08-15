@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { EmptyState, ErrorState, Loading } from '@/components/ui/states';
 import { Screen } from '@/components/ui/Screen';
+import { SectionUnavailable } from '@/components/ui/SectionUnavailable';
 import { SelectField } from '@/components/ui/SelectField';
 import { TeacherGuard } from '@/components/ui/TeacherGuard';
 import { ThemedText } from '@/components/ui/ThemedText';
@@ -13,6 +14,7 @@ import { Radius, Shadow, Spacing } from '@/constants/theme';
 import { fetchTeacherClassesCatalog, fetchTeacherStudents, RosterStudent } from '@/data/teacher-api';
 import { useTeacherAuth } from '@/hooks/use-teacher-auth';
 import { useTheme } from '@/hooks/use-theme';
+import { useSectionEnabled } from '@/hooks/use-sections';
 
 const SESSION_YEAR_OPTIONS = [
   { label: 'Academic Session 2024-2025', value: '2024-2025' },
@@ -23,6 +25,9 @@ const SESSION_YEAR_OPTIONS = [
 export default function TeacherPromoteScreen() {
   const theme = useTheme();
   const { loggedIn } = useTeacherAuth();
+  const enabled = useSectionEnabled('teacher_promote');
+
+  if (!enabled) return <SectionUnavailable />;
   const [classes, setClasses] = useState<{ id: number; name: string; sections: { id: number; name: string }[] }[]>([]);
   const [loadingClasses, setLoadingClasses] = useState(true);
 

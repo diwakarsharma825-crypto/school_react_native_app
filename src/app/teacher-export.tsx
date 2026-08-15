@@ -7,6 +7,7 @@ import { Brand, Radius, Spacing } from '@/constants/theme';
 import { Card } from '@/components/ui/Card';
 import { DatePickerField } from '@/components/ui/DatePickerField';
 import { Screen } from '@/components/ui/Screen';
+import { SectionUnavailable } from '@/components/ui/SectionUnavailable';
 import { SelectField } from '@/components/ui/SelectField';
 import { TeacherGuard } from '@/components/ui/TeacherGuard';
 import { ThemedText } from '@/components/ui/ThemedText';
@@ -20,6 +21,7 @@ import {
 } from '@/data/teacher-api';
 import { useTeacherAuth } from '@/hooks/use-teacher-auth';
 import { useTheme } from '@/hooks/use-theme';
+import { useSectionEnabled } from '@/hooks/use-sections';
 import { exportToPdf } from '@/lib/pdf-export';
 
 type ExportKind = 'homework' | 'attendance' | 'notices' | 'leaves' | 'fees' | 'roster';

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { EmptyState, Loading } from '@/components/ui/states';
 import { Screen } from '@/components/ui/Screen';
+import { SectionUnavailable } from '@/components/ui/SectionUnavailable';
 import { SelectField } from '@/components/ui/SelectField';
 import { TeacherGuard } from '@/components/ui/TeacherGuard';
 import { ThemedText } from '@/components/ui/ThemedText';
@@ -19,6 +20,7 @@ import {
 } from '@/data/teacher-api';
 import { useTeacherAuth } from '@/hooks/use-teacher-auth';
 import { useTheme } from '@/hooks/use-theme';
+import { useSectionEnabled } from '@/hooks/use-sections';
 import { useLanguage } from '@/lib/i18n';
 
 interface SubjectItem {
@@ -46,6 +48,9 @@ export default function TeacherSubjectsScreen() {
   const theme = useTheme();
   const { loggedIn } = useTeacherAuth();
   const { t } = useLanguage();
+  const enabled = useSectionEnabled('teacher_subjects');
+
+  if (!enabled) return <SectionUnavailable />;
 
   const [classes, setClasses] = useState<ClassPickerItem[]>([]);
   const [loadingClasses, setLoadingClasses] = useState(true);
