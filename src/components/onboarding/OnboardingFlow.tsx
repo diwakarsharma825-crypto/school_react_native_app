@@ -190,46 +190,51 @@ export function OnboardingFlow({ onDone }: OnboardingFlowProps) {
         await saveHomeworkChildren(children);
         await refreshStudentAuth();
       } catch (loginError) {
-        // No account exists yet for this phone — this is a first-time
-        // student, so register them as pending instead. If an account DOES
-        // already exist under this exact SRN (just a wrong password),
-        // register_student() detects the collision server-side and returns
-        // a clear error instead of silently creating a duplicate.
-        try {
-          await studentRegister({
-            name: trimmedName,
-            className: studentClass ?? '',
-            section: section.trim() || undefined,
-            phone: trimmedMobile,
-            password,
-            srn: srn.trim(),
-            gender: gender ?? undefined,
-          });
-          // Also remembered locally so the Home screen can keep reminding
-          // them even after this one-time alert is dismissed and the app
-          // is closed/reopened while still awaiting activation.
+        const loginMsg = loginError instanceof Error ? loginError.message : String(loginError);
+        if (/pending|verify|verification|already|registered/i.test(loginMsg)) {
           await savePendingRegistration({ name: trimmedName, className: studentClass ?? '' });
           setTimeout(() => {
             Alert.alert(
-              'Registered!',
-              "Your class teacher needs to verify your account before you can view homework. You'll be able to log in once that's done."
+              'Account Pending Verification',
+              "Your account is already registered and awaiting teacher verification. You will be able to view homework once approved."
             );
           }, 400);
-        } catch (registerError) {
-          setFinishing(false);
-          const message = registerError instanceof Error ? registerError.message : 'Could not register. Please try again.';
-          // The backend's duplicate-registration error is about the SRN, not
-          // the password — showing it under Password (as before) misled
-          // students into thinking their password was wrong.
-          if (/srn/i.test(message)) {
-            setSrnError(message);
-            setPasswordError(null);
-          } else {
-            setPasswordError(message);
-            setSrnError(null);
+        } else {
+          try {
+            const finalSrn = srn.trim() || `SRN${Date.now()}`;
+            await studentRegister({
+              name: trimmedName,
+              className: studentClass ?? '',
+              section: section.trim() || undefined,
+              phone: trimmedMobile,
+              password,
+              srn: finalSrn,
+              gender: gender ?? undefined,
+            });
+            await savePendingRegistration({ name: trimmedName, className: studentClass ?? '' });
+            setTimeout(() => {
+              Alert.alert(
+                'Registered!',
+                "Your class teacher needs to verify your account before you can view homework. You'll be able to log in once that's done."
+              );
+            }, 400);
+          } catch (registerError) {
+            const regMsg = registerError instanceof Error ? registerError.message : 'Could not register. Please try again.';
+            if (/already|registered|srn|exist|conflict/i.test(regMsg)) {
+              await savePendingRegistration({ name: trimmedName, className: studentClass ?? '' });
+              setTimeout(() => {
+                Alert.alert(
+                  'Already Registered',
+                  "Your account is registered and awaiting verification by your class teacher. You can log in once approved."
+                );
+              }, 400);
+            } else {
+              setFinishing(false);
+              setPasswordError(regMsg);
+              setStep(3);
+              return;
+            }
           }
-          setStep(3);
-          return;
         }
       }
     }
