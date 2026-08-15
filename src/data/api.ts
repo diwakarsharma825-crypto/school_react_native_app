@@ -20,7 +20,7 @@ import {
 import { getHomeworkAccess } from '@/lib/homework-access';
 
 // ─── Single swap-point ──────────────────────────────────────────────────────
-// The app talks to the real, live Saarthak GIMSSS backend by default.
+// The app talks to the live institute backend by default.
 // USE_MOCK stays available as a manual override for offline development —
 // flip it to true (or point BASE_URL elsewhere) if the live API is
 // unreachable in your environment. src/data/mock.ts is kept as a reference

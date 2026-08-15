@@ -186,7 +186,7 @@ export default function MoreScreen() {
     },
   ];
 
-  // No hardcoded fallback name here on purpose — showing "Saarthak GIMSSS"
+  // No hardcoded fallback name here on purpose — showing school name from /settings
   // while /settings is still loading, then swapping to the real school name,
   // reads as a bug (flash of wrong content). Just wait for the real data.
   const [imgError, setImgError] = useState(false);
