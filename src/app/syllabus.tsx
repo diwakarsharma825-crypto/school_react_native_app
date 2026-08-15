@@ -46,7 +46,7 @@ export interface SyllabusChapter {
   fileName?: string;
 }
 
-const STORAGE_KEY = '@school_app_syllabus_store_v5';
+const STORAGE_KEY = '@school_app_syllabus_store_v6';
 
 const DEFAULT_CLASSES = [
   { id: 1, name: 'Class 1st - A' },
@@ -72,7 +72,6 @@ export default function SubjectSyllabusScreen() {
   const [selectedClass, setSelectedClass] = useState<string>('Class 1st - A');
   const [selectedSubject, setSelectedSubject] = useState<string>('Mathematics');
 
-  const [isTeacherMode, setIsTeacherMode] = useState<boolean>(true);
   const [allChapters, setAllChapters] = useState<SyllabusChapter[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
@@ -94,6 +93,7 @@ export default function SubjectSyllabusScreen() {
   const [formAttachmentType, setFormAttachmentType] = useState<'pdf' | 'image'>('pdf');
   const [formAttachmentUri, setFormAttachmentUri] = useState<string>('');
   const [formAttachmentName, setFormAttachmentName] = useState<string>('');
+  const [formAttachmentFile, setFormAttachmentFile] = useState<any>(null);
   const [formCompleted, setFormCompleted] = useState<boolean>(false);
 
   // 1. Fetch Teacher's Assigned Classes Catalog
@@ -128,7 +128,7 @@ export default function SubjectSyllabusScreen() {
     loadSubjects();
   }, [selectedClass, teacherClasses]);
 
-  // 3. Load Syllabus Data Exclusively from Backend API
+  // 3. Load Syllabus Data Exclusively from Backend API & Storage
   const loadSyllabusData = async () => {
     setIsLoading(true);
     try {
@@ -204,6 +204,15 @@ export default function SubjectSyllabusScreen() {
         setFormAttachmentType('pdf');
         setFormAttachmentUri(asset.uri);
         setFormAttachmentName(asset.name || 'Syllabus_Document.pdf');
+        if (asset.file) {
+          setFormAttachmentFile(asset.file);
+        } else {
+          setFormAttachmentFile({
+            uri: asset.uri,
+            name: asset.name || 'document.pdf',
+            type: 'application/pdf',
+          });
+        }
       }
     } catch (err) {
       Alert.alert('Error', 'Could not select document');
@@ -226,6 +235,15 @@ export default function SubjectSyllabusScreen() {
         setFormAttachmentType('image');
         setFormAttachmentUri(asset.uri);
         setFormAttachmentName(asset.fileName || 'Syllabus_Diagram.jpg');
+        if (asset.file) {
+          setFormAttachmentFile(asset.file);
+        } else {
+          setFormAttachmentFile({
+            uri: asset.uri,
+            name: asset.fileName || 'image.jpg',
+            type: 'image/jpeg',
+          });
+        }
       }
     } catch (err) {
       Alert.alert('Error', 'Could not select image');
@@ -242,6 +260,7 @@ export default function SubjectSyllabusScreen() {
     setFormAttachmentType('pdf');
     setFormAttachmentUri('');
     setFormAttachmentName('');
+    setFormAttachmentFile(null);
     setFormCompleted(false);
     setModalVisible(true);
   };
@@ -255,6 +274,7 @@ export default function SubjectSyllabusScreen() {
     setFormAttachmentType(ch.imageUrl ? 'image' : 'pdf');
     setFormAttachmentUri(ch.pdfUrl || ch.imageUrl || '');
     setFormAttachmentName(ch.fileName || (ch.pdfUrl ? 'Reference_Document.pdf' : ch.imageUrl ? 'Reference_Image.png' : ''));
+    setFormAttachmentFile(null);
     setFormCompleted(ch.completed);
     setModalVisible(true);
   };
@@ -273,22 +293,28 @@ export default function SubjectSyllabusScreen() {
       .filter((t) => t.length > 0);
     const topicsArray = parsedTopics.length > 0 ? parsedTopics : ['General Concepts'];
 
-    const pdfUrl = formAttachmentType === 'pdf' && formAttachmentUri ? formAttachmentUri : undefined;
-    const imageUrl = formAttachmentType === 'image' && formAttachmentUri ? formAttachmentUri : undefined;
+    let pdfUrl = formAttachmentType === 'pdf' && formAttachmentUri ? formAttachmentUri : undefined;
+    let imageUrl = formAttachmentType === 'image' && formAttachmentUri ? formAttachmentUri : undefined;
 
     let updated: SyllabusChapter[];
 
     if (editingChapterId) {
       // Call Backend API Edit
-      editSyllabusChapterApi({
-        id: editingChapterId,
-        chapter_number: parsedChNum,
-        chapter_title: formTitle.trim(),
-        topics: topicsArray,
-        status: formCompleted ? 1 : 0,
-        pdf_url: pdfUrl,
-        image_url: imageUrl,
-      }).catch(() => {});
+      try {
+        const apiRes = await editSyllabusChapterApi({
+          id: editingChapterId,
+          chapter_number: parsedChNum,
+          chapter_title: formTitle.trim(),
+          topics: topicsArray,
+          status: formCompleted ? 1 : 0,
+          pdf_url: pdfUrl,
+          image_url: imageUrl,
+          pdf_file: formAttachmentType === 'pdf' ? formAttachmentFile : undefined,
+          image_file: formAttachmentType === 'image' ? formAttachmentFile : undefined,
+        });
+        if (apiRes?.pdf_url) pdfUrl = apiRes.pdf_url;
+        if (apiRes?.image_url) imageUrl = apiRes.image_url;
+      } catch {}
 
       updated = allChapters.map((ch) => {
         if (ch.id === editingChapterId) {
@@ -317,8 +343,12 @@ export default function SubjectSyllabusScreen() {
           status: formCompleted ? 1 : 0,
           pdf_url: pdfUrl,
           image_url: imageUrl,
+          pdf_file: formAttachmentType === 'pdf' ? formAttachmentFile : undefined,
+          image_file: formAttachmentType === 'image' ? formAttachmentFile : undefined,
         });
         if (apiRes && apiRes.id) createdId = String(apiRes.id);
+        if (apiRes?.pdf_url) pdfUrl = apiRes.pdf_url;
+        if (apiRes?.image_url) imageUrl = apiRes.image_url;
       } catch {}
 
       const newCh: SyllabusChapter = {
@@ -377,56 +407,21 @@ export default function SubjectSyllabusScreen() {
   return (
     <Screen>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Top Header & Role Banner */}
+        {/* Top Header */}
         <View style={styles.headerWrap}>
-          <View style={styles.headerTitleRow}>
-            <View style={{ flex: 1 }}>
-              <ThemedText type="subtitle" style={styles.mainTitle}>
-                {t('syllabus')}
-              </ThemedText>
-              <ThemedText type="small" themeColor="textSecondary">
-                Assigned class & subject curriculum management
-              </ThemedText>
-            </View>
-            <Pressable
-              onPress={() => setIsTeacherMode(!isTeacherMode)}
-              style={[
-                styles.modeBtn,
-                {
-                  backgroundColor: isTeacherMode
-                    ? theme.dark
-                      ? 'rgba(37,99,235,0.25)'
-                      : '#EFF6FF'
-                    : theme.dark
-                    ? 'rgba(255,255,255,0.1)'
-                    : '#F1F5F9',
-                  borderColor: isTeacherMode ? '#3B82F6' : theme.dark ? '#334155' : '#CBD5E1',
-                },
-              ]}
-            >
-              <Ionicons
-                name={isTeacherMode ? 'school-outline' : 'person-outline'}
-                size={16}
-                color={isTeacherMode ? (theme.dark ? '#60A5FA' : '#2563EB') : theme.textSecondary}
-              />
-              <ThemedText
-                type="smallBold"
-                style={{
-                  color: isTeacherMode ? (theme.dark ? '#60A5FA' : '#2563EB') : theme.textSecondary,
-                  fontSize: 12,
-                }}
-              >
-                {isTeacherMode ? 'Teacher Mode' : 'Student Mode'}
-              </ThemedText>
-            </Pressable>
-          </View>
+          <ThemedText type="subtitle" style={styles.mainTitle}>
+            {t('syllabus')}
+          </ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            Class & subject curriculum overview and completion tracker
+          </ThemedText>
         </View>
 
-        {/* Filter Selection Row: Filtered to Assigned Teacher Classes & Corresponding Subjects */}
+        {/* Filter Selection Row: Teacher Classes & Corresponding Subjects */}
         <View style={styles.filterRow}>
           <View style={{ flex: 1 }}>
             <SelectField
-              label={t('class') || 'Teacher Class'}
+              label={t('class') || 'Class'}
               options={classOptions}
               value={selectedClass}
               onChange={(val) => setSelectedClass(val)}
@@ -466,21 +461,19 @@ export default function SubjectSyllabusScreen() {
             <ThemedText type="small" themeColor="textSecondary">
               {completedCount} / {currentChapters.length} {t('Chapters Covered')}
             </ThemedText>
-            {isTeacherMode ? (
-              <Pressable
-                onPress={handleOpenAddModal}
-                style={({ pressed }) => [
-                  styles.addChBtn,
-                  { backgroundColor: theme.dark ? '#2563EB' : '#1D4ED8' },
-                  pressed && { opacity: 0.8 },
-                ]}
-              >
-                <Ionicons name="add-circle-outline" size={16} color="#FFFFFF" />
-                <ThemedText type="smallBold" style={{ color: '#FFFFFF', fontSize: 12 }}>
-                  + Add Chapter
-                </ThemedText>
-              </Pressable>
-            ) : null}
+            <Pressable
+              onPress={handleOpenAddModal}
+              style={({ pressed }) => [
+                styles.addChBtn,
+                { backgroundColor: theme.dark ? '#2563EB' : '#1D4ED8' },
+                pressed && { opacity: 0.8 },
+              ]}
+            >
+              <Ionicons name="add-circle-outline" size={16} color="#FFFFFF" />
+              <ThemedText type="smallBold" style={{ color: '#FFFFFF', fontSize: 12 }}>
+                + Add Chapter
+              </ThemedText>
+            </Pressable>
           </View>
         </Card>
 
@@ -512,9 +505,8 @@ export default function SubjectSyllabusScreen() {
                 </View>
 
                 <View style={styles.headerRightActions}>
-                  {/* Status Badge (Pressable for Teachers to Toggle) */}
+                  {/* Status Badge (Pressable to Toggle) */}
                   <Pressable
-                    disabled={!isTeacherMode}
                     onPress={() => handleToggleStatus(ch)}
                     style={({ pressed }) => [
                       styles.statusPill,
@@ -528,7 +520,7 @@ export default function SubjectSyllabusScreen() {
                           : '#FEF3C7',
                         borderColor: ch.completed ? '#22C55E' : '#EAB308',
                       },
-                      pressed && isTeacherMode && { opacity: 0.7 },
+                      pressed && { opacity: 0.7 },
                     ]}
                   >
                     <Ionicons
@@ -554,31 +546,29 @@ export default function SubjectSyllabusScreen() {
                     </ThemedText>
                   </Pressable>
 
-                  {/* Teacher Action Controls: Edit & Delete */}
-                  {isTeacherMode ? (
-                    <View style={styles.actionBtnRow}>
-                      <Pressable
-                        onPress={() => handleOpenEditModal(ch)}
-                        style={({ pressed }) => [
-                          styles.iconBtn,
-                          { backgroundColor: theme.dark ? 'rgba(59,130,246,0.2)' : '#EFF6FF', borderColor: '#3B82F6' },
-                          pressed && { opacity: 0.7 },
-                        ]}
-                      >
-                        <Ionicons name="pencil-outline" size={15} color={theme.dark ? '#60A5FA' : '#2563EB'} />
-                      </Pressable>
-                      <Pressable
-                        onPress={() => handleDeleteChapter(ch.id)}
-                        style={({ pressed }) => [
-                          styles.iconBtn,
-                          { backgroundColor: theme.dark ? 'rgba(239,68,68,0.2)' : '#FEF2F2', borderColor: '#EF4444' },
-                          pressed && { opacity: 0.7 },
-                        ]}
-                      >
-                        <Ionicons name="trash-outline" size={15} color={theme.dark ? '#FCA5A5' : '#DC2626'} />
-                      </Pressable>
-                    </View>
-                  ) : null}
+                  {/* Action Controls: Edit & Delete */}
+                  <View style={styles.actionBtnRow}>
+                    <Pressable
+                      onPress={() => handleOpenEditModal(ch)}
+                      style={({ pressed }) => [
+                        styles.iconBtn,
+                        { backgroundColor: theme.dark ? 'rgba(59,130,246,0.2)' : '#EFF6FF', borderColor: '#3B82F6' },
+                        pressed && { opacity: 0.7 },
+                      ]}
+                    >
+                      <Ionicons name="pencil-outline" size={15} color={theme.dark ? '#60A5FA' : '#2563EB'} />
+                    </Pressable>
+                    <Pressable
+                      onPress={() => handleDeleteChapter(ch.id)}
+                      style={({ pressed }) => [
+                        styles.iconBtn,
+                        { backgroundColor: theme.dark ? 'rgba(239,68,68,0.2)' : '#FEF2F2', borderColor: '#EF4444' },
+                        pressed && { opacity: 0.7 },
+                      ]}
+                    >
+                      <Ionicons name="trash-outline" size={15} color={theme.dark ? '#FCA5A5' : '#DC2626'} />
+                    </Pressable>
+                  </View>
                 </View>
               </View>
 
@@ -865,6 +855,7 @@ export default function SubjectSyllabusScreen() {
                       onPress={() => {
                         setFormAttachmentUri('');
                         setFormAttachmentName('');
+                        setFormAttachmentFile(null);
                       }}
                     >
                       <Ionicons name="close-circle-outline" size={20} color="#EF4444" />
@@ -946,24 +937,9 @@ const styles = StyleSheet.create({
   headerWrap: {
     marginBottom: Spacing.two,
   },
-  headerTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: Spacing.two,
-  },
   mainTitle: {
     fontSize: 20,
     fontWeight: '700',
-  },
-  modeBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: Radius.full,
-    borderWidth: 1,
   },
   filterRow: {
     flexDirection: 'row',

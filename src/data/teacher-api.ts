@@ -1420,7 +1420,9 @@ export async function addSyllabusChapterApi(params: {
   status: number;
   pdf_url?: string;
   image_url?: string;
-}): Promise<{ id: string }> {
+  pdf_file?: any;
+  image_file?: any;
+}): Promise<{ id: string; pdf_url?: string; image_url?: string }> {
   const body = new FormData();
   body.append('class', params.class);
   body.append('subject', params.subject);
@@ -1430,6 +1432,8 @@ export async function addSyllabusChapterApi(params: {
   body.append('status', String(params.status));
   if (params.pdf_url) body.append('pdf_url', params.pdf_url);
   if (params.image_url) body.append('image_url', params.image_url);
+  if (params.pdf_file) body.append('pdf_file', params.pdf_file);
+  if (params.image_file) body.append('image_file', params.image_file);
 
   const response = await fetch(`${BASE_URL}/teacher_add_syllabus`, { method: 'POST', body });
   const json = await response.json();
@@ -1445,7 +1449,9 @@ export async function editSyllabusChapterApi(params: {
   status: number;
   pdf_url?: string;
   image_url?: string;
-}): Promise<void> {
+  pdf_file?: any;
+  image_file?: any;
+}): Promise<{ pdf_url?: string; image_url?: string }> {
   const body = new FormData();
   body.append('id', params.id);
   body.append('chapter_number', String(params.chapter_number));
@@ -1454,10 +1460,13 @@ export async function editSyllabusChapterApi(params: {
   body.append('status', String(params.status));
   if (params.pdf_url) body.append('pdf_url', params.pdf_url);
   if (params.image_url) body.append('image_url', params.image_url);
+  if (params.pdf_file) body.append('pdf_file', params.pdf_file);
+  if (params.image_file) body.append('image_file', params.image_file);
 
   const response = await fetch(`${BASE_URL}/teacher_edit_syllabus`, { method: 'POST', body });
   const json = await response.json();
   if (!json.status) throw new Error(json.message || 'Failed to update syllabus chapter');
+  return json.data || {};
 }
 
 export async function toggleSyllabusStatusApi(id: string, status: number): Promise<void> {
