@@ -139,7 +139,12 @@ export type TeacherPermissionKey =
   | 'attendance'
   | 'leave'
   | 'fees'
-  | 'result';
+  | 'result'
+  | 'teacher_subjects'
+  | 'teacher_promote'
+  | 'syllabus'
+  | 'teacher_export'
+  | 'teacher_storage';
 
 export interface TeacherProfile {
   name: string | null;

@@ -1129,14 +1129,14 @@ const TEACHER_QUICK_LINKS: TeacherQuickLink[] = [
   { label: 'Students', icon: 'people-outline', bg: '#E0F2FE', fg: '#0284C7', route: '/teacher-students' },
   { label: 'Homework', icon: 'book-outline', bg: '#E0E7FF', fg: '#4338CA', route: '/teacher-homework', permKey: 'homework' },
   { label: 'Attendance', icon: 'checkmark-done-outline', bg: '#DFF1E1', fg: '#2E7D32', route: '/teacher-attendance', permKey: 'attendance' },
-  { label: 'Subjects', icon: 'library-outline', bg: '#FEF3C7', fg: '#D97706', route: '/teacher-subjects' },
-  { label: 'Promotion', icon: 'trending-up-outline', bg: '#FCE7F3', fg: '#DB2777', route: '/teacher-promote' },
-  { label: 'Syllabus', icon: 'document-text-outline', bg: '#CCFBF1', fg: '#0D9488', route: '/syllabus' },
+  { label: 'Subjects', icon: 'library-outline', bg: '#FEF3C7', fg: '#D97706', route: '/teacher-subjects', permKey: 'teacher_subjects' },
+  { label: 'Promotion', icon: 'trending-up-outline', bg: '#FCE7F3', fg: '#DB2777', route: '/teacher-promote', permKey: 'teacher_promote' },
+  { label: 'Syllabus', icon: 'document-text-outline', bg: '#CCFBF1', fg: '#0D9488', route: '/syllabus', permKey: 'syllabus' },
   { label: 'Leaves', icon: 'calendar-clear-outline', bg: '#FBEFD3', fg: '#B8860B', route: '/teacher-leaves', permKey: 'leave' },
   { label: 'Fees', icon: 'cash-outline', bg: '#FBE2E2', fg: '#C62828', route: '/teacher-fees', permKey: 'fees' },
   { label: 'Notices', icon: 'megaphone-outline', bg: '#E3EEFD', fg: '#2E6FBE', route: '/teacher-notices', permKey: 'notices' },
   { label: 'Events', icon: 'calendar-outline', bg: '#EDE3FD', fg: '#6A3EBE', route: '/teacher-events', permKey: 'events' },
-  { label: 'Export', icon: 'download-outline', bg: '#E7E7E7', fg: '#444B54', route: '/teacher-export' },
+  { label: 'Export', icon: 'download-outline', bg: '#E7E7E7', fg: '#444B54', route: '/teacher-export', permKey: 'teacher_export' },
 ];
 
 /** Teacher-side counterpart to the student dashboard's Quick Links grid —
