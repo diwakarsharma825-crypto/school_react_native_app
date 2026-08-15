@@ -95,102 +95,98 @@ export default function HomeScreen() {
 
   return (
     <Screen>
-      {home.data ? (
-        <>
-          <Carousel items={home.data.sliders} />
-          {pendingRegistration && !studentLoggedIn ? (
-            <Card
+      {home.data.sliders && home.data.sliders.length > 0 ? (
+        <Carousel sliders={home.data.sliders} />
+      ) : null}
+      {pendingRegistration && !studentLoggedIn ? (
+        <Card
+          style={{
+            marginBottom: Spacing.four,
+            backgroundColor: theme.dark ? '#451A03' : '#FEF3C7',
+            borderColor: theme.dark ? '#92400E' : '#F59E0B',
+            borderWidth: 1,
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.three }}>
+            <View
               style={{
-                marginBottom: Spacing.four,
-                backgroundColor: theme.dark ? '#451A03' : '#FEF3C7',
-                borderColor: theme.dark ? '#92400E' : '#F59E0B',
-                borderWidth: 1,
+                width: 36,
+                height: 36,
+                borderRadius: 18,
+                backgroundColor: '#F59E0B',
+                alignItems: 'center',
+                justifyContent: 'center',
               }}
             >
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.three }}>
-                <View
-                  style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: 18,
-                    backgroundColor: '#F59E0B',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Ionicons name="time-outline" size={20} color="#FFFFFF" />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <ThemedText type="smallBold" style={{ color: theme.dark ? '#FDE047' : '#92400E' }}>
-                    {t('account_pending')}
-                  </ThemedText>
-                  <ThemedText
-                    type="small"
-                    style={{ color: theme.dark ? 'rgba(255,255,255,0.85)' : '#B45309', fontSize: 12 }}
-                  >
-                    Registration for {pendingRegistration.name} ({pendingRegistration.className}) is submitted. Your class teacher needs to activate your account before you can view homework.
-                  </ThemedText>
-                </View>
-              </View>
-            </Card>
-          ) : null}
-          <QuickActionGrid />
+              <Ionicons name="time-outline" size={20} color="#FFFFFF" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <ThemedText type="smallBold" style={{ color: theme.dark ? '#FDE047' : '#92400E' }}>
+                {t('account_pending')}
+              </ThemedText>
+              <ThemedText
+                type="small"
+                style={{ color: theme.dark ? 'rgba(255,255,255,0.85)' : '#B45309', fontSize: 12 }}
+              >
+                Registration for {pendingRegistration.name} ({pendingRegistration.className}) is submitted. Your class teacher needs to activate your account before you can view homework.
+              </ThemedText>
+            </View>
+          </View>
+        </Card>
+      ) : null}
+      <QuickActionGrid />
 
-          <SectionHeader title={t('principal_message')} />
-          {settings.data?.principle_text ? (
-            <PrincipalCard
-              photoUrl={settings.data.principle_image_url ?? null}
-              message={stripHtml(settings.data.principle_text)}
-              name={settings.data.principal_name}
-            />
-          ) : (
-            <EmptyState message="Message unavailable." />
-          )}
-
-          <StatsRow stats={home.data.stats} />
-
-          {eventsEnabled ? (
-            <>
-              <SectionHeader title={t('latest_events')} onSeeAll={() => router.push('/(tabs)/events')} />
-              {home.data.events.length > 0 ? (
-                <View style={{ marginBottom: Spacing.four }}>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                    {home.data.events.map((e) => (
-                      <EventSpotlightCard
-                        key={e.id}
-                        title={e.title}
-                        date={e.event_from}
-                        place={e.event_place}
-                        imageUrl={e.image_url}
-                        coverMedia={e.cover_media}
-                        images={e.images}
-                        onPress={() => router.push(`/event/${e.id}`)}
-                      />
-                    ))}
-                  </ScrollView>
-                </View>
-              ) : (
-                <EmptyState message="No upcoming events." />
-              )}
-            </>
-          ) : null}
-
-          {topStudentsEnabled && (achievers.data ?? []).length > 0 ? (
-            <>
-              <SectionHeader title={t('top_students')} onSeeAll={() => router.push('/top-students')} />
-              <View style={{ marginBottom: Spacing.four }}>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                  {(achievers.data ?? []).map(toAchiever).map((a, i) => (
-                    <AchieverCard key={a.name} achiever={a} paletteIndex={i} width={190} />
-                  ))}
-                </ScrollView>
-              </View>
-            </>
-          ) : null}
-        </>
+      <SectionHeader title={t('principal_message')} />
+      {settings.data?.principle_text ? (
+        <PrincipalCard
+          photoUrl={settings.data.principle_image_url ?? null}
+          message={stripHtml(settings.data.principle_text)}
+          name={settings.data.principal_name}
+        />
       ) : (
-        <EmptyState message="Nothing to show yet." />
+        <EmptyState message="Message unavailable." />
       )}
+
+      <StatsRow stats={home.data.stats} />
+
+      {eventsEnabled ? (
+        <>
+          <SectionHeader title={t('latest_events')} onSeeAll={() => router.push('/(tabs)/events')} />
+          {home.data.events.length > 0 ? (
+            <View style={{ marginBottom: Spacing.four }}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                {home.data.events.map((e) => (
+                  <EventSpotlightCard
+                    key={e.id}
+                    title={e.title}
+                    date={e.event_from}
+                    place={e.event_place}
+                    imageUrl={e.image_url}
+                    coverMedia={e.cover_media}
+                    images={e.images}
+                    onPress={() => router.push(`/event/${e.id}`)}
+                  />
+                ))}
+              </ScrollView>
+            </View>
+          ) : (
+            <EmptyState message="No upcoming events." />
+          )}
+        </>
+      ) : null}
+
+      {topStudentsEnabled && (achievers.data ?? []).length > 0 ? (
+        <>
+          <SectionHeader title={t('top_students')} onSeeAll={() => router.push('/top-students')} />
+          <View style={{ marginBottom: Spacing.four }}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              {(achievers.data ?? []).map(toAchiever).map((a, i) => (
+                <AchieverCard key={a.name} achiever={a} paletteIndex={i} width={190} />
+              ))}
+            </ScrollView>
+          </View>
+        </>
+      ) : null}
     </Screen>
   );
 }
