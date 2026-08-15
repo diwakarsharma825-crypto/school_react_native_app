@@ -27,6 +27,7 @@ export function AppHeader() {
   const insets = useSafeAreaInsets();
   const theme = useTheme();
   const brand = useBrand();
+  const { language, toggleLanguage } = useLanguage();
   const { data: settings } = useFetch(fetchSettings);
   const [imgError, setImgError] = useState(false);
   const schoolName = settings?.school_name;
@@ -57,6 +58,16 @@ export function AppHeader() {
         ) : null}
       </View>
       <View style={styles.actions}>
+        <Pressable
+          hitSlop={8}
+          onPress={toggleLanguage}
+          style={({ pressed }) => [styles.langBtn, pressed && { opacity: 0.7 }]}
+          accessibilityLabel="Switch Language"
+        >
+          <ThemedText type="smallBold" style={{ color: '#FFFFFF', fontSize: 11 }}>
+            {language === 'en' ? '🌐 HI' : '🌐 EN'}
+          </ThemedText>
+        </Pressable>
         <ThemeToggle />
         <Pressable
           hitSlop={10}
@@ -102,5 +113,15 @@ const styles = StyleSheet.create({
   },
   bell: {
     padding: Spacing.one,
+  },
+  langBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.35)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

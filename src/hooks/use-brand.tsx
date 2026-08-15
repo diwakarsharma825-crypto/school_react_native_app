@@ -8,18 +8,34 @@ export interface BrandOverride {
   splashColor?: string | null;
   headerColor?: string | null;
   achieversDisplay: 'marks' | 'grade';
+  mode?: 'school' | 'institute' | 'tutor';
+  labels?: {
+    teacher?: string;
+    class?: string;
+    student?: string;
+  };
 }
 
-const EMPTY_BRAND: BrandOverride = { logoUrl: null, appTitle: null, primaryColor: null, accentColor: null, splashColor: null, headerColor: null, achieversDisplay: 'marks' };
+const EMPTY_BRAND: BrandOverride = {
+  logoUrl: null,
+  appTitle: null,
+  primaryColor: null,
+  accentColor: null,
+  splashColor: null,
+  headerColor: null,
+  achieversDisplay: 'marks',
+  mode: 'school',
+  labels: {
+    teacher: 'Teacher',
+    class: 'Class',
+    student: 'Student',
+  },
+};
 
 const BrandContext = createContext<BrandOverride>(EMPTY_BRAND);
 
-/** Admin-set logo + brand colors from App Control, applied at runtime.
- * Falls back to the bundled defaults (theme.ts's Brand.blue/saffron, the
- * static app icon) wherever a field is null — this never blocks rendering
- * on a slow/failed app_status fetch. */
 export function BrandProvider({ value, children }: { value: BrandOverride; children: React.ReactNode }) {
-  return <BrandContext.Provider value={value}>{children}</BrandContext.Provider>;
+  return <BrandContext.Provider value={{ ...EMPTY_BRAND, ...value }}>{children}</BrandContext.Provider>;
 }
 
 export function useBrand(): BrandOverride {

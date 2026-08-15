@@ -234,6 +234,7 @@ function RootLayoutInner() {
                   <Stack.Screen name="homework" options={{ header: () => <DetailHeader title="Homework" /> }} />
                   <Stack.Screen name="apply-leave" options={{ header: () => <DetailHeader title="Apply Leave" /> }} />
                   <Stack.Screen name="fees" options={{ header: () => <DetailHeader title="Fee Invoices" /> }} />
+                  <Stack.Screen name="syllabus" options={{ header: () => <DetailHeader title="Subject Syllabus" /> }} />
                   <Stack.Screen name="login" options={{ header: () => <AppHeader /> }} />
                   <Stack.Screen name="teacher-login" options={{ header: () => <DetailHeader title="Teacher Login" /> }} />
                   <Stack.Screen name="teacher-profile-setup" options={{ header: () => <DetailHeader title="Teacher Profile Setup" /> }} />
@@ -253,6 +254,7 @@ function RootLayoutInner() {
                   <Stack.Screen name="teacher-import-students" options={{ header: () => <DetailHeader title="Import Students (Excel)" /> }} />
                   <Stack.Screen name="teacher-student-review" options={{ header: () => <DetailHeader title="Review Student" /> }} />
                   <Stack.Screen name="teacher-add-student" options={{ header: () => <DetailHeader title="Add Student" /> }} />
+                  <Stack.Screen name="teacher-promote" options={{ header: () => <DetailHeader title="Student Promotion" /> }} />
                   <Stack.Screen name="student-dashboard" options={{ header: () => <DetailHeader title="Student Dashboard" /> }} />
                   <Stack.Screen name="teacher-students" options={{ header: () => <DetailHeader title="Student Roster" /> }} />
                   <Stack.Screen name="student-attendance" options={{ header: () => <DetailHeader title="Attendance Record" /> }} />
@@ -268,15 +270,19 @@ function RootLayoutInner() {
   );
 }
 
+import { LanguageProvider } from '@/lib/i18n';
+
 export default function RootLayout() {
   return (
     <KeyboardProvider>
       <ThemeModeProvider>
-        <TeacherAuthProvider>
-          <StudentAuthProvider>
-            <RootLayoutInner />
-          </StudentAuthProvider>
-        </TeacherAuthProvider>
+        <LanguageProvider>
+          <TeacherAuthProvider>
+            <StudentAuthProvider>
+              <RootLayoutInner />
+            </StudentAuthProvider>
+          </TeacherAuthProvider>
+        </LanguageProvider>
       </ThemeModeProvider>
     </KeyboardProvider>
   );

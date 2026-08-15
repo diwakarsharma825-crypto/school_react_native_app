@@ -285,6 +285,26 @@ function StudentsTab({
           </Pressable>
         ) : null}
 
+        <Pressable
+          onPress={() => router.push('/teacher-promote' as any)}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 6,
+            backgroundColor: theme.surface,
+            borderColor: theme.tint,
+            borderWidth: 1.5,
+            paddingHorizontal: 14,
+            paddingVertical: 8,
+            borderRadius: Radius.md,
+          }}
+        >
+          <Ionicons name="arrow-up-circle-outline" size={16} color={theme.tint} />
+          <ThemedText type="smallBold" themeColor="tint">
+            Batch Promotion
+          </ThemedText>
+        </Pressable>
+
         {canImportResult ? (
           <Pressable
             onPress={() => router.push('/teacher-import-result' as any)}

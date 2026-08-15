@@ -62,6 +62,8 @@ function AddFeeModal({
   const [feeType, setFeeType] = useState<FeeType | null>(null);
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
+  const [discount, setDiscount] = useState('');
+  const [discountReason, setDiscountReason] = useState('');
   const [dueDate, setDueDate] = useState<string | null>(null);
   const [file, setFile] = useState<{ uri: string; mimeType?: string | null; name?: string | null } | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -175,7 +177,7 @@ function AddFeeModal({
           <View style={styles.row}>
             <View style={styles.rowItem}>
               <ThemedText type="smallBold" style={styles.fieldLabel}>
-                Amount
+                Base Amount (₹)
               </ThemedText>
               <TextInput
                 value={amount}
@@ -193,6 +195,53 @@ function AddFeeModal({
               <DatePickerField label="Due Date" placeholder="Select date" value={dueDate} onChange={setDueDate} minDate="0000-00-00" />
             </View>
           </View>
+
+          <View style={styles.row}>
+            <View style={styles.rowItem}>
+              <ThemedText type="smallBold" style={styles.fieldLabel}>
+                Discount (₹)
+              </ThemedText>
+              <TextInput
+                value={discount}
+                onChangeText={setDiscount}
+                onFocus={() => scrollRef.current?.assureFocusedInputVisible()}
+                placeholder="0"
+                keyboardType="decimal-pad"
+                autoComplete="off"
+                textContentType="none"
+                placeholderTextColor={theme.textSecondary}
+                style={[styles.input, { borderColor: theme.border, color: theme.text }]}
+              />
+            </View>
+            <View style={styles.rowItem}>
+              <ThemedText type="smallBold" style={styles.fieldLabel}>
+                Net Payable
+              </ThemedText>
+              <View style={[styles.input, { borderColor: theme.border, justifyContent: 'center', backgroundColor: theme.dark ? 'rgba(255,255,255,0.05)' : '#F1F5F9' }]}>
+                <ThemedText type="smallBold" style={{ color: theme.tint }}>
+                  ₹{Math.max(0, (Number(amount) || 0) - (Number(discount) || 0))}
+                </ThemedText>
+              </View>
+            </View>
+          </View>
+
+          {(Number(discount) || 0) > 0 ? (
+            <>
+              <ThemedText type="smallBold" style={styles.fieldLabel}>
+                Discount Reason
+              </ThemedText>
+              <TextInput
+                value={discountReason}
+                onChangeText={setDiscountReason}
+                onFocus={() => scrollRef.current?.assureFocusedInputVisible()}
+                placeholder="e.g. Sibling Concession, Merit Scholarship"
+                placeholderTextColor={theme.textSecondary}
+                autoComplete="off"
+                textContentType="none"
+                style={[styles.input, { borderColor: theme.border, color: theme.text }]}
+              />
+            </>
+          ) : null}
 
           <Pressable onPress={pickFile} style={[styles.filePicker, { borderColor: theme.border }]}>
             <ThemedText type="small">{file ? 'Invoice file selected' : 'Attach invoice (image or PDF, optional)'}</ThemedText>
