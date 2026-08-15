@@ -30,9 +30,11 @@ export function QuickActionGrid() {
     if (key === 'attendance') return t('attendance');
     if (key === 'notices') return t('notices');
     if (key === 'syllabus') return t('syllabus');
+    if (key === 'subjects') return t('Subjects');
+    if (key === 'promotion') return t('Promotion');
     if (key === 'teachers') return t('teachers');
     if (key === 'disclosures') return t('disclosures');
-    return rawLabel;
+    return t(rawLabel);
   };
 
   return (

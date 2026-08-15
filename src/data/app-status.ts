@@ -82,6 +82,9 @@ const FAIL_OPEN_TRIAL: TrialStatus = {
 export const DEFAULT_HOME_TILES: LayoutItem[] = [
   { label: 'Result', icon: 'document-text', colorBg: '#FDECD8', colorFg: '#E8871E', target: 'result', targetUrl: null },
   { label: 'Notices', icon: 'megaphone', colorBg: '#DCE8F7', colorFg: '#2E6FBE', target: 'notices', targetUrl: null },
+  { label: 'Syllabus', icon: 'book', colorBg: '#F3E8FF', colorFg: '#9333EA', target: 'syllabus', targetUrl: null },
+  { label: 'Subjects', icon: 'journal', colorBg: '#E0F2FE', colorFg: '#0284C7', target: 'teacher_subjects', targetUrl: null },
+  { label: 'Promotion', icon: 'arrow-up-circle', colorBg: '#DCFCE7', colorFg: '#16A34A', target: 'teacher_promote', targetUrl: null },
   { label: 'Disclosure', icon: 'shield-checkmark', colorBg: '#DFF1E1', colorFg: '#2E7D32', target: 'disclosure', targetUrl: null },
   { label: 'Contact', icon: 'call', colorBg: '#FBE2E2', colorFg: '#C62828', target: 'contact', targetUrl: null },
 ];
