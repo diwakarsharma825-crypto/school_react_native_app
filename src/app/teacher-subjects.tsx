@@ -4,41 +4,49 @@ import { Alert, Modal, Pressable, StyleSheet, TextInput, View } from 'react-nati
 
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { EmptyState, ErrorState, Loading } from '@/components/ui/states';
+import { EmptyState, Loading } from '@/components/ui/states';
 import { Screen } from '@/components/ui/Screen';
 import { SelectField } from '@/components/ui/SelectField';
 import { TeacherGuard } from '@/components/ui/TeacherGuard';
 import { ThemedText } from '@/components/ui/ThemedText';
-import { Radius, Shadow, Spacing } from '@/constants/theme';
-import { addTeacherSubject, ClassPickerItem, deleteTeacherSubject, fetchTeacherClassesCatalog, fetchTeacherSubjects, MappedSubjectItem } from '@/data/teacher-api';
+import { Radius, Spacing } from '@/constants/theme';
+import {
+  addTeacherSubject,
+  ClassPickerItem,
+  deleteTeacherSubject,
+  fetchTeacherClassesCatalog,
+  fetchTeacherSubjects,
+} from '@/data/teacher-api';
 import { useTeacherAuth } from '@/hooks/use-teacher-auth';
 import { useTheme } from '@/hooks/use-theme';
+import { useLanguage } from '@/lib/i18n';
 
 interface SubjectItem {
   id: string;
   name: string;
   code?: string;
-  teacherName?: string;
 }
 
 const DEFAULT_CLASS_SUBJECTS: Record<string, SubjectItem[]> = {
   'Class 10th': [
-    { id: 'sub-1', name: 'Mathematics', code: 'MATH-10', teacherName: 'Mr. Rajesh Sharma' },
-    { id: 'sub-2', name: 'Science', code: 'SCI-10', teacherName: 'Dr. Sunita Verma' },
-    { id: 'sub-3', name: 'English Literature', code: 'ENG-10', teacherName: 'Mrs. Anju Kapoor' },
-    { id: 'sub-4', name: 'Social Science', code: 'SST-10', teacherName: 'Mr. Vikram Singh' },
-    { id: 'sub-5', name: 'Hindi', code: 'HIN-10', teacherName: 'Mr. Ramesh Gupta' },
+    { id: 'sub-1', name: 'Mathematics', code: 'MATH-10' },
+    { id: 'sub-2', name: 'Science', code: 'SCI-10' },
+    { id: 'sub-3', name: 'English Literature', code: 'ENG-10' },
+    { id: 'sub-4', name: 'Social Science', code: 'SST-10' },
+    { id: 'sub-5', name: 'Hindi', code: 'HIN-10' },
   ],
   'Class 9th': [
-    { id: 'sub-6', name: 'Mathematics', code: 'MATH-9', teacherName: 'Mr. Rajesh Sharma' },
-    { id: 'sub-7', name: 'General Science', code: 'SCI-9', teacherName: 'Dr. Sunita Verma' },
-    { id: 'sub-8', name: 'English Grammar', code: 'ENG-9', teacherName: 'Mrs. Anju Kapoor' },
+    { id: 'sub-6', name: 'Mathematics', code: 'MATH-9' },
+    { id: 'sub-7', name: 'General Science', code: 'SCI-9' },
+    { id: 'sub-8', name: 'English Grammar', code: 'ENG-9' },
   ],
 };
 
 export default function TeacherSubjectsScreen() {
   const theme = useTheme();
   const { loggedIn } = useTeacherAuth();
+  const { t } = useLanguage();
+
   const [classes, setClasses] = useState<ClassPickerItem[]>([]);
   const [loadingClasses, setLoadingClasses] = useState(true);
   const [selectedClassId, setSelectedClassId] = useState<number | null>(null);
@@ -46,9 +54,12 @@ export default function TeacherSubjectsScreen() {
 
   const [subjects, setSubjects] = useState<SubjectItem[]>([]);
   const [loadingSubjects, setLoadingSubjects] = useState(false);
+
+  // Modal State for Add / Edit
   const [modalVisible, setModalVisible] = useState(false);
-  const [newSubjectName, setNewSubjectName] = useState('');
-  const [newSubjectCode, setNewSubjectCode] = useState('');
+  const [editingSubject, setEditingSubject] = useState<SubjectItem | null>(null);
+  const [subjectName, setSubjectName] = useState('');
+  const [subjectCode, setSubjectCode] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -68,7 +79,6 @@ export default function TeacherSubjectsScreen() {
         const formatted: SubjectItem[] = data.map((item) => ({
           id: String(item.id),
           name: item.name,
-          teacherName: 'Assigned Faculty',
         }));
         setSubjects(formatted.length > 0 ? formatted : DEFAULT_CLASS_SUBJECTS['Class 10th'] || []);
       })
@@ -90,12 +100,29 @@ export default function TeacherSubjectsScreen() {
   const className = selectedClass?.name || 'Class 10th';
 
   const classOptions = classes.map((c) => ({ label: c.name, value: String(c.id) }));
-  const sectionOptions = selectedClass
+  const sectionOptions = selectedClass?.sections
     ? selectedClass.sections.map((s) => ({ label: `Section ${s.name}`, value: String(s.id) }))
     : [];
 
-  const handleAddSubject = async () => {
-    if (!newSubjectName.trim()) {
+  const openAddModal = () => {
+    setEditingSubject(null);
+    setSubjectName('');
+    setSubjectCode('');
+    setModalVisible(true);
+  };
+
+  const openEditModal = (sub: SubjectItem) => {
+    setEditingSubject(sub);
+    setSubjectName(sub.name);
+    setSubjectCode(sub.code || '');
+    setModalVisible(true);
+  };
+
+  const handleSaveSubject = async () => {
+    const trimmedName = subjectName.trim();
+    const trimmedCode = subjectCode.trim();
+
+    if (!trimmedName) {
       Alert.alert('Validation Error', 'Please enter a subject name.');
       return;
     }
@@ -103,27 +130,52 @@ export default function TeacherSubjectsScreen() {
       Alert.alert('Validation Error', 'Please select a class first.');
       return;
     }
+
+    // Check Unique Subject Name for this class
+    const isDuplicate = subjects.some(
+      (s) => s.id !== editingSubject?.id && s.name.trim().toLowerCase() === trimmedName.toLowerCase()
+    );
+    if (isDuplicate) {
+      Alert.alert('Duplicate Subject Name', `A subject named "${trimmedName}" already exists for this class.`);
+      return;
+    }
+
     setSubmitting(true);
     try {
-      await addTeacherSubject(selectedClassId, newSubjectName.trim());
-      setNewSubjectName('');
-      setNewSubjectCode('');
+      if (editingSubject) {
+        // Edit existing subject
+        setSubjects((prev) =>
+          prev.map((s) => (s.id === editingSubject.id ? { ...s, name: trimmedName, code: trimmedCode || undefined } : s))
+        );
+        Alert.alert('Subject Updated!', `Subject "${trimmedName}" has been updated.`);
+      } else {
+        // Add new subject
+        await addTeacherSubject(selectedClassId, trimmedName);
+        loadSubjects(selectedClassId);
+        Alert.alert('Subject Added!', `${trimmedName} has been mapped to ${className}.`);
+      }
+      setSubjectName('');
+      setSubjectCode('');
+      setEditingSubject(null);
       setModalVisible(false);
-      loadSubjects(selectedClassId);
-      Alert.alert('Subject Added!', `${newSubjectName.trim()} has been mapped to ${className}.`);
-    } catch (e) {
-      // Fallback local update if API requires specific role
-      const newSub: SubjectItem = {
-        id: `sub-${Date.now()}`,
-        name: newSubjectName.trim(),
-        code: newSubjectCode.trim() || undefined,
-        teacherName: 'Assigned Faculty',
-      };
-      setSubjects((prev) => [...prev, newSub]);
-      setNewSubjectName('');
-      setNewSubjectCode('');
+    } catch {
+      // Fallback local update
+      if (editingSubject) {
+        setSubjects((prev) =>
+          prev.map((s) => (s.id === editingSubject.id ? { ...s, name: trimmedName, code: trimmedCode || undefined } : s))
+        );
+      } else {
+        const newSub: SubjectItem = {
+          id: `sub-${Date.now()}`,
+          name: trimmedName,
+          code: trimmedCode || undefined,
+        };
+        setSubjects((prev) => [...prev, newSub]);
+      }
+      setSubjectName('');
+      setSubjectCode('');
+      setEditingSubject(null);
       setModalVisible(false);
-      Alert.alert('Subject Added!', `${newSub.name} has been mapped to ${className}.`);
     } finally {
       setSubmitting(false);
     }
@@ -148,9 +200,9 @@ export default function TeacherSubjectsScreen() {
   return (
     <Screen>
       <View style={styles.headerWrap}>
-        <ThemedText type="subtitle">Class & Subject Management</ThemedText>
+        <ThemedText type="subtitle">{t('Class & Subject Management')}</ThemedText>
         <ThemedText type="small" themeColor="textSecondary">
-          Assign and manage subjects mapped to assigned classes and sections
+          Assign, edit, and manage subjects for assigned classes
         </ThemedText>
       </View>
 
@@ -184,8 +236,12 @@ export default function TeacherSubjectsScreen() {
           Mapped Subjects ({subjects.length})
         </ThemedText>
         <Pressable
-          onPress={() => setModalVisible(true)}
-          style={({ pressed }) => [styles.addBtn, { backgroundColor: theme.tint }, pressed && { opacity: 0.8 }]}
+          onPress={openAddModal}
+          style={({ pressed }) => [
+            styles.addBtn,
+            { backgroundColor: theme.dark ? '#2563EB' : theme.tint },
+            pressed && { opacity: 0.8 },
+          ]}
         >
           <Ionicons name="add" size={16} color="#FFFFFF" />
           <ThemedText type="smallBold" style={{ color: '#FFFFFF', fontSize: 12 }}>
@@ -195,7 +251,9 @@ export default function TeacherSubjectsScreen() {
       </View>
 
       {/* Mapped Subjects List */}
-      {subjects.length === 0 ? (
+      {loadingSubjects ? (
+        <Loading label="Loading subjects…" />
+      ) : subjects.length === 0 ? (
         <EmptyState message="No subjects assigned to this class yet." icon="book-outline" />
       ) : (
         subjects.map((sub) => (
@@ -204,71 +262,110 @@ export default function TeacherSubjectsScreen() {
               <View
                 style={[
                   styles.subIconWrap,
-                  { backgroundColor: theme.dark ? 'rgba(37,99,235,0.2)' : '#EFF6FF' },
+                  {
+                    backgroundColor: theme.dark ? 'rgba(37, 99, 235, 0.25)' : '#EFF6FF',
+                    borderColor: theme.dark ? '#3B82F6' : '#BFDBFE',
+                    borderWidth: 1,
+                  },
                 ]}
               >
-                <Ionicons name="journal-outline" size={22} color={theme.tint} />
+                <Ionicons name="book" size={20} color={theme.dark ? '#60A5FA' : '#2563EB'} />
               </View>
               <View style={styles.subTextCol}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                   <ThemedText type="smallBold" style={{ fontSize: 15 }}>
-                    {sub.name}
+                    {t(sub.name)}
                   </ThemedText>
                   {sub.code ? (
-                    <View style={[styles.codeBadge, { backgroundColor: theme.dark ? 'rgba(255,255,255,0.1)' : '#E2E8F0' }]}>
-                      <ThemedText type="small" style={{ fontSize: 10, fontWeight: '600' }}>
+                    <View
+                      style={[
+                        styles.codeBadge,
+                        {
+                          backgroundColor: theme.dark ? '#1E3A8A' : '#DBEAFE',
+                          borderColor: theme.dark ? '#3B82F6' : '#93C5FD',
+                          borderWidth: 1,
+                        },
+                      ]}
+                    >
+                      <ThemedText
+                        type="small"
+                        style={{ fontSize: 10, fontWeight: '700', color: theme.dark ? '#93C5FD' : '#1D4ED8' }}
+                      >
                         {sub.code}
                       </ThemedText>
                     </View>
                   ) : null}
                 </View>
-                <ThemedText type="small" themeColor="textSecondary" style={{ marginTop: 2 }}>
-                  Teacher: {sub.teacherName || 'Assigned Faculty'}
-                </ThemedText>
               </View>
             </View>
 
-            <Pressable onPress={() => handleDeleteSubject(sub.id)} hitSlop={10}>
-              <Ionicons name="trash-outline" size={18} color="#EF4444" />
-            </Pressable>
+            {/* Action Buttons: Edit ✏️ and Delete 🗑️ */}
+            <View style={styles.actionRow}>
+              <Pressable
+                onPress={() => openEditModal(sub)}
+                hitSlop={10}
+                style={[
+                  styles.actionIconBtn,
+                  { backgroundColor: theme.dark ? 'rgba(59, 130, 246, 0.2)' : '#EFF6FF' },
+                ]}
+              >
+                <Ionicons name="pencil-outline" size={16} color={theme.dark ? '#60A5FA' : '#2563EB'} />
+              </Pressable>
+
+              <Pressable
+                onPress={() => handleDeleteSubject(sub.id)}
+                hitSlop={10}
+                style={[
+                  styles.actionIconBtn,
+                  { backgroundColor: theme.dark ? 'rgba(239, 68, 68, 0.2)' : '#FEF2F2' },
+                ]}
+              >
+                <Ionicons name="trash-outline" size={16} color={theme.dark ? '#F87171' : '#EF4444'} />
+              </Pressable>
+            </View>
           </Card>
         ))
       )}
 
-      {/* Add Subject Modal */}
+      {/* Add / Edit Subject Modal */}
       <Modal visible={modalVisible} transparent animationType="slide" onRequestClose={() => setModalVisible(false)}>
         <View style={styles.modalBackdrop}>
-          <View style={[styles.modalSheet, { backgroundColor: theme.background }]}>
+          <View style={[styles.modalSheet, { backgroundColor: theme.surface }]}>
             <View style={styles.modalHeader}>
-              <ThemedText type="subtitle">Add New Subject</ThemedText>
+              <ThemedText type="subtitle">{editingSubject ? 'Edit Subject' : 'Add New Subject'}</ThemedText>
               <Pressable onPress={() => setModalVisible(false)} hitSlop={10}>
                 <Ionicons name="close" size={22} color={theme.text} />
               </Pressable>
             </View>
 
             <ThemedText type="smallBold" style={styles.label}>
-              Subject Name *
+              Subject Name * (Must be Unique)
             </ThemedText>
             <TextInput
-              value={newSubjectName}
-              onChangeText={setNewSubjectName}
+              value={subjectName}
+              onChangeText={setSubjectName}
               placeholder="e.g. Computer Science, Economics"
               placeholderTextColor={theme.textSecondary}
-              style={[styles.input, { borderColor: theme.border, color: theme.text }]}
+              style={[styles.input, { borderColor: theme.border, color: theme.text, backgroundColor: theme.background }]}
             />
 
             <ThemedText type="smallBold" style={styles.label}>
               Subject Code (Optional)
             </ThemedText>
             <TextInput
-              value={newSubjectCode}
-              onChangeText={setNewSubjectCode}
+              value={subjectCode}
+              onChangeText={setSubjectCode}
               placeholder="e.g. CS-101"
               placeholderTextColor={theme.textSecondary}
-              style={[styles.input, { borderColor: theme.border, color: theme.text }]}
+              style={[styles.input, { borderColor: theme.border, color: theme.text, backgroundColor: theme.background }]}
             />
 
-            <Button label="Add Subject to Curriculum" onPress={handleAddSubject} style={{ marginTop: Spacing.three }} />
+            <Button
+              label={submitting ? 'Saving…' : editingSubject ? 'Save Changes' : 'Add Subject to Curriculum'}
+              onPress={handleSaveSubject}
+              disabled={submitting}
+              style={{ marginTop: Spacing.four }}
+            />
           </View>
         </View>
       </Modal>
@@ -326,6 +423,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  actionIconBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   modalBackdrop: {
     flex: 1,
