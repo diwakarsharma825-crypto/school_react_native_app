@@ -191,8 +191,32 @@ export async function fetchSubjectsCatalog(classId: number, search?: string): Pr
   ];
 }
 
+const MASTER_CLASSES_CATALOG: ClassPickerItem[] = [
+  { id: 1, name: 'Pre-Nursery' },
+  { id: 2, name: 'Nursery' },
+  { id: 3, name: 'LKG' },
+  { id: 4, name: 'UKG' },
+  { id: 5, name: 'Class 1st' },
+  { id: 6, name: 'Class 2nd' },
+  { id: 7, name: 'Class 3rd' },
+  { id: 8, name: 'Class 4th' },
+  { id: 9, name: 'Class 5th' },
+  { id: 10, name: 'Class 6th' },
+  { id: 11, name: 'Class 7th' },
+  { id: 12, name: 'Class 8th' },
+  { id: 13, name: 'Class 9th' },
+  { id: 14, name: 'Class 10th' },
+  { id: 15, name: 'Class 11th' },
+  { id: 16, name: 'Class 12th' },
+];
+
 export async function fetchClassesCatalog(): Promise<ClassPickerItem[]> {
-  return fetchTeacherClassesCatalog();
+  try {
+    const response = await fetch(`${BASE_URL}/teacher_classes_catalog`);
+    const json = (await response.json()) as ApiEnvelope<ClassPickerItem[]>;
+    if (json.status && json.data && json.data.length > 0) return json.data;
+  } catch {}
+  return MASTER_CLASSES_CATALOG;
 }
 
 export interface ProfileClassSelection {
