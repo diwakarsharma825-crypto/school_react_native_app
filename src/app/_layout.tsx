@@ -255,6 +255,7 @@ function RootLayoutInner() {
                   <Stack.Screen name="teacher-student-review" options={{ header: () => <DetailHeader title="Review Student" /> }} />
                   <Stack.Screen name="teacher-add-student" options={{ header: () => <DetailHeader title="Add Student" /> }} />
                   <Stack.Screen name="teacher-promote" options={{ header: () => <DetailHeader title="Student Promotion" /> }} />
+                  <Stack.Screen name="teacher-subjects" options={{ header: () => <DetailHeader title="Manage Subjects" /> }} />
                   <Stack.Screen name="student-dashboard" options={{ header: () => <DetailHeader title="Student Dashboard" /> }} />
                   <Stack.Screen name="teacher-students" options={{ header: () => <DetailHeader title="Student Roster" /> }} />
                   <Stack.Screen name="student-attendance" options={{ header: () => <DetailHeader title="Attendance Record" /> }} />

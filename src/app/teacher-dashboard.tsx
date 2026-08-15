@@ -305,6 +305,26 @@ function StudentsTab({
           </ThemedText>
         </Pressable>
 
+        <Pressable
+          onPress={() => router.push('/teacher-subjects' as any)}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 6,
+            backgroundColor: theme.surface,
+            borderColor: theme.tint,
+            borderWidth: 1.5,
+            paddingHorizontal: 14,
+            paddingVertical: 8,
+            borderRadius: Radius.md,
+          }}
+        >
+          <Ionicons name="book-outline" size={16} color={theme.tint} />
+          <ThemedText type="smallBold" themeColor="tint">
+            Manage Subjects
+          </ThemedText>
+        </Pressable>
+
         {canImportResult ? (
           <Pressable
             onPress={() => router.push('/teacher-import-result' as any)}
