@@ -192,10 +192,7 @@ export async function fetchSubjectsCatalog(classId: number, search?: string): Pr
 }
 
 export async function fetchClassesCatalog(): Promise<ClassPickerItem[]> {
-  const response = await fetch(`${BASE_URL}/teacher_classes_catalog`);
-  const json = (await response.json()) as ApiEnvelope<ClassPickerItem[]>;
-  if (!json.status) throw new Error(json.message);
-  return json.data;
+  return fetchTeacherClassesCatalog();
 }
 
 export interface ProfileClassSelection {
@@ -1321,29 +1318,23 @@ export async function fetchTeacherClassesCatalog(): Promise<ClassPickerItem[]> {
     profile = await fetchTeacherProfile();
   } catch {}
 
-  let allCatalog: ClassPickerItem[] = [];
+  if (profile && profile.classes && profile.classes.length > 0) {
+    return profile.classes.map((c, idx) => ({
+      id: c.class_id || idx + 1,
+      name: c.class_name + (c.section_name ? ` - ${c.section_name}` : ''),
+      section: c.section_name || undefined,
+    }));
+  }
+
   try {
-    allCatalog = await authedRequest<ClassPickerItem[]>('/teacher_classes_catalog');
+    return await authedRequest<ClassPickerItem[]>('/teacher_classes_catalog');
   } catch {
-    allCatalog = [
-      { id: 1, name: '10th', section: 'A' },
-      { id: 2, name: '10th', section: 'B' },
-      { id: 3, name: '9th', section: 'A' },
-      { id: 4, name: '9th', section: 'B' },
-      { id: 5, name: '8th', section: 'A' },
-      { id: 6, name: '7th', section: 'A' },
-      { id: 7, name: '6th', section: 'A' },
+    return [
+      { id: 1, name: 'Class 1st - A', section: 'A' },
+      { id: 2, name: 'Class 2nd - A', section: 'A' },
+      { id: 3, name: 'UKG - A', section: 'A' },
     ];
   }
-
-  // Filter if teacher is assigned specific classes in their profile
-  if (profile && profile.classes && profile.classes.length > 0 && !profile.can_edit_classes) {
-    const assignedIds = new Set(profile.classes.map((c) => c.class_id));
-    const filtered = allCatalog.filter((c) => assignedIds.has(c.id));
-    if (filtered.length > 0) return filtered;
-  }
-
-  return allCatalog;
 }
 
 export async function addClass(name: string): Promise<void> {

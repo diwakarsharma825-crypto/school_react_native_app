@@ -1266,7 +1266,7 @@ export default function TeacherDashboardScreen() {
         menu={[]}
       />
 
-      {classes.length > 1 ? (
+      {classes.length > 0 ? (
         <SelectField label="Class" placeholder="Select class" value={classId} options={classOptions} onChange={setClassId} />
       ) : null}
 
