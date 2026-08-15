@@ -12,6 +12,7 @@ import { useFetch } from '@/hooks/use-fetch';
 import { useTheme } from '@/hooks/use-theme';
 import { ThemedText } from './ThemedText';
 import { ThemeToggle } from './ThemeToggle';
+import { useLanguage } from '@/lib/i18n';
 
 import { useLayout } from '@/hooks/use-layout';
 import { useStudentAuth } from '@/hooks/use-student-auth';
