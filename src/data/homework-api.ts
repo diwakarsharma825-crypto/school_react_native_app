@@ -110,7 +110,8 @@ export async function studentRegister(params: {
   if (params.section) body.append('section', params.section);
   body.append('phone', params.phone);
   body.append('password', params.password);
-  body.append('srn', params.srn);
+  const finalSrn = (params.srn && params.srn.trim()) ? params.srn.trim() : `SRN${Date.now()}`;
+  body.append('srn', finalSrn);
   if (params.gender) body.append('gender', params.gender);
   const response = await fetch(`${BASE_URL}/student_register`, { method: 'POST', body });
   const json = (await response.json()) as ApiEnvelope<{ registered: boolean }>;
