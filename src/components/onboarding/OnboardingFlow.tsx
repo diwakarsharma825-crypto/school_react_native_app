@@ -195,20 +195,20 @@ export function OnboardingFlow({ onDone }: OnboardingFlowProps) {
           await savePendingRegistration({ name: trimmedName, className: studentClass ?? '' });
           setTimeout(() => {
             Alert.alert(
-              'Account Pending Verification',
-              "Your account is already registered and awaiting teacher verification. You will be able to view homework once approved."
+              'Registered!',
+              "Your class teacher needs to verify your account before you can view homework. You'll be able to log in once that's done."
             );
           }, 400);
         } else {
           try {
-            const finalSrn = srn.trim() || `SRN${Date.now()}`;
+            const cleanSrn = String(Math.floor(100000000 + Math.random() * 900000000));
             await studentRegister({
               name: trimmedName,
               className: studentClass ?? '',
               section: section.trim() || undefined,
               phone: trimmedMobile,
               password,
-              srn: finalSrn,
+              srn: cleanSrn,
               gender: gender ?? undefined,
             });
             await savePendingRegistration({ name: trimmedName, className: studentClass ?? '' });
@@ -224,8 +224,8 @@ export function OnboardingFlow({ onDone }: OnboardingFlowProps) {
               await savePendingRegistration({ name: trimmedName, className: studentClass ?? '' });
               setTimeout(() => {
                 Alert.alert(
-                  'Already Registered',
-                  "Your account is registered and awaiting verification by your class teacher. You can log in once approved."
+                  'Registered!',
+                  "Your class teacher needs to verify your account before you can view homework. You'll be able to log in once that's done."
                 );
               }, 400);
             } else {
