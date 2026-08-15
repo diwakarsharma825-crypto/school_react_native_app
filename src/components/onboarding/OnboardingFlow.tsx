@@ -194,10 +194,14 @@ export function OnboardingFlow({ onDone }: OnboardingFlowProps) {
         if (/pending|verify|verification|already|registered/i.test(loginMsg)) {
           await savePendingRegistration({ name: trimmedName, className: studentClass ?? '' });
           setTimeout(() => {
-            Alert.alert(
-              'Registered!',
-              "Your class teacher needs to verify your account before you can view homework. You'll be able to log in once that's done."
-            );
+            if (typeof window !== 'undefined' && window.alert) {
+              window.alert("Registered!\n\nYour class teacher needs to verify your account before you can view homework. You'll be able to log in once that's done.");
+            } else {
+              Alert.alert(
+                'Registered!',
+                "Your class teacher needs to verify your account before you can view homework. You'll be able to log in once that's done."
+              );
+            }
           }, 400);
         } else {
           try {
@@ -213,20 +217,28 @@ export function OnboardingFlow({ onDone }: OnboardingFlowProps) {
             });
             await savePendingRegistration({ name: trimmedName, className: studentClass ?? '' });
             setTimeout(() => {
-              Alert.alert(
-                'Registered!',
-                "Your class teacher needs to verify your account before you can view homework. You'll be able to log in once that's done."
-              );
+              if (typeof window !== 'undefined' && window.alert) {
+                window.alert("Registered!\n\nYour class teacher needs to verify your account before you can view homework. You'll be able to log in once that's done.");
+              } else {
+                Alert.alert(
+                  'Registered!',
+                  "Your class teacher needs to verify your account before you can view homework. You'll be able to log in once that's done."
+                );
+              }
             }, 400);
           } catch (registerError) {
             const regMsg = registerError instanceof Error ? registerError.message : 'Could not register. Please try again.';
             if (/already|registered|srn|exist|conflict/i.test(regMsg)) {
               await savePendingRegistration({ name: trimmedName, className: studentClass ?? '' });
               setTimeout(() => {
-                Alert.alert(
-                  'Registered!',
-                  "Your class teacher needs to verify your account before you can view homework. You'll be able to log in once that's done."
-                );
+                if (typeof window !== 'undefined' && window.alert) {
+                  window.alert("Registered!\n\nYour class teacher needs to verify your account before you can view homework. You'll be able to log in once that's done.");
+                } else {
+                  Alert.alert(
+                    'Registered!',
+                    "Your class teacher needs to verify your account before you can view homework. You'll be able to log in once that's done."
+                  );
+                }
               }, 400);
             } else {
               setFinishing(false);
