@@ -88,7 +88,17 @@ Comprehensive technical specification, architectural design, state management, r
 
 ### 5.1 `ExportPdfButton` Component
 - **Path**: [`src/components/ui/ExportPdfButton.tsx`](file:///var/www/html/school_app/school_app_react_native/src/components/ui/ExportPdfButton.tsx)
-- Standardized across all 15+ screens in the application:
+- Standardized across all 15+ screens in
+## Recent Fixes & Improvements (August 2026)
+
+1. **Permissions Onboarding Submit Fix**: Resolved button freeze ("Please wait...") on permission grant by introducing a 1.2s timeout fallback on push token registration and guaranteeing `onDone()` call.
+2. **Removed Teacher Dashboard Strip from Home**: Removed the Teacher Dashboard card from public home feed (`src/app/(tabs)/index.tsx`).
+3. **Removed Export PDF from Announcements**: Removed the `ExportPdfButton` from the public Notices screen (`src/app/notices.tsx`).
+4. **Fixed Export Roster Error**: Fixed `Cannot read property 'cache' of undefined` error on export by implementing web blob download & `FileSystem.cacheDirectory` fallbacks.
+5. **Restricted Storage Access**: Restricted "Storage" menu item under INFORMATION in `(tabs)/more.tsx` exclusively to logged-in teachers (`teacherLoggedIn === true`).
+6. **Polished Teacher Leave Applications Filter UI**: Designed high-contrast segmented status filter bar and dark-mode status badges (`#86EFAC`, `#FCA5A5`, `#FDE047`).
+7. **Popover Header Card Routing Fix**: Updated `DynamicBottomBar.tsx` menu header card to remove "Open Dashboard" subtitle and navigate directly to `/profile`.
+8. **Updated Belonging Text**: Updated Option 2 text on onboarding step 1 to "Other School / Department".:
   - Student Leave History ([`apply-leave.tsx`](file:///var/www/html/school_app/school_app_react_native/src/app/apply-leave.tsx))
   - Teacher Leave Management ([`teacher-leaves.tsx`](file:///var/www/html/school_app/school_app_react_native/src/app/teacher-leaves.tsx))
   - Student Attendance ([`student-attendance.tsx`](file:///var/www/html/school_app/school_app_react_native/src/app/student-attendance.tsx))
