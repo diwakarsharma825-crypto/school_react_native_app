@@ -48,7 +48,7 @@ export interface SyllabusChapter {
   fileName?: string;
 }
 
-const STORAGE_KEY = '@school_app_syllabus_store_v3';
+const STORAGE_KEY = '@school_app_syllabus_store_v4';
 
 const DEFAULT_CLASSES = [
   { id: 1, name: 'Class 1st - A' },
@@ -63,38 +63,6 @@ const DEFAULT_SUBJECTS = [
   { id: 4, name: 'Hindi' },
 ];
 
-const INITIAL_SYLLABUS: SyllabusChapter[] = [
-  {
-    id: 'math-1',
-    classId: 'Class 1st - A',
-    subject: 'Mathematics',
-    chapterNumber: 1,
-    title: 'Numbers & Counting (1 to 100)',
-    topics: ['Counting numbers 1-50', 'Count & Match objects', 'Before & After Numbers'],
-    completed: true,
-    pdfUrl: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
-    fileName: 'Numbers_Chapter_1.pdf',
-  },
-  {
-    id: 'math-2',
-    classId: 'Class 1st - A',
-    subject: 'Mathematics',
-    chapterNumber: 2,
-    title: 'Addition & Subtraction Basics',
-    topics: ['Single digit addition', 'Picture subtraction', 'Word problems'],
-    completed: false,
-  },
-  {
-    id: 'sci-1',
-    classId: 'Class 1st - A',
-    subject: 'Science',
-    chapterNumber: 1,
-    title: 'Living and Non-Living Things',
-    topics: ['Characteristics of living things', 'Natural vs Man-made objects'],
-    completed: true,
-  },
-];
-
 export default function SubjectSyllabusScreen() {
   const theme = useTheme();
   const { t } = useLanguage();
@@ -107,7 +75,8 @@ export default function SubjectSyllabusScreen() {
   const [selectedSubject, setSelectedSubject] = useState<string>('Mathematics');
 
   const [isTeacherMode, setIsTeacherMode] = useState<boolean>(true);
-  const [allChapters, setAllChapters] = useState<SyllabusChapter[]>(INITIAL_SYLLABUS);
+  const [allChapters, setAllChapters] = useState<SyllabusChapter[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   // Modal State
   const [modalVisible, setModalVisible] = useState<boolean>(false);
@@ -154,11 +123,12 @@ export default function SubjectSyllabusScreen() {
     loadSubjects();
   }, [selectedClass, teacherClasses]);
 
-  // 3. Load Syllabus Data from Backend API & Fallback Storage
+  // 3. Load Syllabus Data Exclusively from Backend API
   const loadSyllabusData = async () => {
+    setIsLoading(true);
     try {
       const apiRows = await fetchSyllabusApi(selectedClass, selectedSubject);
-      if (apiRows && apiRows.length > 0) {
+      if (apiRows && Array.isArray(apiRows)) {
         const mapped: SyllabusChapter[] = apiRows.map((r) => ({
           id: String(r.id),
           classId: r.class || selectedClass,
@@ -178,21 +148,23 @@ export default function SubjectSyllabusScreen() {
           );
           return [...filteredOther, ...mapped];
         });
+        setIsLoading(false);
         return;
       }
     } catch {}
 
-    // Fallback to AsyncStorage
+    // Fallback to AsyncStorage cache
     AsyncStorage.getItem(STORAGE_KEY).then((data) => {
       if (data) {
         try {
           const parsed = JSON.parse(data);
-          if (Array.isArray(parsed) && parsed.length > 0) {
+          if (Array.isArray(parsed)) {
             setAllChapters(parsed);
           }
         } catch {}
       }
     });
+    setIsLoading(false);
   };
 
   useEffect(() => {
