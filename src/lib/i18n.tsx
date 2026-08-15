@@ -126,18 +126,95 @@ export const TRANSLATIONS: Record<Language, Record<string, string>> = {
   },
 };
 
+const DYNAMIC_WORD_MAP: Record<string, string> = {
+  // Subjects
+  'mathematics': 'गणित',
+  'maths': 'गणित',
+  'science': 'विज्ञान',
+  'general science': 'सामान्य विज्ञान',
+  'english': 'अंग्रेजी',
+  'english literature': 'अंग्रेजी साहित्य',
+  'english grammar': 'अंग्रेजी व्याकरण',
+  'hindi': 'हिंदी',
+  'social science': 'सामाजिक विज्ञान',
+  'social studies': 'सामाजिक अध्ययन',
+  'computer science': 'कंप्यूटर विज्ञान',
+  'physics': 'भौतिक विज्ञान',
+  'chemistry': 'रसायन विज्ञान',
+  'biology': 'जीव विज्ञान',
+  'economics': 'अर्थशास्त्र',
+  'accountancy': 'लेखाशास्त्र',
+  'business studies': 'व्यवसाय अध्ययन',
+  'history': 'इतिहास',
+  'geography': 'भूगोल',
+  'political science': 'राजनीति विज्ञान',
+
+  // Common Academic Terms
+  'class': 'कक्षा',
+  'section': 'अनुभाग',
+  'homework': 'गृहकार्य',
+  'attendance': 'उपस्थिति',
+  'notice': 'सूचना',
+  'notices': 'सूचनाएं',
+  'announcement': 'घोषणा',
+  'announcements': 'घोषणाएं',
+  'event': 'कार्यक्रम',
+  'events': 'कार्यक्रम',
+  'holiday': 'अवकाश',
+  'holidays': 'अवकाश',
+  'syllabus': 'पाठ्यक्रम',
+  'chapter': 'अध्याय',
+  'topic': 'विषय',
+  'fee': 'शुल्क',
+  'fees': 'शुल्क',
+  'invoice': 'चालान',
+  'invoices': 'चालान',
+  'amount': 'राशि',
+  'discount': 'छूट',
+  'reason': 'कारण',
+  'status': 'स्थिति',
+  'due': 'देय',
+  'paid': 'भुगतान',
+  'unpaid': 'अदत्त',
+  'present': 'उपस्थित',
+  'absent': 'अनुपस्थित',
+  'leave': 'अवकाश',
+  'pending': 'लंबित',
+  'approved': 'स्वीकृत',
+  'rejected': 'अस्वीकृत',
+  'teacher': 'शिक्षक',
+  'tutor': 'ट्यूटर',
+  'student': 'छात्र',
+  'learner': 'शिक्षार्थी',
+  'principal': 'प्राचार्य',
+  'school': 'विद्यालय',
+  'institute': 'संस्थान',
+  'result': 'परीक्षा परिणाम',
+  'report card': 'प्रगति पत्र',
+  'top achievers': 'मेधावी छात्र',
+  'mandatory disclosures': 'अनिवार्य प्रकटीकरण',
+  'about us': 'हमारे बारे में',
+  'contact us': 'संपर्क करें',
+  'gallery': 'गैलरी',
+  'more': 'अन्य',
+  'home': 'मुख्य पृष्ठ',
+  'login': 'लॉग इन',
+  'logout': 'लॉग आउट',
+  'profile': 'प्रोफाइल',
+};
+
 interface LanguageContextType {
   language: Language;
   setLanguage: (lang: Language) => Promise<void>;
   toggleLanguage: () => Promise<void>;
-  t: (key: string) => string;
+  t: (keyOrText: string) => string;
 }
 
 const LanguageContext = createContext<LanguageContextType>({
   language: 'en',
   setLanguage: async () => {},
   toggleLanguage: async () => {},
-  t: (key: string) => key,
+  t: (keyOrText: string) => keyOrText,
 });
 
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -161,8 +238,32 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     await setLanguage(nextLang);
   };
 
-  const t = (key: string): string => {
-    return TRANSLATIONS[language]?.[key] || TRANSLATIONS.en[key] || key;
+  /** Translates any static key OR dynamic text string from backend API */
+  const t = (keyOrText: string): string => {
+    if (!keyOrText) return '';
+    if (language === 'en') {
+      return TRANSLATIONS.en[keyOrText] || keyOrText;
+    }
+
+    // 1. Direct key match in Hindi translation dictionary
+    if (TRANSLATIONS.hi[keyOrText]) {
+      return TRANSLATIONS.hi[keyOrText];
+    }
+
+    // 2. Direct word/phrase match in Dynamic Word Map
+    const normalized = keyOrText.toLowerCase().trim();
+    if (DYNAMIC_WORD_MAP[normalized]) {
+      return DYNAMIC_WORD_MAP[normalized];
+    }
+
+    // 3. Smart pattern replacement for dynamic strings (e.g. "Class 10th Mathematics Homework")
+    let translated = keyOrText;
+    Object.keys(DYNAMIC_WORD_MAP).forEach((word) => {
+      const regex = new RegExp(`\\b${word}\\b`, 'gi');
+      translated = translated.replace(regex, DYNAMIC_WORD_MAP[word]);
+    });
+
+    return translated;
   };
 
   return (

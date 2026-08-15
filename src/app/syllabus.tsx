@@ -128,16 +128,16 @@ export default function StudentSyllabusScreen() {
       {/* Progress Bar Card */}
       <Card style={styles.progressCard}>
         <View style={styles.progressTop}>
-          <ThemedText type="smallBold">{selectedSubject} Progress</ThemedText>
+          <ThemedText type="smallBold">{t(selectedSubject)} {t('Syllabus')}</ThemedText>
           <ThemedText type="smallBold" style={{ color: theme.tint }}>
-            {progressPercent}% Completed
+            {progressPercent}% {t('Completed')}
           </ThemedText>
         </View>
         <View style={[styles.progressTrack, { backgroundColor: theme.dark ? 'rgba(255,255,255,0.1)' : '#E2E8F0' }]}>
           <View style={[styles.progressBar, { width: `${progressPercent}%`, backgroundColor: theme.tint }]} />
         </View>
         <ThemedText type="small" themeColor="textSecondary" style={{ marginTop: Spacing.one }}>
-          {completedCount} of {chapters.length} Chapters Covered
+          {completedCount} / {chapters.length} {t('Chapters Covered')}
         </ThemedText>
       </Card>
 
@@ -151,11 +151,11 @@ export default function StudentSyllabusScreen() {
               <View style={styles.chTitleCol}>
                 <View style={[styles.badge, { backgroundColor: theme.dark ? 'rgba(37,99,235,0.2)' : '#EFF6FF' }]}>
                   <ThemedText type="smallBold" style={{ color: theme.tint, fontSize: 11 }}>
-                    CH {ch.chapterNumber}
+                    {t('CH')} {ch.chapterNumber}
                   </ThemedText>
                 </View>
                 <ThemedText type="smallBold" style={styles.chTitle}>
-                  {ch.title}
+                  {t(ch.title)}
                 </ThemedText>
               </View>
 
@@ -178,7 +178,7 @@ export default function StudentSyllabusScreen() {
                     fontWeight: '600',
                   }}
                 >
-                  {ch.completed ? 'Completed' : 'In Progress'}
+                  {ch.completed ? t('Completed') : t('In Progress')}
                 </ThemedText>
               </View>
             </View>
@@ -188,7 +188,7 @@ export default function StudentSyllabusScreen() {
                 <View key={i} style={styles.topicRow}>
                   <Ionicons name="ellipse" size={6} color={theme.textSecondary} style={{ marginTop: 6 }} />
                   <ThemedText type="small" themeColor="textSecondary" style={{ flex: 1 }}>
-                    {topic}
+                    {t(topic)}
                   </ThemedText>
                 </View>
               ))}

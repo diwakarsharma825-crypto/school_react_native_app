@@ -13,6 +13,7 @@ import { fetchHolidays, fetchNews, fetchNotices } from '@/data/api';
 import { useFetch } from '@/hooks/use-fetch';
 import { useSectionEnabled } from '@/hooks/use-sections';
 import { formatDate, stripHtml } from '@/lib/format';
+import { useLanguage } from '@/lib/i18n';
 import { ExportPdfButton } from '@/components/ui/ExportPdfButton';
 import { exportToPdf } from '@/lib/pdf-export';
 
@@ -26,13 +27,12 @@ const TABS: { key: TabKey; label: string; color: string; icon: keyof typeof Ioni
 
 const TRUNCATE_LENGTH = 140;
 
-/** The real app's Notices/Announcements screen — three source endpoints
- * (News, Notices, Holidays) behind a segmented tab switcher. */
 export default function NoticesScreen() {
   const theme = useTheme();
   const enabled = useSectionEnabled('notices');
   const [active, setActive] = useState<TabKey>('notice');
   const [expandedIds, setExpandedIds] = useState<Set<number | string>>(new Set());
+  const { t } = useLanguage();
 
   const news = useFetch(fetchNews);
   const notices = useFetch(fetchNotices);
@@ -78,7 +78,7 @@ export default function NoticesScreen() {
               >
                 <Ionicons name={tab.icon} size={14} color={isActive ? tab.color : theme.textSecondary} />
                 <ThemedText type={isActive ? 'smallBold' : 'small'} themeColor={isActive ? 'text' : 'textSecondary'}>
-                  {tab.label}
+                  {t(tab.label)}
                 </ThemedText>
               </Pressable>
             );
@@ -99,7 +99,7 @@ export default function NoticesScreen() {
               expanded || !isLong ? item.detail : `${item.detail.slice(0, TRUNCATE_LENGTH).trim()}…`;
             return (
               <Card key={item.id} style={[styles.card, { borderLeftColor: activeTab.color, borderLeftWidth: 4 }]}>
-                <ThemedText type="smallBold">{item.title}</ThemedText>
+                <ThemedText type="smallBold">{t(item.title)}</ThemedText>
                 <View style={styles.dateRow}>
                   <Ionicons name="calendar-outline" size={13} color={activeTab.color} />
                   <ThemedText type="small" style={[styles.date, { color: activeTab.color }]}>
@@ -108,7 +108,7 @@ export default function NoticesScreen() {
                 </View>
                 {shownDetail ? (
                   <ThemedText type="small" themeColor="textSecondary">
-                    {shownDetail}
+                    {t(shownDetail)}
                   </ThemedText>
                 ) : null}
                 {isLong ? (

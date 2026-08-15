@@ -46,6 +46,7 @@ function AccessForm({ onDone }: { onDone: () => void }) {
   const router = useRouter();
   const { setLoggedIn: setTeacherLoggedIn } = useTeacherAuth();
   const { refresh: refreshStudentAuth } = useStudentAuth();
+  const { t } = useLanguage();
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -204,6 +205,7 @@ function formatDateHeader(dateStr: string): string {
 function HomeworkCalendar({ access, onLogout }: { access: HomeworkAccess; onLogout: () => void }) {
   const theme = useTheme();
   const { allChildren, switchChild } = useStudentAuth();
+  const { t } = useLanguage();
   const today = new Date();
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar');
   const [searchQuery, setSearchQuery] = useState('');
@@ -511,13 +513,13 @@ function HomeworkCalendar({ access, onLogout }: { access: HomeworkAccess; onLogo
                   <View style={styles.entryHeaderRow}>
                     <View style={[styles.subjectBadge, { backgroundColor: theme.tint }]}>
                       <ThemedText type="smallBold" style={{ color: Brand.white, fontSize: 12 }}>
-                        {entry.subject}
+                        {t(entry.subject)}
                       </ThemedText>
                     </View>
                     {entry.chapter ? (
                       <View style={[styles.chapterBadge, { backgroundColor: theme.accent + '22', borderColor: theme.accent, borderWidth: 1 }]}>
                         <ThemedText type="smallBold" style={{ color: theme.accent, fontSize: 12 }}>
-                          {entry.chapter}
+                          {t(entry.chapter)}
                         </ThemedText>
                       </View>
                     ) : null}
@@ -530,7 +532,7 @@ function HomeworkCalendar({ access, onLogout }: { access: HomeworkAccess; onLogo
                   ) : null}
                   {entry.description ? (
                     <ThemedText type="small" themeColor="textSecondary" style={styles.entryDescription} numberOfLines={2}>
-                      {entry.description}
+                      {t(entry.description)}
                     </ThemedText>
                   ) : null}
                   {entry.attachments.length > 0 ? (

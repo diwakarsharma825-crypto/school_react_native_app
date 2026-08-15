@@ -16,10 +16,13 @@ import { useTheme } from '@/hooks/use-theme';
 import { ExportPdfButton } from '@/components/ui/ExportPdfButton';
 import { exportToPdf } from '@/lib/pdf-export';
 
+import { useLanguage } from '@/lib/i18n';
+
 export default function EventsScreen() {
   const theme = useTheme();
   const enabled = useSectionEnabled('events');
   const { data, loading, error, refetch } = useFetch(fetchEvents);
+  const { t } = useLanguage();
 
   if (!enabled) return <SectionUnavailable />;
 
@@ -62,12 +65,12 @@ export default function EventsScreen() {
           {data.map((e) => (
             <MediaCard
               key={e.id}
-              title={e.title}
+              title={t(e.title)}
               date={e.event_from}
               imageUrl={e.image_url}
               coverMedia={e.cover_media}
-              excerpt={e.note}
-              category="Event"
+              excerpt={e.note ? t(e.note) : undefined}
+              category={t('Event')}
               onPress={() => router.push(`/event/${e.id}`)}
             />
           ))}
