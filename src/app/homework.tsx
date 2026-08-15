@@ -25,6 +25,7 @@ import { getCurrentDeviceLocation, requestAppPermissions } from '@/lib/permissio
 import { useBrand } from '@/hooks/use-brand';
 import { useTheme } from '@/hooks/use-theme';
 import { useSectionEnabled } from '@/hooks/use-sections';
+import { useLanguage } from '@/lib/i18n';
 import { SectionUnavailable } from '@/components/ui/SectionUnavailable';
 import { ExportPdfButton } from '@/components/ui/ExportPdfButton';
 import { exportToPdf } from '@/lib/pdf-export';
