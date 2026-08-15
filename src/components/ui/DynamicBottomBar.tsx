@@ -83,6 +83,8 @@ export function DynamicBottomBar() {
 
   const rawTeacherMenuItems: (MenuItem & { permKey?: keyof NonNullable<typeof profile>['permissions'] })[] = [
     { label: 'Teacher Dashboard', icon: 'speedometer-outline', onPress: () => router.push('/teacher-dashboard' as any) },
+    { label: 'Manage Subjects', icon: 'journal-outline', onPress: () => router.push('/teacher-subjects' as any) },
+    { label: 'Batch Promotion', icon: 'arrow-up-circle-outline', onPress: () => router.push('/teacher-promote' as any) },
     { label: 'Manage Notices', icon: 'megaphone-outline', onPress: () => router.push('/teacher-notices' as any), permKey: 'notices' },
     { label: 'Manage Events', icon: 'calendar-outline', onPress: () => router.push('/teacher-events' as any), permKey: 'events' },
     { label: 'Attendance', icon: 'checkmark-done-outline', onPress: () => router.push('/teacher-attendance' as any), permKey: 'attendance' },

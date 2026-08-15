@@ -115,6 +115,8 @@ export default function MoreScreen() {
   const accountRows: Row[] = teacherLoggedIn
     ? [
         { label: 'Teacher Dashboard', icon: 'speedometer-outline', onPress: () => router.push('/teacher-dashboard' as any) },
+        { label: 'Manage Subjects', icon: 'journal-outline', onPress: () => router.push('/teacher-subjects' as any) },
+        { label: 'Student Promotion', icon: 'arrow-up-circle-outline', onPress: () => router.push('/teacher-promote' as any) },
         {
           label: 'Change Password',
           icon: 'key-outline',
@@ -149,6 +151,7 @@ export default function MoreScreen() {
   const exploreRows: Row[] = [
     { label: 'Notifications', icon: 'notifications-outline', onPress: () => router.push('/notifications') },
     { label: 'Subject Syllabus', icon: 'book-outline', onPress: () => router.push('/syllabus') },
+    { label: 'Manage Subjects', icon: 'journal-outline', onPress: () => router.push('/teacher-subjects' as any) },
     ...(!instituteMode ? [{ label: 'About Us', icon: 'information-circle-outline' as const, onPress: () => router.push('/about') }] : []),
     {
       label: 'Announcements',
