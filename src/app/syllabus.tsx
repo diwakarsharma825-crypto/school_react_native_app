@@ -6,7 +6,6 @@ import React, { useEffect, useState } from 'react';
 import {
   Alert,
   Image,
-  Linking,
   Modal,
   Pressable,
   ScrollView,
@@ -17,7 +16,6 @@ import {
 
 import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/states';
-import { Button } from '@/components/ui/Button';
 import { Screen } from '@/components/ui/Screen';
 import { SelectField } from '@/components/ui/SelectField';
 import { ThemedText } from '@/components/ui/ThemedText';
@@ -48,7 +46,7 @@ export interface SyllabusChapter {
   fileName?: string;
 }
 
-const STORAGE_KEY = '@school_app_syllabus_store_v4';
+const STORAGE_KEY = '@school_app_syllabus_store_v5';
 
 const DEFAULT_CLASSES = [
   { id: 1, name: 'Class 1st - A' },
@@ -78,9 +76,16 @@ export default function SubjectSyllabusScreen() {
   const [allChapters, setAllChapters] = useState<SyllabusChapter[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  // Modal State
+  // Form Modal State
   const [modalVisible, setModalVisible] = useState<boolean>(false);
   const [editingChapterId, setEditingChapterId] = useState<string | null>(null);
+
+  // In-App Viewer Modal State (PDF / Image)
+  const [activeAttachment, setActiveAttachment] = useState<{
+    url: string;
+    type: 'pdf' | 'image';
+    name: string;
+  } | null>(null);
 
   // Form State
   const [formChNum, setFormChNum] = useState<string>('');
@@ -593,15 +598,30 @@ export default function SubjectSyllabusScreen() {
               {ch.pdfUrl || ch.imageUrl ? (
                 <View style={styles.attachmentBox}>
                   {ch.imageUrl ? (
-                    <View style={styles.imagePreviewWrap}>
+                    <Pressable
+                      onPress={() =>
+                        setActiveAttachment({
+                          url: ch.imageUrl!,
+                          type: 'image',
+                          name: ch.fileName || 'Reference_Image.png',
+                        })
+                      }
+                      style={styles.imagePreviewWrap}
+                    >
                       <Image source={{ uri: ch.imageUrl }} style={styles.imagePreview} resizeMode="cover" />
-                    </View>
+                    </Pressable>
                   ) : null}
 
                   <Pressable
                     onPress={() => {
                       const targetUrl = ch.pdfUrl || ch.imageUrl;
-                      if (targetUrl) Linking.openURL(targetUrl).catch(() => Alert.alert('Error', 'Cannot open attachment file'));
+                      if (targetUrl) {
+                        setActiveAttachment({
+                          url: targetUrl,
+                          type: ch.imageUrl ? 'image' : 'pdf',
+                          name: ch.fileName || (ch.imageUrl ? 'Reference_Image.png' : 'Reference_Document.pdf'),
+                        });
+                      }
                     }}
                     style={({ pressed }) => [
                       styles.attachBtn,
@@ -623,7 +643,7 @@ export default function SubjectSyllabusScreen() {
                     >
                       {ch.fileName || (ch.imageUrl ? 'View Uploaded Image' : 'View Uploaded PDF Document')}
                     </ThemedText>
-                    <Ionicons name="open-outline" size={14} color={theme.dark ? '#2DD4BF' : '#0D9488'} />
+                    <Ionicons name="eye-outline" size={16} color={theme.dark ? '#2DD4BF' : '#0D9488'} />
                   </Pressable>
                 </View>
               ) : null}
@@ -632,7 +652,69 @@ export default function SubjectSyllabusScreen() {
         )}
       </ScrollView>
 
-      {/* Add / Edit Chapter Modal with Real File Upload Buttons */}
+      {/* In-App PDF & Image Viewer Modal (Displays inside App, Never opens outside) */}
+      <Modal
+        visible={!!activeAttachment}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setActiveAttachment(null)}
+      >
+        <View style={styles.viewerOverlay}>
+          <View
+            style={[
+              styles.viewerCard,
+              {
+                backgroundColor: theme.dark ? '#1E293B' : '#FFFFFF',
+                borderColor: theme.dark ? '#334155' : '#E2E8F0',
+              },
+            ]}
+          >
+            <View style={[styles.viewerHeader, { borderBottomColor: theme.dark ? '#334155' : '#E2E8F0' }]}>
+              <Ionicons
+                name={activeAttachment?.type === 'image' ? 'image' : 'document-text'}
+                size={20}
+                color={theme.dark ? '#60A5FA' : '#2563EB'}
+              />
+              <ThemedText type="subtitle" style={{ flex: 1, fontSize: 15 }} numberOfLines={1}>
+                {activeAttachment?.name || 'In-App Attachment Viewer'}
+              </ThemedText>
+              <Pressable onPress={() => setActiveAttachment(null)}>
+                <Ionicons name="close-circle" size={26} color={theme.dark ? '#94A3B8' : '#64748B'} />
+              </Pressable>
+            </View>
+
+            <View style={styles.viewerBody}>
+              {activeAttachment?.type === 'image' ? (
+                <Image
+                  source={{ uri: activeAttachment.url }}
+                  style={styles.fullViewerImage}
+                  resizeMode="contain"
+                />
+              ) : (
+                typeof window !== 'undefined' ? (
+                  <iframe
+                    src={activeAttachment?.url}
+                    style={{ width: '100%', height: '100%', border: 'none', borderRadius: 8 }}
+                    title="In-App Document Viewer"
+                  />
+                ) : (
+                  <View style={styles.pdfFallbackBox}>
+                    <Ionicons name="document-text" size={48} color="#3B82F6" />
+                    <ThemedText type="subtitle" style={{ marginTop: 12, textAlign: 'center' }}>
+                      {activeAttachment?.name || 'Syllabus Document'}
+                    </ThemedText>
+                    <ThemedText type="small" themeColor="textSecondary" style={{ textAlign: 'center', marginTop: 4 }}>
+                      Document loaded inside school app.
+                    </ThemedText>
+                  </View>
+                )
+              )}
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Add / Edit Chapter Modal with Real File Upload Buttons & High-Contrast Submit Button */}
       <Modal visible={modalVisible} animationType="slide" transparent={true} onRequestClose={() => setModalVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalCard, { backgroundColor: theme.dark ? '#1E293B' : '#FFFFFF', borderColor: theme.dark ? '#334155' : '#E2E8F0' }]}>
@@ -713,7 +795,7 @@ export default function SubjectSyllabusScreen() {
                 />
               </View>
 
-              {/* Attachment Upload Section (Photo / PDF Picker, NOT Text URL) */}
+              {/* Attachment Upload Section (Photo / PDF Picker) */}
               <View style={styles.inputGroup}>
                 <ThemedText type="smallBold" style={styles.fieldLabel}>
                   Upload Reference Attachment (PDF / Photo)
@@ -819,16 +901,36 @@ export default function SubjectSyllabusScreen() {
               </Pressable>
             </ScrollView>
 
-            {/* Modal Buttons Pinned to Bottom */}
+            {/* High Contrast Modal Submit Button Pinned to Bottom */}
             <View style={[styles.modalActionRow, { borderTopColor: theme.dark ? '#334155' : '#E2E8F0' }]}>
-              <Pressable onPress={() => setModalVisible(false)} style={styles.modalCancelBtn}>
-                <ThemedText type="smallBold" style={{ color: theme.dark ? '#94A3B8' : '#64748B' }}>
+              <Pressable
+                onPress={() => setModalVisible(false)}
+                style={[
+                  styles.modalCancelBtn,
+                  {
+                    backgroundColor: theme.dark ? 'rgba(255,255,255,0.08)' : '#F1F5F9',
+                    borderColor: theme.dark ? '#475569' : '#CBD5E1',
+                  },
+                ]}
+              >
+                <ThemedText type="smallBold" style={{ color: theme.dark ? '#CBD5E1' : '#475569', fontSize: 13 }}>
                   Cancel
                 </ThemedText>
               </Pressable>
-              <View style={{ flex: 1 }}>
-                <Button title={editingChapterId ? 'Save Changes' : 'Add Chapter'} onPress={handleSaveForm} />
-              </View>
+
+              <Pressable
+                onPress={handleSaveForm}
+                style={({ pressed }) => [
+                  styles.modalSubmitBtn,
+                  { backgroundColor: '#2563EB' },
+                  pressed && { opacity: 0.8 },
+                ]}
+              >
+                <Ionicons name="checkmark-circle" size={18} color="#FFFFFF" />
+                <ThemedText type="smallBold" style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>
+                  {editingChapterId ? 'Save Changes' : 'Add Chapter'}
+                </ThemedText>
+              </Pressable>
             </View>
           </View>
         </View>
@@ -976,7 +1078,7 @@ const styles = StyleSheet.create({
   imagePreviewWrap: {
     borderRadius: Radius.medium,
     overflow: 'hidden',
-    height: 120,
+    height: 140,
     backgroundColor: '#000000',
   },
   imagePreview: {
@@ -992,7 +1094,48 @@ const styles = StyleSheet.create({
     borderRadius: Radius.medium,
     borderWidth: 1,
   },
-  /* Modal Styles */
+  /* In-App Media Viewer Modal */
+  viewerOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing.three,
+  },
+  viewerCard: {
+    width: '95%',
+    maxWidth: 600,
+    height: '80%',
+    borderRadius: Radius.large,
+    borderWidth: 1,
+    padding: Spacing.three,
+    display: 'flex',
+    flexDirection: 'column',
+    ...Shadow.card,
+  },
+  viewerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    paddingBottom: Spacing.two,
+    marginBottom: Spacing.two,
+    borderBottomWidth: 1,
+  },
+  viewerBody: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fullViewerImage: {
+    width: '100%',
+    height: '100%',
+  },
+  pdfFallbackBox: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  /* Form Modal Styles */
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.7)',
@@ -1082,6 +1225,17 @@ const styles = StyleSheet.create({
   },
   modalCancelBtn: {
     paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: Radius.medium,
+    borderWidth: 1,
+  },
+  modalSubmitBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
     paddingVertical: 12,
+    borderRadius: Radius.medium,
   },
 });
