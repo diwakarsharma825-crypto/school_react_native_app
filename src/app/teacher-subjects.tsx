@@ -11,9 +11,12 @@ import { TeacherGuard } from '@/components/ui/TeacherGuard';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { Radius, Spacing } from '@/constants/theme';
 import {
+  addClass,
   addTeacherSubject,
   ClassPickerItem,
+  deleteClass,
   deleteTeacherSubject,
+  editClass,
   fetchTeacherClassesCatalog,
   fetchTeacherSubjects,
 } from '@/data/teacher-api';
@@ -44,32 +47,41 @@ const DEFAULT_CLASS_SUBJECTS: Record<string, SubjectItem[]> = {
 
 export default function TeacherSubjectsScreen() {
   const theme = useTheme();
-  const { loggedIn } = useTeacherAuth();
+  const { loggedIn, profile } = useTeacherAuth();
   const { t } = useLanguage();
 
   const [classes, setClasses] = useState<ClassPickerItem[]>([]);
   const [loadingClasses, setLoadingClasses] = useState(true);
   const [selectedClassId, setSelectedClassId] = useState<number | null>(null);
-  const [selectedSectionId, setSelectedSectionId] = useState<number | undefined>(undefined);
 
   const [subjects, setSubjects] = useState<SubjectItem[]>([]);
   const [loadingSubjects, setLoadingSubjects] = useState(false);
 
-  // Modal State for Add / Edit
+  // Subject Modal State
   const [modalVisible, setModalVisible] = useState(false);
   const [editingSubject, setEditingSubject] = useState<SubjectItem | null>(null);
   const [subjectName, setSubjectName] = useState('');
   const [subjectCode, setSubjectCode] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
+  // Principal Class Management Modal State
+  const [classModalVisible, setClassModalVisible] = useState(false);
+  const [newClassName, setNewClassName] = useState('');
+  const [editingClass, setEditingClass] = useState<ClassPickerItem | null>(null);
+
+  const reloadClasses = () => {
+    setLoadingClasses(true);
     fetchTeacherClassesCatalog()
       .then((data) => {
         setClasses(data);
-        if (data.length > 0) setSelectedClassId(data[0].id);
+        if (data.length > 0 && !selectedClassId) setSelectedClassId(data[0].id);
       })
       .catch(() => {})
       .finally(() => setLoadingClasses(false));
+  };
+
+  useEffect(() => {
+    reloadClasses();
   }, []);
 
   const loadSubjects = (classId: number) => {
@@ -98,20 +110,21 @@ export default function TeacherSubjectsScreen() {
 
   const selectedClass = classes.find((c) => c.id === selectedClassId);
   const className = selectedClass?.name || 'Class 10th';
+  const canManageClasses = profile?.can_edit_classes ?? true;
 
-  const classOptions = classes.map((c) => ({ label: c.name, value: String(c.id) }));
-  const sectionOptions = selectedClass?.sections
-    ? selectedClass.sections.map((s) => ({ label: `Section ${s.name}`, value: String(s.id) }))
-    : [];
+  const classOptions = classes.map((c) => ({
+    label: c.section ? `${c.name} (${c.section})` : c.name,
+    value: String(c.id),
+  }));
 
-  const openAddModal = () => {
+  const openAddSubjectModal = () => {
     setEditingSubject(null);
     setSubjectName('');
     setSubjectCode('');
     setModalVisible(true);
   };
 
-  const openEditModal = (sub: SubjectItem) => {
+  const openEditSubjectModal = (sub: SubjectItem) => {
     setEditingSubject(sub);
     setSubjectName(sub.name);
     setSubjectCode(sub.code || '');
@@ -143,13 +156,11 @@ export default function TeacherSubjectsScreen() {
     setSubmitting(true);
     try {
       if (editingSubject) {
-        // Edit existing subject
         setSubjects((prev) =>
           prev.map((s) => (s.id === editingSubject.id ? { ...s, name: trimmedName, code: trimmedCode || undefined } : s))
         );
         Alert.alert('Subject Updated!', `Subject "${trimmedName}" has been updated.`);
       } else {
-        // Add new subject
         await addTeacherSubject(selectedClassId, trimmedName);
         loadSubjects(selectedClassId);
         Alert.alert('Subject Added!', `${trimmedName} has been mapped to ${className}.`);
@@ -159,7 +170,6 @@ export default function TeacherSubjectsScreen() {
       setEditingSubject(null);
       setModalVisible(false);
     } catch {
-      // Fallback local update
       if (editingSubject) {
         setSubjects((prev) =>
           prev.map((s) => (s.id === editingSubject.id ? { ...s, name: trimmedName, code: trimmedCode || undefined } : s))
@@ -197,6 +207,52 @@ export default function TeacherSubjectsScreen() {
     ]);
   };
 
+  // Principal Class Management Actions
+  const handleSaveClass = async () => {
+    const name = newClassName.trim();
+    if (!name) {
+      Alert.alert('Validation Error', 'Please enter a class name.');
+      return;
+    }
+    try {
+      if (editingClass) {
+        await editClass(editingClass.id, name);
+        Alert.alert('Class Updated!', `Class "${name}" updated.`);
+      } else {
+        await addClass(name);
+        Alert.alert('Class Added!', `New Class "${name}" created.`);
+      }
+      setNewClassName('');
+      setEditingClass(null);
+      reloadClasses();
+    } catch (e) {
+      if (editingClass) {
+        setClasses((prev) => prev.map((c) => (c.id === editingClass.id ? { ...c, name } : c)));
+      } else {
+        setClasses((prev) => [...prev, { id: Date.now(), name }]);
+      }
+      setNewClassName('');
+      setEditingClass(null);
+    }
+  };
+
+  const handleDeleteClass = (id: number, name: string) => {
+    Alert.alert('Delete Class?', `Are you sure you want to delete ${name}?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteClass(id);
+          } catch {}
+          setClasses((prev) => prev.filter((c) => c.id !== id));
+          if (selectedClassId === id) setSelectedClassId(null);
+        },
+      },
+    ]);
+  };
+
   return (
     <Screen>
       <View style={styles.headerWrap}>
@@ -206,27 +262,37 @@ export default function TeacherSubjectsScreen() {
         </ThemedText>
       </View>
 
-      {/* Class & Section Selectors */}
+      {/* Class Selector Card */}
       <Card style={styles.filterCard}>
         {loadingClasses ? (
-          <Loading label="Loading classes…" />
+          <Loading label="Loading assigned classes…" />
         ) : (
-          <>
+          <View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <ThemedText type="smallBold" style={{ marginBottom: Spacing.one }}>
+                Assigned Classes ({classes.length})
+              </ThemedText>
+
+              {canManageClasses ? (
+                <Pressable
+                  onPress={() => setClassModalVisible(true)}
+                  style={({ pressed }) => [styles.manageClassBtn, pressed && { opacity: 0.8 }]}
+                >
+                  <Ionicons name="settings-outline" size={14} color={theme.tint} />
+                  <ThemedText type="smallBold" style={{ color: theme.tint, fontSize: 11 }}>
+                    Manage Catalog
+                  </ThemedText>
+                </Pressable>
+              ) : null}
+            </View>
+
             <SelectField
               label="Select Class"
               options={classOptions}
               value={selectedClassId ? String(selectedClassId) : null}
               onChange={(val) => setSelectedClassId(val ? Number(val) : null)}
             />
-            {sectionOptions.length > 0 ? (
-              <SelectField
-                label="Select Section (Optional)"
-                options={sectionOptions}
-                value={selectedSectionId ? String(selectedSectionId) : null}
-                onChange={(val) => setSelectedSectionId(val ? Number(val) : undefined)}
-              />
-            ) : null}
-          </>
+          </View>
         )}
       </Card>
 
@@ -236,7 +302,7 @@ export default function TeacherSubjectsScreen() {
           Mapped Subjects ({subjects.length})
         </ThemedText>
         <Pressable
-          onPress={openAddModal}
+          onPress={openAddSubjectModal}
           style={({ pressed }) => [
             styles.addBtn,
             { backgroundColor: theme.dark ? '#2563EB' : theme.tint },
@@ -302,7 +368,7 @@ export default function TeacherSubjectsScreen() {
             {/* Action Buttons: Edit ✏️ and Delete 🗑️ */}
             <View style={styles.actionRow}>
               <Pressable
-                onPress={() => openEditModal(sub)}
+                onPress={() => openEditSubjectModal(sub)}
                 hitSlop={10}
                 style={[
                   styles.actionIconBtn,
@@ -369,6 +435,73 @@ export default function TeacherSubjectsScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Principal Class Catalog Manager Modal */}
+      <Modal visible={classModalVisible} transparent animationType="slide" onRequestClose={() => setClassModalVisible(false)}>
+        <View style={styles.modalBackdrop}>
+          <View style={[styles.modalSheet, { backgroundColor: theme.surface, maxHeight: '80%' }]}>
+            <View style={styles.modalHeader}>
+              <ThemedText type="subtitle">Manage Class Catalog</ThemedText>
+              <Pressable onPress={() => setClassModalVisible(false)} hitSlop={10}>
+                <Ionicons name="close" size={22} color={theme.text} />
+              </Pressable>
+            </View>
+
+            <ThemedText type="smallBold" style={styles.label}>
+              {editingClass ? `Edit Class Name (${editingClass.name})` : 'Create New Class'}
+            </ThemedText>
+            <View style={{ flexDirection: 'row', gap: Spacing.two, marginBottom: Spacing.three }}>
+              <TextInput
+                value={newClassName}
+                onChangeText={setNewClassName}
+                placeholder="e.g. Class 11th Commerce"
+                placeholderTextColor={theme.textSecondary}
+                style={[
+                  styles.input,
+                  { flex: 1, borderColor: theme.border, color: theme.text, backgroundColor: theme.background },
+                ]}
+              />
+              <Button label={editingClass ? 'Save' : 'Add'} onPress={handleSaveClass} style={{ paddingHorizontal: 16 }} />
+            </View>
+
+            <ThemedText type="smallBold" style={{ marginBottom: Spacing.two }}>
+              Master Class List ({classes.length})
+            </ThemedText>
+
+            {classes.map((cls) => (
+              <View
+                key={cls.id}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  paddingVertical: 8,
+                  paddingHorizontal: 12,
+                  backgroundColor: theme.background,
+                  borderRadius: Radius.medium,
+                  marginBottom: 6,
+                }}
+              >
+                <ThemedText type="smallBold">{cls.name}</ThemedText>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <Pressable
+                    onPress={() => {
+                      setEditingClass(cls);
+                      setNewClassName(cls.name);
+                    }}
+                    hitSlop={8}
+                  >
+                    <Ionicons name="pencil" size={16} color={theme.tint} />
+                  </Pressable>
+                  <Pressable onPress={() => handleDeleteClass(cls.id, cls.name)} hitSlop={8}>
+                    <Ionicons name="trash" size={16} color="#EF4444" />
+                  </Pressable>
+                </View>
+              </View>
+            ))}
+          </View>
+        </View>
+      </Modal>
     </Screen>
   );
 }
@@ -379,6 +512,11 @@ const styles = StyleSheet.create({
   },
   filterCard: {
     marginBottom: Spacing.three,
+  },
+  manageClassBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   listHeader: {
     flexDirection: 'row',

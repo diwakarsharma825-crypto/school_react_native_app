@@ -1316,10 +1316,16 @@ export interface ClassPickerItem {
 }
 
 export async function fetchTeacherClassesCatalog(): Promise<ClassPickerItem[]> {
+  let profile: TeacherProfile | null = null;
   try {
-    return await authedRequest<ClassPickerItem[]>('/teacher_classes_catalog');
+    profile = await fetchTeacherProfile();
+  } catch {}
+
+  let allCatalog: ClassPickerItem[] = [];
+  try {
+    allCatalog = await authedRequest<ClassPickerItem[]>('/teacher_classes_catalog');
   } catch {
-    return [
+    allCatalog = [
       { id: 1, name: '10th', section: 'A' },
       { id: 2, name: '10th', section: 'B' },
       { id: 3, name: '9th', section: 'A' },
@@ -1329,4 +1335,32 @@ export async function fetchTeacherClassesCatalog(): Promise<ClassPickerItem[]> {
       { id: 7, name: '6th', section: 'A' },
     ];
   }
+
+  // Filter if teacher is assigned specific classes in their profile
+  if (profile && profile.classes && profile.classes.length > 0 && !profile.can_edit_classes) {
+    const assignedIds = new Set(profile.classes.map((c) => c.class_id));
+    const filtered = allCatalog.filter((c) => assignedIds.has(c.id));
+    if (filtered.length > 0) return filtered;
+  }
+
+  return allCatalog;
+}
+
+export async function addClass(name: string): Promise<void> {
+  const body = new FormData();
+  body.append('name', name);
+  await authedRequest<{ created: boolean }>('/add_class', { method: 'POST', body });
+}
+
+export async function editClass(id: number, name: string): Promise<void> {
+  const body = new FormData();
+  body.append('id', String(id));
+  body.append('name', name);
+  await authedRequest<{ updated: boolean }>('/edit_class', { method: 'POST', body });
+}
+
+export async function deleteClass(id: number): Promise<void> {
+  const body = new FormData();
+  body.append('id', String(id));
+  await authedRequest<{ deleted: boolean }>('/delete_class', { method: 'POST', body });
 }
