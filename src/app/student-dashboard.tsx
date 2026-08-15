@@ -33,6 +33,7 @@ const QUICK_LINKS: QuickLink[] = [
   { label: 'Apply Leave', icon: 'calendar-clear-outline', bg: '#FEFCBF', fg: '#744210', route: '/apply-leave' },
   { label: 'Fees', icon: 'cash-outline', bg: '#FED7D7', fg: '#742A2A', route: '/fees' },
   { label: 'Result', icon: 'school-outline', bg: '#E9D8FD', fg: '#553C9A', route: '/result' },
+  { label: 'Syllabus', icon: 'journal-outline', bg: '#EBF8FF', fg: '#2B6CB0', route: '/syllabus' },
 ];
 
 /** Student-side landing screen, mirroring the teacher Dashboard and the

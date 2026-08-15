@@ -24,6 +24,8 @@ import { Radius, Shadow, Spacing } from '@/constants/theme';
 import { useLanguage } from '@/lib/i18n';
 import { useTheme } from '@/hooks/use-theme';
 import { useSectionEnabled } from '@/hooks/use-sections';
+import { useTeacherAuth } from '@/hooks/use-teacher-auth';
+import { useStudentAuth } from '@/hooks/use-student-auth';
 import {
   addSyllabusChapterApi,
   ClassPickerItem,
@@ -67,6 +69,10 @@ export default function SubjectSyllabusScreen() {
   const theme = useTheme();
   const { t } = useLanguage();
   const enabled = useSectionEnabled('syllabus');
+  const { loggedIn: teacherLoggedIn } = useTeacherAuth();
+  const { loggedIn: studentLoggedIn, access: studentAccess } = useStudentAuth();
+
+  const isStudent = studentLoggedIn || !teacherLoggedIn;
 
   if (!enabled) return <SectionUnavailable />;
 
@@ -74,8 +80,19 @@ export default function SubjectSyllabusScreen() {
   const [teacherClasses, setTeacherClasses] = useState<ClassPickerItem[]>(DEFAULT_CLASSES);
   const [subjectList, setSubjectList] = useState<{ id: number; name: string }[]>(DEFAULT_SUBJECTS);
 
-  const [selectedClass, setSelectedClass] = useState<string>('Class 1st - A');
+  const studentClassName = studentAccess?.className
+    ? `${studentAccess.className}${studentAccess.section ? ` - ${studentAccess.section}` : ''}`
+    : 'Pre-Nursery';
+
+  const [selectedClass, setSelectedClass] = useState<string>(isStudent ? studentClassName : 'Class 1st - A');
   const [selectedSubject, setSelectedSubject] = useState<string>('Mathematics');
+
+  // Auto-set class name for logged in student
+  useEffect(() => {
+    if (isStudent && studentAccess?.className) {
+      setSelectedClass(studentClassName);
+    }
+  }, [isStudent, studentAccess]);
 
   const [allChapters, setAllChapters] = useState<SyllabusChapter[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -104,6 +121,7 @@ export default function SubjectSyllabusScreen() {
   // 1. Fetch Teacher's Assigned Classes Catalog
   useEffect(() => {
     async function loadClasses() {
+      if (isStudent) return;
       try {
         const classes = await fetchTeacherClassesCatalog();
         if (classes && classes.length > 0) {
@@ -113,7 +131,7 @@ export default function SubjectSyllabusScreen() {
       } catch {}
     }
     loadClasses();
-  }, []);
+  }, [isStudent]);
 
   // 2. Fetch Subjects According to Selected Class
   useEffect(() => {
@@ -424,14 +442,16 @@ export default function SubjectSyllabusScreen() {
 
         {/* Filter Selection Row: Teacher Classes & Corresponding Subjects */}
         <View style={styles.filterRow}>
-          <View style={{ flex: 1 }}>
-            <SelectField
-              label={t('class') || 'Class'}
-              options={classOptions}
-              value={selectedClass}
-              onChange={(val) => setSelectedClass(val)}
-            />
-          </View>
+          {!isStudent ? (
+            <View style={{ flex: 1 }}>
+              <SelectField
+                label={t('class') || 'Class'}
+                options={classOptions}
+                value={selectedClass}
+                onChange={(val) => setSelectedClass(val)}
+              />
+            </View>
+          ) : null}
           <View style={{ flex: 1 }}>
             <SelectField
               label={t('select_subject') || 'Subject'}
@@ -466,19 +486,21 @@ export default function SubjectSyllabusScreen() {
             <ThemedText type="small" themeColor="textSecondary">
               {completedCount} / {currentChapters.length} {t('Chapters Covered')}
             </ThemedText>
-            <Pressable
-              onPress={handleOpenAddModal}
-              style={({ pressed }) => [
-                styles.addChBtn,
-                { backgroundColor: theme.dark ? '#2563EB' : '#1D4ED8' },
-                pressed && { opacity: 0.8 },
-              ]}
-            >
-              <Ionicons name="add-circle-outline" size={16} color="#FFFFFF" />
-              <ThemedText type="smallBold" style={{ color: '#FFFFFF', fontSize: 12 }}>
-                + Add Chapter
-              </ThemedText>
-            </Pressable>
+            {teacherLoggedIn ? (
+              <Pressable
+                onPress={handleOpenAddModal}
+                style={({ pressed }) => [
+                  styles.addChBtn,
+                  { backgroundColor: theme.dark ? '#2563EB' : '#1D4ED8' },
+                  pressed && { opacity: 0.8 },
+                ]}
+              >
+                <Ionicons name="add-circle-outline" size={16} color="#FFFFFF" />
+                <ThemedText type="smallBold" style={{ color: '#FFFFFF', fontSize: 12 }}>
+                  + Add Chapter
+                </ThemedText>
+              </Pressable>
+            ) : null}
           </View>
         </Card>
 
@@ -510,70 +532,112 @@ export default function SubjectSyllabusScreen() {
                 </View>
 
                 <View style={styles.headerRightActions}>
-                  {/* Status Badge (Pressable to Toggle) */}
-                  <Pressable
-                    onPress={() => handleToggleStatus(ch)}
-                    style={({ pressed }) => [
-                      styles.statusPill,
-                      {
-                        backgroundColor: ch.completed
-                          ? theme.dark
-                            ? 'rgba(34,197,94,0.25)'
-                            : '#DCFCE7'
-                          : theme.dark
-                          ? 'rgba(234,179,8,0.25)'
-                          : '#FEF3C7',
-                        borderColor: ch.completed ? '#22C55E' : '#EAB308',
-                      },
-                      pressed && { opacity: 0.7 },
-                    ]}
-                  >
-                    <Ionicons
-                      name={ch.completed ? 'checkmark-circle' : 'time-outline'}
-                      size={14}
-                      color={ch.completed ? (theme.dark ? '#4ADE80' : '#16A34A') : (theme.dark ? '#FACC15' : '#D97706')}
-                    />
-                    <ThemedText
-                      type="small"
-                      style={{
-                        color: ch.completed
-                          ? theme.dark
-                            ? '#86EFAC'
-                            : '#15803D'
-                          : theme.dark
-                          ? '#FDE047'
-                          : '#B45309',
-                        fontSize: 11,
-                        fontWeight: '700',
-                      }}
+                  {/* Status Badge (Pressable to Toggle for Teacher, Static for Student) */}
+                  {teacherLoggedIn ? (
+                    <Pressable
+                      onPress={() => handleToggleStatus(ch)}
+                      style={({ pressed }) => [
+                        styles.statusPill,
+                        {
+                          backgroundColor: ch.completed
+                            ? theme.dark
+                              ? 'rgba(34,197,94,0.25)'
+                              : '#DCFCE7'
+                            : theme.dark
+                            ? 'rgba(234,179,8,0.25)'
+                            : '#FEF3C7',
+                          borderColor: ch.completed ? '#22C55E' : '#EAB308',
+                        },
+                        pressed && { opacity: 0.7 },
+                      ]}
                     >
-                      {ch.completed ? 'Completed' : 'In Progress'}
-                    </ThemedText>
-                  </Pressable>
+                      <Ionicons
+                        name={ch.completed ? 'checkmark-circle' : 'time-outline'}
+                        size={14}
+                        color={ch.completed ? (theme.dark ? '#4ADE80' : '#16A34A') : (theme.dark ? '#FACC15' : '#D97706')}
+                      />
+                      <ThemedText
+                        type="small"
+                        style={{
+                          color: ch.completed
+                            ? theme.dark
+                              ? '#86EFAC'
+                              : '#15803D'
+                            : theme.dark
+                            ? '#FDE047'
+                            : '#B45309',
+                          fontSize: 11,
+                          fontWeight: '700',
+                        }}
+                      >
+                        {ch.completed ? 'Completed' : 'In Progress'}
+                      </ThemedText>
+                    </Pressable>
+                  ) : (
+                    <View
+                      style={[
+                        styles.statusPill,
+                        {
+                          backgroundColor: ch.completed
+                            ? theme.dark
+                              ? 'rgba(34,197,94,0.25)'
+                              : '#DCFCE7'
+                            : theme.dark
+                            ? 'rgba(234,179,8,0.25)'
+                            : '#FEF3C7',
+                          borderColor: ch.completed ? '#22C55E' : '#EAB308',
+                        },
+                      ]}
+                    >
+                      <Ionicons
+                        name={ch.completed ? 'checkmark-circle' : 'time-outline'}
+                        size={14}
+                        color={ch.completed ? (theme.dark ? '#4ADE80' : '#16A34A') : (theme.dark ? '#FACC15' : '#D97706')}
+                      />
+                      <ThemedText
+                        type="small"
+                        style={{
+                          color: ch.completed
+                            ? theme.dark
+                              ? '#86EFAC'
+                              : '#15803D'
+                            : theme.dark
+                            ? '#FDE047'
+                            : '#B45309',
+                          fontSize: 11,
+                          fontWeight: '700',
+                        }}
+                      >
+                        {ch.completed ? 'Completed' : 'In Progress'}
+                      </ThemedText>
+                    </View>
+                  )}
 
-                  {/* Action Controls: Edit & Delete */}
-                  <View style={styles.actionBtnRow}>
-                    <Pressable
-                      onPress={() => handleOpenEditModal(ch)}
-                      style={({ pressed }) => [
-                        styles.iconBtn,
-                        { backgroundColor: theme.dark ? 'rgba(59,130,246,0.2)' : '#EFF6FF', borderColor: '#3B82F6' },
-                        pressed && { opacity: 0.7 },
-                      ]}
-                    >
-                      <Ionicons name="pencil-outline" size={15} color={theme.dark ? '#60A5FA' : '#2563EB'} />
-                    </Pressable>
-                    <Pressable
-                      onPress={() => handleDeleteChapter(ch.id)}
-                      style={({ pressed }) => [
-                        styles.iconBtn,
-                        { backgroundColor: theme.dark ? 'rgba(239,68,68,0.2)' : '#FEF2F2', borderColor: '#EF4444' },
-                        pressed && { opacity: 0.7 },
-                      ]}
-                    >
-                      <Ionicons name="trash-outline" size={15} color={theme.dark ? '#FCA5A5' : '#DC2626'} />
-                    </Pressable>
-                  </View>
+                  {/* Action Controls: Edit & Delete (Teacher Only) */}
+                  {teacherLoggedIn ? (
+                    <View style={styles.actionBtnRow}>
+                      <Pressable
+                        onPress={() => handleOpenEditModal(ch)}
+                        style={({ pressed }) => [
+                          styles.iconBtn,
+                          { backgroundColor: theme.dark ? 'rgba(59,130,246,0.2)' : '#EFF6FF', borderColor: '#3B82F6' },
+                          pressed && { opacity: 0.7 },
+                        ]}
+                      >
+                        <Ionicons name="pencil-outline" size={15} color={theme.dark ? '#60A5FA' : '#2563EB'} />
+                      </Pressable>
+                      <Pressable
+                        onPress={() => handleDeleteChapter(ch.id)}
+                        style={({ pressed }) => [
+                          styles.iconBtn,
+                          { backgroundColor: theme.dark ? 'rgba(239,68,68,0.2)' : '#FEF2F2', borderColor: '#EF4444' },
+                          pressed && { opacity: 0.7 },
+                        ]}
+                      >
+                        <Ionicons name="trash-outline" size={15} color={theme.dark ? '#FCA5A5' : '#DC2626'} />
+                      </Pressable>
+                    </View>
+                  ) : null}
                 </View>
               </View>
 

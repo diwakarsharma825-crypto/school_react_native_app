@@ -146,7 +146,7 @@ export default function MoreScreen() {
 
   const exploreRows: Row[] = [
     { label: 'Notifications', icon: 'notifications-outline', onPress: () => router.push('/notifications') },
-    { label: 'Subject Syllabus', icon: 'book-outline', onPress: () => router.push('/syllabus') },
+    ...(!studentLoggedIn ? [{ label: 'Subject Syllabus', icon: 'book-outline', onPress: () => router.push('/syllabus') }] : []),
     ...(!instituteMode ? [{ label: 'About Us', icon: 'information-circle-outline' as const, onPress: () => router.push('/about') }] : []),
     {
       label: 'Announcements',
