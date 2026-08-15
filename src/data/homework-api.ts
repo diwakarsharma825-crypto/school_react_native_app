@@ -110,9 +110,11 @@ export async function studentRegister(params: {
   if (params.section) body.append('section', params.section);
   body.append('phone', params.phone);
   body.append('password', params.password);
-  // Always generate a guaranteed unique SRN for every registration attempt
-  const finalSrn = `SRN${Date.now()}${Math.floor(1000 + Math.random() * 9000)}`;
-  body.append('srn', finalSrn);
+  // Generate pure numeric SRN digits only (e.g. 98472910) so MySQL integer column stores a unique value instead of 0
+  const cleanSrn = (params.srn && params.srn.trim() && params.srn.trim() !== '0' && /^\d+$/.test(params.srn.trim()))
+    ? params.srn.trim()
+    : String(Math.floor(100000000 + Math.random() * 900000000));
+  body.append('srn', cleanSrn);
   if (params.gender) body.append('gender', params.gender);
 
   const response = await fetch(`${BASE_URL}/student_register`, { method: 'POST', body });
