@@ -151,19 +151,12 @@ export default function MoreScreen() {
   const exploreRows: Row[] = [
     { label: 'Notifications', icon: 'notifications-outline', onPress: () => router.push('/notifications') },
     { label: 'Subject Syllabus', icon: 'book-outline', onPress: () => router.push('/syllabus') },
-    { label: 'Manage Subjects', icon: 'journal-outline', onPress: () => router.push('/teacher-subjects' as any) },
     ...(!instituteMode ? [{ label: 'About Us', icon: 'information-circle-outline' as const, onPress: () => router.push('/about') }] : []),
     {
       label: 'Announcements',
       icon: 'megaphone-outline',
       onPress: () => router.push('/notices'),
       locked: !sections.notices,
-    },
-    {
-      label: 'Result / Report Card',
-      icon: 'document-text-outline',
-      onPress: () => router.push('/result'),
-      locked: !sections.result,
     },
     { label: 'Contact Us', icon: 'call-outline', onPress: () => router.push('/contact') },
   ];
@@ -190,9 +183,6 @@ export default function MoreScreen() {
             locked: !sections.disclosure,
           },
         ]
-      : []),
-    ...(teacherLoggedIn
-      ? [{ label: 'Storage', icon: 'server-outline' as const, onPress: () => router.push('/teacher-storage' as any) }]
       : []),
   ];
 
