@@ -15,7 +15,12 @@ export type SectionKey =
   | 'homework'
   | 'attendance'
   | 'leave'
-  | 'fees';
+  | 'fees'
+  | 'teacher_subjects'
+  | 'teacher_promote'
+  | 'syllabus'
+  | 'teacher_export'
+  | 'teacher_storage';
 
 /** Admin-controlled section visibility. Defaults to all-true so nothing
  * flickers hidden while the first app_status check is still in flight. */
@@ -33,6 +38,11 @@ export const ALL_SECTIONS_ENABLED: EnabledSections = {
   attendance: true,
   leave: true,
   fees: true,
+  teacher_subjects: true,
+  teacher_promote: true,
+  syllabus: true,
+  teacher_export: true,
+  teacher_storage: true,
 };
 
 export interface AppStatus {
