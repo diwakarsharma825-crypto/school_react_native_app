@@ -1,5 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as DocumentPicker from 'expo-document-picker';
+import * as ImagePicker from 'expo-image-picker';
 import React, { useEffect, useState } from 'react';
 import {
   Alert,
@@ -22,6 +24,16 @@ import { ThemedText } from '@/components/ui/ThemedText';
 import { Radius, Shadow, Spacing } from '@/constants/theme';
 import { useLanguage } from '@/lib/i18n';
 import { useTheme } from '@/hooks/use-theme';
+import {
+  addSyllabusChapterApi,
+  ClassPickerItem,
+  deleteSyllabusChapterApi,
+  editSyllabusChapterApi,
+  fetchSyllabusApi,
+  fetchSubjectsCatalog,
+  fetchTeacherClassesCatalog,
+  toggleSyllabusStatusApi,
+} from '@/data/teacher-api';
 
 export interface SyllabusChapter {
   id: string;
@@ -33,97 +45,67 @@ export interface SyllabusChapter {
   completed: boolean;
   pdfUrl?: string;
   imageUrl?: string;
+  fileName?: string;
 }
 
-const STORAGE_KEY = '@school_app_syllabus_store_v2';
+const STORAGE_KEY = '@school_app_syllabus_store_v3';
+
+const DEFAULT_CLASSES = [
+  { id: 1, name: 'Class 1st - A' },
+  { id: 2, name: 'Class 2nd - A' },
+  { id: 3, name: 'UKG - A' },
+];
+
+const DEFAULT_SUBJECTS = [
+  { id: 1, name: 'Mathematics' },
+  { id: 2, name: 'Science' },
+  { id: 3, name: 'English' },
+  { id: 4, name: 'Hindi' },
+];
 
 const INITIAL_SYLLABUS: SyllabusChapter[] = [
   {
     id: 'math-1',
-    classId: 'Class 10th',
+    classId: 'Class 1st - A',
     subject: 'Mathematics',
     chapterNumber: 1,
-    title: 'Real Numbers & Polynomials',
-    topics: ['Euclid Division Lemma', 'Fundamental Theorem of Arithmetic', 'Zeroes of a Polynomial'],
+    title: 'Numbers & Counting (1 to 100)',
+    topics: ['Counting numbers 1-50', 'Count & Match objects', 'Before & After Numbers'],
     completed: true,
     pdfUrl: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+    fileName: 'Numbers_Chapter_1.pdf',
   },
   {
     id: 'math-2',
-    classId: 'Class 10th',
+    classId: 'Class 1st - A',
     subject: 'Mathematics',
     chapterNumber: 2,
-    title: 'Pair of Linear Equations in Two Variables',
-    topics: ['Graphical Method', 'Algebraic Method: Substitution & Elimination', 'Equations Reducible to Linear Form'],
-    completed: true,
-  },
-  {
-    id: 'math-3',
-    classId: 'Class 10th',
-    subject: 'Mathematics',
-    chapterNumber: 3,
-    title: 'Quadratic Equations',
-    topics: ['Standard Form', 'Factorisation Method', 'Nature of Roots & Discriminant'],
-    completed: false,
-  },
-  {
-    id: 'math-4',
-    classId: 'Class 10th',
-    subject: 'Mathematics',
-    chapterNumber: 4,
-    title: 'Arithmetic Progressions',
-    topics: ['nth Term of an AP', 'Sum of First n Terms of an AP'],
+    title: 'Addition & Subtraction Basics',
+    topics: ['Single digit addition', 'Picture subtraction', 'Word problems'],
     completed: false,
   },
   {
     id: 'sci-1',
-    classId: 'Class 10th',
+    classId: 'Class 1st - A',
     subject: 'Science',
     chapterNumber: 1,
-    title: 'Chemical Reactions and Equations',
-    topics: ['Chemical Equations', 'Types of Chemical Reactions', 'Corrosion and Rancidity'],
+    title: 'Living and Non-Living Things',
+    topics: ['Characteristics of living things', 'Natural vs Man-made objects'],
     completed: true,
   },
-  {
-    id: 'sci-2',
-    classId: 'Class 10th',
-    subject: 'Science',
-    chapterNumber: 2,
-    title: 'Acids, Bases and Salts',
-    topics: ['Chemical Properties', 'pH Scale Concept', 'Salts & Derivatives'],
-    completed: false,
-  },
-  {
-    id: 'eng-1',
-    classId: 'Class 10th',
-    subject: 'English',
-    chapterNumber: 1,
-    title: 'A Letter to God',
-    topics: ['Reading Comprehension', 'Character Sketch of Lencho', 'Grammar: Tenses & Reported Speech'],
-    completed: true,
-  },
-];
-
-const CLASS_OPTIONS = [
-  { label: 'Class 10th', value: 'Class 10th' },
-  { label: 'Class 9th', value: 'Class 9th' },
-  { label: 'Class 8th', value: 'Class 8th' },
-];
-
-const SUBJECT_OPTIONS = [
-  { label: 'Mathematics', value: 'Mathematics' },
-  { label: 'Science', value: 'Science' },
-  { label: 'English', value: 'English' },
-  { label: 'Social Studies', value: 'Social Studies' },
-  { label: 'Hindi', value: 'Hindi' },
 ];
 
 export default function SubjectSyllabusScreen() {
   const theme = useTheme();
   const { t } = useLanguage();
 
-  const [selectedClass, setSelectedClass] = useState<string>('Class 10th');
+  // Class & Subject Options
+  const [teacherClasses, setTeacherClasses] = useState<ClassPickerItem[]>(DEFAULT_CLASSES);
+  const [subjectList, setSubjectList] = useState<{ id: number; name: string }[]>(DEFAULT_SUBJECTS);
+
+  const [selectedClass, setSelectedClass] = useState<string>('Class 1st - A');
   const [selectedSubject, setSelectedSubject] = useState<string>('Mathematics');
+
   const [isTeacherMode, setIsTeacherMode] = useState<boolean>(true);
   const [allChapters, setAllChapters] = useState<SyllabusChapter[]>(INITIAL_SYLLABUS);
 
@@ -136,11 +118,71 @@ export default function SubjectSyllabusScreen() {
   const [formTitle, setFormTitle] = useState<string>('');
   const [formTopics, setFormTopics] = useState<string>('');
   const [formAttachmentType, setFormAttachmentType] = useState<'pdf' | 'image'>('pdf');
-  const [formAttachmentUrl, setFormAttachmentUrl] = useState<string>('');
+  const [formAttachmentUri, setFormAttachmentUri] = useState<string>('');
+  const [formAttachmentName, setFormAttachmentName] = useState<string>('');
   const [formCompleted, setFormCompleted] = useState<boolean>(false);
 
-  // Load persisted syllabus chapters
+  // 1. Fetch Teacher's Assigned Classes Catalog
   useEffect(() => {
+    async function loadClasses() {
+      try {
+        const classes = await fetchTeacherClassesCatalog();
+        if (classes && classes.length > 0) {
+          setTeacherClasses(classes);
+          setSelectedClass(classes[0].name);
+        }
+      } catch {}
+    }
+    loadClasses();
+  }, []);
+
+  // 2. Fetch Subjects According to Selected Class
+  useEffect(() => {
+    async function loadSubjects() {
+      const match = teacherClasses.find((c) => c.name === selectedClass);
+      const classId = match ? match.id : 1;
+      try {
+        const subs = await fetchSubjectsCatalog(classId);
+        if (subs && subs.length > 0) {
+          setSubjectList(subs);
+          setSelectedSubject(subs[0].name);
+        }
+      } catch {
+        setSubjectList(DEFAULT_SUBJECTS);
+      }
+    }
+    loadSubjects();
+  }, [selectedClass, teacherClasses]);
+
+  // 3. Load Syllabus Data from Backend API & Fallback Storage
+  const loadSyllabusData = async () => {
+    try {
+      const apiRows = await fetchSyllabusApi(selectedClass, selectedSubject);
+      if (apiRows && apiRows.length > 0) {
+        const mapped: SyllabusChapter[] = apiRows.map((r) => ({
+          id: String(r.id),
+          classId: r.class || selectedClass,
+          subject: r.subject || selectedSubject,
+          chapterNumber: r.chapter_number,
+          title: r.chapter_title,
+          topics: Array.isArray(r.topics) ? r.topics : [],
+          completed: Boolean(r.status || r.completed),
+          pdfUrl: r.pdf_url || undefined,
+          imageUrl: r.image_url || undefined,
+          fileName: r.pdf_url ? 'Reference_Document.pdf' : r.image_url ? 'Reference_Image.png' : undefined,
+        }));
+
+        setAllChapters((prev) => {
+          const filteredOther = prev.filter(
+            (c) => !(c.classId === selectedClass && c.subject === selectedSubject)
+          );
+          return [...filteredOther, ...mapped];
+        });
+        return;
+      }
+    } catch {}
+
+    // Fallback to AsyncStorage
     AsyncStorage.getItem(STORAGE_KEY).then((data) => {
       if (data) {
         try {
@@ -151,9 +193,13 @@ export default function SubjectSyllabusScreen() {
         } catch {}
       }
     });
-  }, []);
+  };
 
-  // Save syllabus chapters to AsyncStorage
+  useEffect(() => {
+    loadSyllabusData();
+  }, [selectedClass, selectedSubject]);
+
+  // Save Syllabus to Storage & State
   const saveChapters = async (updated: SyllabusChapter[]) => {
     setAllChapters(updated);
     try {
@@ -161,13 +207,53 @@ export default function SubjectSyllabusScreen() {
     } catch {}
   };
 
-  // Filtered chapters by Class & Subject
+  // Filtered chapters for current Class & Subject
   const currentChapters = allChapters.filter(
     (c) => c.classId === selectedClass && c.subject === selectedSubject
   );
   const completedCount = currentChapters.filter((c) => c.completed).length;
   const progressPercent =
     currentChapters.length > 0 ? Math.round((completedCount / currentChapters.length) * 100) : 0;
+
+  // File Upload Handlers (Image / PDF Picker)
+  const handlePickDocument = async () => {
+    try {
+      const res = await DocumentPicker.getDocumentAsync({
+        type: 'application/pdf',
+        copyToCacheDirectory: true,
+      });
+      if (!res.canceled && res.assets && res.assets.length > 0) {
+        const asset = res.assets[0];
+        setFormAttachmentType('pdf');
+        setFormAttachmentUri(asset.uri);
+        setFormAttachmentName(asset.name || 'Syllabus_Document.pdf');
+      }
+    } catch (err) {
+      Alert.alert('Error', 'Could not select document');
+    }
+  };
+
+  const handlePickImage = async () => {
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert('Permission Required', 'Gallery access permission is required to upload images.');
+        return;
+      }
+      const res = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        quality: 0.8,
+      });
+      if (!res.canceled && res.assets && res.assets.length > 0) {
+        const asset = res.assets[0];
+        setFormAttachmentType('image');
+        setFormAttachmentUri(asset.uri);
+        setFormAttachmentName(asset.fileName || 'Syllabus_Diagram.jpg');
+      }
+    } catch (err) {
+      Alert.alert('Error', 'Could not select image');
+    }
+  };
 
   // Open Add Chapter Modal
   const handleOpenAddModal = () => {
@@ -177,7 +263,8 @@ export default function SubjectSyllabusScreen() {
     setFormTitle('');
     setFormTopics('');
     setFormAttachmentType('pdf');
-    setFormAttachmentUrl('');
+    setFormAttachmentUri('');
+    setFormAttachmentName('');
     setFormCompleted(false);
     setModalVisible(true);
   };
@@ -189,15 +276,16 @@ export default function SubjectSyllabusScreen() {
     setFormTitle(ch.title);
     setFormTopics(ch.topics.join('\n'));
     setFormAttachmentType(ch.imageUrl ? 'image' : 'pdf');
-    setFormAttachmentUrl(ch.pdfUrl || ch.imageUrl || '');
+    setFormAttachmentUri(ch.pdfUrl || ch.imageUrl || '');
+    setFormAttachmentName(ch.fileName || (ch.pdfUrl ? 'Reference_Document.pdf' : ch.imageUrl ? 'Reference_Image.png' : ''));
     setFormCompleted(ch.completed);
     setModalVisible(true);
   };
 
   // Save / Submit Chapter Form
-  const handleSaveForm = () => {
+  const handleSaveForm = async () => {
     if (!formTitle.trim()) {
-      Alert.alert(t('error') || 'Error', 'Please enter a chapter title');
+      Alert.alert('Required', 'Please enter a chapter title');
       return;
     }
 
@@ -206,35 +294,67 @@ export default function SubjectSyllabusScreen() {
       .split('\n')
       .map((t) => t.trim())
       .filter((t) => t.length > 0);
+    const topicsArray = parsedTopics.length > 0 ? parsedTopics : ['General Concepts'];
+
+    const pdfUrl = formAttachmentType === 'pdf' && formAttachmentUri ? formAttachmentUri : undefined;
+    const imageUrl = formAttachmentType === 'image' && formAttachmentUri ? formAttachmentUri : undefined;
 
     let updated: SyllabusChapter[];
 
     if (editingChapterId) {
+      // Call Backend API Edit
+      editSyllabusChapterApi({
+        id: editingChapterId,
+        chapter_number: parsedChNum,
+        chapter_title: formTitle.trim(),
+        topics: topicsArray,
+        status: formCompleted ? 1 : 0,
+        pdf_url: pdfUrl,
+        image_url: imageUrl,
+      }).catch(() => {});
+
       updated = allChapters.map((ch) => {
         if (ch.id === editingChapterId) {
           return {
             ...ch,
             chapterNumber: parsedChNum,
             title: formTitle.trim(),
-            topics: parsedTopics.length > 0 ? parsedTopics : ['General Concepts'],
+            topics: topicsArray,
             completed: formCompleted,
-            pdfUrl: formAttachmentType === 'pdf' && formAttachmentUrl.trim() ? formAttachmentUrl.trim() : undefined,
-            imageUrl: formAttachmentType === 'image' && formAttachmentUrl.trim() ? formAttachmentUrl.trim() : undefined,
+            pdfUrl,
+            imageUrl,
+            fileName: formAttachmentName || (pdfUrl ? 'Reference_Document.pdf' : imageUrl ? 'Reference_Image.png' : undefined),
           };
         }
         return ch;
       });
     } else {
+      let createdId = 'ch-' + Date.now();
+      try {
+        const apiRes = await addSyllabusChapterApi({
+          class: selectedClass,
+          subject: selectedSubject,
+          chapter_number: parsedChNum,
+          chapter_title: formTitle.trim(),
+          topics: topicsArray,
+          status: formCompleted ? 1 : 0,
+          pdf_url: pdfUrl,
+          image_url: imageUrl,
+        });
+        if (apiRes && apiRes.id) createdId = String(apiRes.id);
+      } catch {}
+
       const newCh: SyllabusChapter = {
-        id: 'ch-' + Date.now(),
+        id: createdId,
         classId: selectedClass,
         subject: selectedSubject,
         chapterNumber: parsedChNum,
         title: formTitle.trim(),
-        topics: parsedTopics.length > 0 ? parsedTopics : ['General Concepts'],
+        topics: topicsArray,
         completed: formCompleted,
-        pdfUrl: formAttachmentType === 'pdf' && formAttachmentUrl.trim() ? formAttachmentUrl.trim() : undefined,
-        imageUrl: formAttachmentType === 'image' && formAttachmentUrl.trim() ? formAttachmentUrl.trim() : undefined,
+        pdfUrl,
+        imageUrl,
+        fileName: formAttachmentName || (pdfUrl ? 'Reference_Document.pdf' : imageUrl ? 'Reference_Image.png' : undefined),
       };
       updated = [...allChapters, newCh];
     }
@@ -245,9 +365,12 @@ export default function SubjectSyllabusScreen() {
 
   // Quick Toggle Status
   const handleToggleStatus = (ch: SyllabusChapter) => {
+    const nextStatus = !ch.completed;
+    toggleSyllabusStatusApi(ch.id, nextStatus ? 1 : 0).catch(() => {});
+
     const updated = allChapters.map((c) => {
       if (c.id === ch.id) {
-        return { ...c, completed: !c.completed };
+        return { ...c, completed: nextStatus };
       }
       return c;
     });
@@ -262,12 +385,17 @@ export default function SubjectSyllabusScreen() {
         text: 'Delete',
         style: 'destructive',
         onPress: () => {
+          deleteSyllabusChapterApi(chId).catch(() => {});
           const updated = allChapters.filter((c) => c.id !== chId);
           saveChapters(updated);
         },
       },
     ]);
   };
+
+  // Map options for SelectFields
+  const classOptions = teacherClasses.map((c) => ({ label: c.name, value: c.name }));
+  const subjectOptions = subjectList.map((s) => ({ label: s.name, value: s.name }));
 
   return (
     <Screen>
@@ -280,7 +408,7 @@ export default function SubjectSyllabusScreen() {
                 {t('syllabus')}
               </ThemedText>
               <ThemedText type="small" themeColor="textSecondary">
-                Chapter-wise topic breakdown & completion management
+                Assigned class & subject curriculum management
               </ThemedText>
             </View>
             <Pressable
@@ -317,12 +445,12 @@ export default function SubjectSyllabusScreen() {
           </View>
         </View>
 
-        {/* Filter Selection Row */}
+        {/* Filter Selection Row: Filtered to Assigned Teacher Classes & Corresponding Subjects */}
         <View style={styles.filterRow}>
           <View style={{ flex: 1 }}>
             <SelectField
-              label={t('class') || 'Class'}
-              options={CLASS_OPTIONS}
+              label={t('class') || 'Teacher Class'}
+              options={classOptions}
               value={selectedClass}
               onChange={(val) => setSelectedClass(val)}
             />
@@ -330,7 +458,7 @@ export default function SubjectSyllabusScreen() {
           <View style={{ flex: 1 }}>
             <SelectField
               label={t('select_subject') || 'Subject'}
-              options={SUBJECT_OPTIONS}
+              options={subjectOptions}
               value={selectedSubject}
               onChange={(val) => setSelectedSubject(val)}
             />
@@ -341,7 +469,7 @@ export default function SubjectSyllabusScreen() {
         <Card style={styles.progressCard}>
           <View style={styles.progressTop}>
             <ThemedText type="smallBold" style={styles.progressTitle}>
-              {selectedClass} - {t(selectedSubject)} {t('Syllabus')}
+              {selectedClass} - {selectedSubject} Syllabus
             </ThemedText>
             <ThemedText type="smallBold" style={{ color: theme.dark ? '#60A5FA' : '#2563EB' }}>
               {progressPercent}% {t('Completed')}
@@ -382,7 +510,7 @@ export default function SubjectSyllabusScreen() {
         {/* Chapter List */}
         {currentChapters.length === 0 ? (
           <EmptyState
-            message={`No chapters found for ${selectedClass} - ${selectedSubject}.`}
+            message={`No syllabus chapters added yet for ${selectedClass} - ${selectedSubject}.`}
             icon="book-outline"
           />
         ) : (
@@ -407,7 +535,7 @@ export default function SubjectSyllabusScreen() {
                 </View>
 
                 <View style={styles.headerRightActions}>
-                  {/* Status Badge (Pressable for Teachers) */}
+                  {/* Status Badge (Pressable for Teachers to Toggle) */}
                   <Pressable
                     disabled={!isTeacherMode}
                     onPress={() => handleToggleStatus(ch)}
@@ -449,7 +577,7 @@ export default function SubjectSyllabusScreen() {
                     </ThemedText>
                   </Pressable>
 
-                  {/* Teacher Action Buttons */}
+                  {/* Teacher Action Controls: Edit & Delete */}
                   {isTeacherMode ? (
                     <View style={styles.actionBtnRow}>
                       <Pressable
@@ -477,7 +605,7 @@ export default function SubjectSyllabusScreen() {
                 </View>
               </View>
 
-              {/* Topics Breakdown */}
+              {/* Sub-Topics */}
               <View style={styles.topicsList}>
                 {ch.topics.map((topic, i) => (
                   <View key={i} style={styles.topicRow}>
@@ -489,7 +617,7 @@ export default function SubjectSyllabusScreen() {
                 ))}
               </View>
 
-              {/* Reference PDF / Photo Attachment */}
+              {/* Uploaded Reference PDF / Photo Attachment */}
               {ch.pdfUrl || ch.imageUrl ? (
                 <View style={styles.attachmentBox}>
                   {ch.imageUrl ? (
@@ -501,7 +629,7 @@ export default function SubjectSyllabusScreen() {
                   <Pressable
                     onPress={() => {
                       const targetUrl = ch.pdfUrl || ch.imageUrl;
-                      if (targetUrl) Linking.openURL(targetUrl).catch(() => Alert.alert('Error', 'Cannot open attachment URL'));
+                      if (targetUrl) Linking.openURL(targetUrl).catch(() => Alert.alert('Error', 'Cannot open attachment file'));
                     }}
                     style={({ pressed }) => [
                       styles.attachBtn,
@@ -521,7 +649,7 @@ export default function SubjectSyllabusScreen() {
                       type="smallBold"
                       style={{ color: theme.dark ? '#2DD4BF' : '#0D9488', fontSize: 12, flex: 1 }}
                     >
-                      {ch.imageUrl ? 'View Reference Image / Diagram' : 'Download Reference Syllabus PDF'}
+                      {ch.fileName || (ch.imageUrl ? 'View Uploaded Image' : 'View Uploaded PDF Document')}
                     </ThemedText>
                     <Ionicons name="open-outline" size={14} color={theme.dark ? '#2DD4BF' : '#0D9488'} />
                   </Pressable>
@@ -532,7 +660,7 @@ export default function SubjectSyllabusScreen() {
         )}
       </ScrollView>
 
-      {/* Add / Edit Chapter Modal */}
+      {/* Add / Edit Chapter Modal with Real File Upload Buttons */}
       <Modal visible={modalVisible} animationType="slide" transparent={true} onRequestClose={() => setModalVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalCard, { backgroundColor: theme.dark ? '#1E293B' : '#FFFFFF', borderColor: theme.dark ? '#334155' : '#E2E8F0' }]}>
@@ -545,7 +673,7 @@ export default function SubjectSyllabusScreen() {
               </Pressable>
             </View>
 
-            <ScrollView style={{ maxHeight: 450 }} showsVerticalScrollIndicator={false}>
+            <ScrollView style={{ maxHeight: 460 }} showsVerticalScrollIndicator={false}>
               {/* Chapter Number */}
               <View style={styles.inputGroup}>
                 <ThemedText type="smallBold" style={styles.fieldLabel}>
@@ -576,7 +704,7 @@ export default function SubjectSyllabusScreen() {
                 <TextInput
                   value={formTitle}
                   onChangeText={setFormTitle}
-                  placeholder="e.g. Quadratic Equations"
+                  placeholder="e.g. Living & Non-Living Things"
                   placeholderTextColor={theme.dark ? '#64748B' : '#94A3B8'}
                   style={[
                     styles.inputField,
@@ -599,7 +727,7 @@ export default function SubjectSyllabusScreen() {
                   onChangeText={setFormTopics}
                   multiline={true}
                   numberOfLines={4}
-                  placeholder={'e.g.\nEuclid Division Lemma\nFundamental Theorem of Arithmetic'}
+                  placeholder={'e.g.\nCounting numbers 1-50\nPicture addition & subtraction'}
                   placeholderTextColor={theme.dark ? '#64748B' : '#94A3B8'}
                   style={[
                     styles.inputField,
@@ -613,98 +741,82 @@ export default function SubjectSyllabusScreen() {
                 />
               </View>
 
-              {/* Attachment Reference Type */}
+              {/* Attachment Upload Section (Photo / PDF Picker, NOT Text URL) */}
               <View style={styles.inputGroup}>
                 <ThemedText type="smallBold" style={styles.fieldLabel}>
-                  Attachment Reference Type
+                  Upload Reference Attachment (PDF / Photo)
                 </ThemedText>
-                <View style={styles.typeSelectorRow}>
+
+                <View style={styles.uploadBtnRow}>
                   <Pressable
-                    onPress={() => setFormAttachmentType('pdf')}
-                    style={[
-                      styles.typeChip,
+                    onPress={handlePickDocument}
+                    style={({ pressed }) => [
+                      styles.fileUploadBtn,
                       {
-                        backgroundColor:
-                          formAttachmentType === 'pdf'
-                            ? theme.dark
-                              ? 'rgba(37,99,235,0.3)'
-                              : '#EFF6FF'
-                            : theme.dark
-                            ? '#0F172A'
-                            : '#F1F5F9',
-                        borderColor: formAttachmentType === 'pdf' ? '#3B82F6' : theme.dark ? '#334155' : '#CBD5E1',
+                        backgroundColor: theme.dark ? 'rgba(37,99,235,0.25)' : '#EFF6FF',
+                        borderColor: theme.dark ? '#3B82F6' : '#2563EB',
                       },
+                      pressed && { opacity: 0.7 },
                     ]}
                   >
-                    <Ionicons name="document-text-outline" size={16} color={formAttachmentType === 'pdf' ? '#3B82F6' : theme.textSecondary} />
-                    <ThemedText type="smallBold" style={{ color: formAttachmentType === 'pdf' ? (theme.dark ? '#60A5FA' : '#2563EB') : theme.textSecondary }}>
-                      PDF Document
+                    <Ionicons name="document-text-outline" size={18} color={theme.dark ? '#60A5FA' : '#2563EB'} />
+                    <ThemedText type="smallBold" style={{ color: theme.dark ? '#60A5FA' : '#2563EB', fontSize: 12 }}>
+                      📂 Choose PDF File
                     </ThemedText>
                   </Pressable>
 
                   <Pressable
-                    onPress={() => setFormAttachmentType('image')}
-                    style={[
-                      styles.typeChip,
+                    onPress={handlePickImage}
+                    style={({ pressed }) => [
+                      styles.fileUploadBtn,
                       {
-                        backgroundColor:
-                          formAttachmentType === 'image'
-                            ? theme.dark
-                              ? 'rgba(13,148,136,0.3)'
-                              : '#F0FDFA'
-                            : theme.dark
-                            ? '#0F172A'
-                            : '#F1F5F9',
-                        borderColor: formAttachmentType === 'image' ? '#0D9488' : theme.dark ? '#334155' : '#CBD5E1',
+                        backgroundColor: theme.dark ? 'rgba(13,148,136,0.25)' : '#F0FDFA',
+                        borderColor: theme.dark ? '#2DD4BF' : '#0D9488',
+                      },
+                      pressed && { opacity: 0.7 },
+                    ]}
+                  >
+                    <Ionicons name="image-outline" size={18} color={theme.dark ? '#2DD4BF' : '#0D9488'} />
+                    <ThemedText type="smallBold" style={{ color: theme.dark ? '#2DD4BF' : '#0D9488', fontSize: 12 }}>
+                      🖼️ Choose Photo
+                    </ThemedText>
+                  </Pressable>
+                </View>
+
+                {/* Selected File Card / Preview */}
+                {formAttachmentUri ? (
+                  <View
+                    style={[
+                      styles.selectedFileCard,
+                      {
+                        backgroundColor: theme.dark ? '#0F172A' : '#F1F5F9',
+                        borderColor: theme.dark ? '#334155' : '#CBD5E1',
                       },
                     ]}
                   >
-                    <Ionicons name="image-outline" size={16} color={formAttachmentType === 'image' ? '#0D9488' : theme.textSecondary} />
-                    <ThemedText type="smallBold" style={{ color: formAttachmentType === 'image' ? (theme.dark ? '#2DD4BF' : '#0D9488') : theme.textSecondary }}>
-                      Photo / Image
-                    </ThemedText>
-                  </Pressable>
-                </View>
-              </View>
-
-              {/* Attachment File URL */}
-              <View style={styles.inputGroup}>
-                <ThemedText type="smallBold" style={styles.fieldLabel}>
-                  {formAttachmentType === 'pdf' ? 'Reference PDF URL' : 'Reference Image URL'}
-                </ThemedText>
-                <TextInput
-                  value={formAttachmentUrl}
-                  onChangeText={setFormAttachmentUrl}
-                  placeholder={formAttachmentType === 'pdf' ? 'https://example.com/syllabus.pdf' : 'https://example.com/diagram.jpg'}
-                  placeholderTextColor={theme.dark ? '#64748B' : '#94A3B8'}
-                  style={[
-                    styles.inputField,
-                    {
-                      backgroundColor: theme.dark ? '#0F172A' : '#F8FAFC',
-                      borderColor: theme.dark ? '#334155' : '#CBD5E1',
-                      color: theme.dark ? '#FFFFFF' : '#0F172A',
-                    },
-                  ]}
-                />
-                {/* Preset Sample Buttons */}
-                <View style={styles.samplePresetRow}>
-                  <Pressable
-                    onPress={() => setFormAttachmentUrl('https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf')}
-                    style={styles.samplePresetBtn}
-                  >
-                    <ThemedText type="small" style={{ color: '#3B82F6', fontSize: 11 }}>
-                      + Sample PDF Link
-                    </ThemedText>
-                  </Pressable>
-                  <Pressable
-                    onPress={() => setFormAttachmentUrl('https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=600')}
-                    style={styles.samplePresetBtn}
-                  >
-                    <ThemedText type="small" style={{ color: '#0D9488', fontSize: 11 }}>
-                      + Sample Photo Link
-                    </ThemedText>
-                  </Pressable>
-                </View>
+                    <Ionicons
+                      name={formAttachmentType === 'image' ? 'image' : 'document-text'}
+                      size={22}
+                      color={formAttachmentType === 'image' ? '#0D9488' : '#2563EB'}
+                    />
+                    <View style={{ flex: 1 }}>
+                      <ThemedText type="smallBold" numberOfLines={1} style={{ fontSize: 12 }}>
+                        {formAttachmentName || 'Attached_File.' + formAttachmentType}
+                      </ThemedText>
+                      <ThemedText type="small" themeColor="textSecondary" style={{ fontSize: 11 }}>
+                        Ready to attach to chapter
+                      </ThemedText>
+                    </View>
+                    <Pressable
+                      onPress={() => {
+                        setFormAttachmentUri('');
+                        setFormAttachmentName('');
+                      }}
+                    >
+                      <Ionicons name="close-circle-outline" size={20} color="#EF4444" />
+                    </Pressable>
+                  </View>
+                ) : null}
               </View>
 
               {/* Completion Status Check */}
@@ -949,28 +1061,29 @@ const styles = StyleSheet.create({
     minHeight: 80,
     textAlignVertical: 'top',
   },
-  typeSelectorRow: {
+  uploadBtnRow: {
     flexDirection: 'row',
     gap: Spacing.two,
+    marginBottom: 8,
   },
-  typeChip: {
+  fileUploadBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingVertical: 10,
+    paddingVertical: 12,
+    borderRadius: Radius.medium,
+    borderWidth: 1.5,
+  },
+  selectedFileCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    padding: 10,
     borderRadius: Radius.medium,
     borderWidth: 1,
-  },
-  samplePresetRow: {
-    flexDirection: 'row',
-    gap: Spacing.two,
     marginTop: 6,
-  },
-  samplePresetBtn: {
-    paddingVertical: 4,
-    paddingHorizontal: 8,
   },
   statusCheckRow: {
     flexDirection: 'row',

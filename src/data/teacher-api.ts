@@ -1385,3 +1385,94 @@ export async function deleteClass(id: number): Promise<void> {
   body.append('id', String(id));
   await authedRequest<{ deleted: boolean }>('/delete_class', { method: 'POST', body });
 }
+
+export interface ApiSyllabusChapter {
+  id: string;
+  class: string;
+  subject: string;
+  chapter_number: number;
+  chapter_title: string;
+  topics: string[];
+  status: number;
+  completed: boolean;
+  pdf_url?: string | null;
+  image_url?: string | null;
+}
+
+export async function fetchSyllabusApi(className: string, subjectName?: string): Promise<ApiSyllabusChapter[]> {
+  const qs = `class=${encodeURIComponent(className)}${subjectName ? `&subject=${encodeURIComponent(subjectName)}` : ''}`;
+  try {
+    const res = await fetch(`${BASE_URL}/student_syllabus?${qs}`);
+    const json = await res.json();
+    if (json.status && Array.isArray(json.data)) {
+      return json.data;
+    }
+  } catch {}
+  return [];
+}
+
+export async function addSyllabusChapterApi(params: {
+  class: string;
+  subject: string;
+  chapter_number: number;
+  chapter_title: string;
+  topics: string[];
+  status: number;
+  pdf_url?: string;
+  image_url?: string;
+}): Promise<{ id: string }> {
+  const body = new FormData();
+  body.append('class', params.class);
+  body.append('subject', params.subject);
+  body.append('chapter_number', String(params.chapter_number));
+  body.append('chapter_title', params.chapter_title);
+  body.append('topics_json', JSON.stringify(params.topics));
+  body.append('status', String(params.status));
+  if (params.pdf_url) body.append('pdf_url', params.pdf_url);
+  if (params.image_url) body.append('image_url', params.image_url);
+
+  const response = await fetch(`${BASE_URL}/teacher_add_syllabus`, { method: 'POST', body });
+  const json = await response.json();
+  if (!json.status) throw new Error(json.message || 'Failed to add syllabus chapter');
+  return json.data;
+}
+
+export async function editSyllabusChapterApi(params: {
+  id: string;
+  chapter_number: number;
+  chapter_title: string;
+  topics: string[];
+  status: number;
+  pdf_url?: string;
+  image_url?: string;
+}): Promise<void> {
+  const body = new FormData();
+  body.append('id', params.id);
+  body.append('chapter_number', String(params.chapter_number));
+  body.append('chapter_title', params.chapter_title);
+  body.append('topics_json', JSON.stringify(params.topics));
+  body.append('status', String(params.status));
+  if (params.pdf_url) body.append('pdf_url', params.pdf_url);
+  if (params.image_url) body.append('image_url', params.image_url);
+
+  const response = await fetch(`${BASE_URL}/teacher_edit_syllabus`, { method: 'POST', body });
+  const json = await response.json();
+  if (!json.status) throw new Error(json.message || 'Failed to update syllabus chapter');
+}
+
+export async function toggleSyllabusStatusApi(id: string, status: number): Promise<void> {
+  const body = new FormData();
+  body.append('id', id);
+  body.append('status', String(status));
+  const response = await fetch(`${BASE_URL}/teacher_toggle_syllabus_status`, { method: 'POST', body });
+  const json = await response.json();
+  if (!json.status) throw new Error(json.message || 'Failed to update status');
+}
+
+export async function deleteSyllabusChapterApi(id: string): Promise<void> {
+  const body = new FormData();
+  body.append('id', id);
+  const response = await fetch(`${BASE_URL}/teacher_delete_syllabus`, { method: 'POST', body });
+  const json = await response.json();
+  if (!json.status) throw new Error(json.message || 'Failed to delete chapter');
+}
