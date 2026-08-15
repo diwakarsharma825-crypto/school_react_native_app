@@ -8,20 +8,32 @@ import { useLayout } from '@/hooks/use-layout';
 import { useSections } from '@/hooks/use-sections';
 import { useTheme } from '@/hooks/use-theme';
 import { TARGET_ROUTES, TARGET_SECTION_KEY } from '@/lib/layout';
+import { useLanguage } from '@/lib/i18n';
 import { Card } from '../ui/Card';
 import { ThemedText } from '../ui/ThemedText';
 
-// Tiles come from App Control → App Layout (admin-configured) and are always
-// shown, even when the tile's target section is turned off — the app
-// shouldn't feel like features vanished. Tapping a disabled one just opens
-// its "Coming Soon" state instead of the real screen; a small lock badge
-// previews that before the tap.
 export function QuickActionGrid() {
   const sections = useSections();
   const theme = useTheme();
   const { homeTiles } = useLayout();
+  const { t } = useLanguage();
 
   if (homeTiles.length === 0) return null;
+
+  const translateTileLabel = (rawLabel: string) => {
+    const key = rawLabel.toLowerCase().trim();
+    if (key === 'result') return t('result');
+    if (key === 'events') return t('events');
+    if (key === 'gallery') return t('gallery');
+    if (key === 'more') return t('more');
+    if (key === 'homework') return t('homework');
+    if (key === 'attendance') return t('attendance');
+    if (key === 'notices') return t('notices');
+    if (key === 'syllabus') return t('syllabus');
+    if (key === 'teachers') return t('teachers');
+    if (key === 'disclosures') return t('disclosures');
+    return rawLabel;
+  };
 
   return (
     <View style={styles.grid}>
@@ -58,7 +70,7 @@ export function QuickActionGrid() {
                 adjustsFontSizeToFit
                 minimumFontScale={0.8}
               >
-                {tile.label}
+                {translateTileLabel(tile.label)}
               </ThemedText>
             </Card>
           </Pressable>

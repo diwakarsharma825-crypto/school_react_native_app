@@ -30,6 +30,7 @@ import { useTeacherAuth } from '@/hooks/use-teacher-auth';
 import StudentDashboardScreen from '@/app/student-dashboard';
 import TeacherDashboardScreen from '@/app/teacher-dashboard';
 import LoginChoiceScreen from '@/app/login';
+import { useLanguage } from '@/lib/i18n';
 
 function PendingApprovalBanner({ pending }: { pending: PendingRegistration }) {
   const theme = useTheme();
@@ -68,6 +69,8 @@ export default function HomeScreen() {
   const { instituteMode } = useLayout();
   const { loggedIn: studentLoggedIn } = useStudentAuth();
   const { loggedIn: teacherLoggedIn } = useTeacherAuth();
+  const { t } = useLanguage();
+
   const home = useFetch(fetchHome);
   const settings = useFetch(fetchSettings);
   const achievers = useFetch(fetchTopAchievers);
@@ -75,9 +78,6 @@ export default function HomeScreen() {
   const topStudentsEnabled = useSectionEnabled('top_students');
   const [pendingRegistration, setPendingRegistration] = useState<PendingRegistration | null>(null);
 
-  // Re-checked every time Home comes into focus — cleared automatically
-  // once the student's account is activated and they actually log in
-  // (see saveHomeworkChildren()), so this naturally disappears on its own.
   useFocusEffect(
     useCallback(() => {
       getPendingRegistration().then(setPendingRegistration);
@@ -90,43 +90,21 @@ export default function HomeScreen() {
     return <LoginChoiceScreen />;
   }
 
-  const refreshAll = useCallback(() => {
-    home.refetch();
-    settings.refetch();
-    achievers.refetch();
-  }, [home, settings, achievers]);
-
-  const initialLoading = home.loading && !home.data;
-  const refreshing = !initialLoading && (home.loading || settings.loading);
-
-  if (initialLoading) {
-    return (
-      <Screen scroll={false}>
-        <Loading label="Loading home…" />
-      </Screen>
-    );
-  }
+  if (home.loading || settings.loading) return <Loading />;
+  if (home.error || !home.data) return <ErrorState message={home.error ?? 'Failed to load'} onRetry={home.refetch} />;
 
   return (
-    <Screen refreshing={refreshing} onRefresh={refreshAll}>
-      {home.error ? (
-        <ErrorState message="Could not load the home page." onRetry={home.refetch} />
-      ) : home.data ? (
+    <Screen>
+      {home.data ? (
         <>
-          {home.data.sliders.length > 0 ? (
-            <Carousel sliders={home.data.sliders} />
-          ) : (
-            <EmptyState message="No banners available." />
-          )}
-
-          {pendingRegistration ? (
+          <Carousel items={home.data.sliders} />
+          {pendingRegistration && !studentLoggedIn ? (
             <Card
               style={{
-                backgroundColor: theme.dark ? 'rgba(234, 179, 8, 0.2)' : '#FEF3C7',
-                borderColor: '#F59E0B',
+                marginBottom: Spacing.four,
+                backgroundColor: theme.dark ? '#451A03' : '#FEF3C7',
+                borderColor: theme.dark ? '#92400E' : '#F59E0B',
                 borderWidth: 1,
-                marginBottom: Spacing.three,
-                padding: Spacing.three,
               }}
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.three }}>
@@ -144,7 +122,7 @@ export default function HomeScreen() {
                 </View>
                 <View style={{ flex: 1 }}>
                   <ThemedText type="smallBold" style={{ color: theme.dark ? '#FDE047' : '#92400E' }}>
-                    Account Pending Activation
+                    {t('account_pending')}
                   </ThemedText>
                   <ThemedText
                     type="small"
@@ -158,7 +136,7 @@ export default function HomeScreen() {
           ) : null}
           <QuickActionGrid />
 
-          <SectionHeader title="Principal's Message" />
+          <SectionHeader title={t('principal_message')} />
           {settings.data?.principle_text ? (
             <PrincipalCard
               photoUrl={settings.data.principle_image_url ?? null}
@@ -173,7 +151,7 @@ export default function HomeScreen() {
 
           {eventsEnabled ? (
             <>
-              <SectionHeader title="Latest Events" onSeeAll={() => router.push('/(tabs)/events')} />
+              <SectionHeader title={t('latest_events')} onSeeAll={() => router.push('/(tabs)/events')} />
               {home.data.events.length > 0 ? (
                 <View style={{ marginBottom: Spacing.four }}>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -199,7 +177,7 @@ export default function HomeScreen() {
 
           {topStudentsEnabled && (achievers.data ?? []).length > 0 ? (
             <>
-              <SectionHeader title="Top Achievers" onSeeAll={() => router.push('/top-students')} />
+              <SectionHeader title={t('top_students')} onSeeAll={() => router.push('/top-students')} />
               <View style={{ marginBottom: Spacing.four }}>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                   {(achievers.data ?? []).map(toAchiever).map((a, i) => (

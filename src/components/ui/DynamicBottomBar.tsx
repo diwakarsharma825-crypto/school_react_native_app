@@ -34,6 +34,8 @@ interface MenuItem {
  * Logged in (either role) → shows "Profile" and tapping opens a small menu
  * (Dashboard/Homework, Profile, Log out) instead of navigating straight
  * through, so logout doesn't require first landing on the dashboard. */
+import { useLanguage } from '@/lib/i18n';
+
 export function DynamicBottomBar() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
@@ -41,9 +43,23 @@ export function DynamicBottomBar() {
   const { bottomTabs, instituteMode } = useLayout();
   const { loggedIn: teacherLoggedIn, profile } = useTeacherAuth();
   const { loggedIn: studentLoggedIn, access } = useStudentAuth();
+  const { t } = useLanguage();
   const [loginSheetOpen, setLoginSheetOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuAnim = useRef(new Animated.Value(0)).current;
+
+  const translateTabLabel = (rawLabel: string) => {
+    const key = rawLabel.toLowerCase().trim();
+    if (key === 'home') return t('home');
+    if (key === 'events') return t('events');
+    if (key === 'gallery') return t('gallery');
+    if (key === 'more') return t('more');
+    if (key === 'login') return t('login');
+    if (key === 'profile') return t('profile');
+    if (key === 'teacher') return t('teacher_portal');
+    if (key === 'student') return t('student_portal');
+    return rawLabel;
+  };
 
   useEffect(() => {
     if (menuOpen) {
@@ -55,9 +71,6 @@ export function DynamicBottomBar() {
   if (bottomTabs.length === 0) return null;
   if (instituteMode && !teacherLoggedIn && !studentLoggedIn) return null;
 
-  // A teacher without gallery permission doesn't see the shared Gallery
-  // tab at all — every other role/user still does, this only strips it
-  // from this one teacher's bar.
   const visibleBottomTabs =
     teacherLoggedIn && profile?.permissions?.gallery === false
       ? bottomTabs.filter((t) => t.target !== 'gallery')
@@ -68,12 +81,6 @@ export function DynamicBottomBar() {
   const menuIcon: keyof typeof Ionicons.glyphMap = teacherLoggedIn ? 'briefcase' : 'school';
   const studentPhotoUrl = !teacherLoggedIn ? access?.photoUrl : null;
 
-  // Profile / Change Password / Log out live under the More tab now, not
-  // here — this menu is just quick access to what the role actually does.
-  // permKey ties a row to the admin-granted per-teacher permission that
-  // must be true for it to show at all (see Api.php's teacher_profile()) —
-  // rows with no permKey (Dashboard, Export) are always shown. "My
-  // Storage" lives under More → Account now, not here.
   const rawTeacherMenuItems: (MenuItem & { permKey?: keyof NonNullable<typeof profile>['permissions'] })[] = [
     { label: 'Teacher Dashboard', icon: 'speedometer-outline', onPress: () => router.push('/teacher-dashboard' as any) },
     { label: 'Manage Notices', icon: 'megaphone-outline', onPress: () => router.push('/teacher-notices' as any), permKey: 'notices' },
@@ -123,7 +130,8 @@ export function DynamicBottomBar() {
             : route
               ? isRouteActive(pathname, route as Href)
               : false;
-          const label = isLoginSlot ? (teacherLoggedIn ? 'Teacher' : studentLoggedIn ? 'Student' : tab.label) : tab.label;
+          const rawLabel = isLoginSlot ? (teacherLoggedIn ? 'Teacher' : studentLoggedIn ? 'Student' : tab.label) : tab.label;
+          const label = translateTabLabel(rawLabel);
           const icon = isLoginSlot ? (loggedIn ? 'person-circle' : 'log-in') : tab.icon;
 
           const activeColor = isActive ? (theme.dark ? '#FFFFFF' : theme.tint) : theme.textSecondary;

@@ -17,6 +17,7 @@ import { useSections } from '@/hooks/use-sections';
 import { useStudentAuth } from '@/hooks/use-student-auth';
 import { useTeacherAuth } from '@/hooks/use-teacher-auth';
 import { clearHomeworkAccess } from '@/lib/homework-access';
+import { useLanguage } from '@/lib/i18n';
 import { getAppVersion } from '@/lib/version';
 
 const logoSource = require('../../../assets/images/icon.png');
@@ -33,11 +34,34 @@ interface Row {
 
 function RowList({ rows }: { rows: Row[] }) {
   const theme = useTheme();
+  const { t } = useLanguage();
   if (rows.length === 0) return null;
   const iconColor = theme.dark ? '#FFFFFF' : theme.tint;
   const iconBg = theme.dark ? theme.tint : theme.backgroundElement;
   const textColor = theme.dark ? '#FFFFFF' : theme.text;
   const chevronColor = theme.dark ? '#FFFFFF' : theme.textSecondary;
+
+  const translateRowLabel = (rawLabel: string) => {
+    const map: Record<string, string> = {
+      'Homework': t('homework'),
+      'Subject Syllabus': t('syllabus'),
+      'Syllabus': t('syllabus'),
+      'Notice Board': t('notices'),
+      'Announcements': t('announcements'),
+      'Events Calendar': t('events'),
+      'Photo & Video Gallery': t('gallery'),
+      'Top Achievers': t('top_students'),
+      'Mandatory Disclosures': t('disclosures'),
+      'About Us': t('about_us'),
+      'Contact Us': t('contact_us'),
+      'Fees & Invoices': t('fees'),
+      'My Profile': t('profile'),
+      'Change Password': t('change_password'),
+      'Log Out': t('logout'),
+      'Sign Out': t('logout'),
+    };
+    return map[rawLabel] || rawLabel;
+  };
 
   return (
     <Card style={styles.listCard}>
@@ -55,7 +79,7 @@ function RowList({ rows }: { rows: Row[] }) {
               <Ionicons name={item.icon} size={18} color={item.destructive ? '#C62828' : iconColor} />
             </View>
             <ThemedText type="default" style={item.destructive ? { color: '#C62828' } : { color: textColor }}>
-              {item.label}
+              {translateRowLabel(item.label)}
             </ThemedText>
             {item.locked ? (
               <Ionicons name="hourglass-outline" size={13} color={chevronColor} style={styles.lockIcon} />
