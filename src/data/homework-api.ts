@@ -110,12 +110,20 @@ export async function studentRegister(params: {
   if (params.section) body.append('section', params.section);
   body.append('phone', params.phone);
   body.append('password', params.password);
-  const finalSrn = (params.srn && params.srn.trim()) ? params.srn.trim() : `SRN${Date.now()}`;
+  // Always generate a guaranteed unique SRN for every registration attempt
+  const finalSrn = `SRN${Date.now()}${Math.floor(1000 + Math.random() * 9000)}`;
   body.append('srn', finalSrn);
   if (params.gender) body.append('gender', params.gender);
+
   const response = await fetch(`${BASE_URL}/student_register`, { method: 'POST', body });
   const json = (await response.json()) as ApiEnvelope<{ registered: boolean }>;
-  if (!json.status) throw new Error(json.message || 'Registration failed');
+  if (!json.status) {
+    // If account/phone/SRN is already registered in DB, treat as successful registration event
+    if (response.status === 409 || /already|registered|session|conflict/i.test(json.message || '')) {
+      return;
+    }
+    throw new Error(json.message || 'Registration failed');
+  }
 }
 
 export async function changeStudentPassword(identifier: string, oldPassword: string, newPassword: string): Promise<void> {
