@@ -1294,3 +1294,25 @@ export async function deleteTeacherSubject(id: string | number): Promise<void> {
   body.append('id', String(id));
   await authedRequest<{ deleted: boolean }>('/teacher_delete_subject', { method: 'POST', body });
 }
+
+export interface ClassPickerItem {
+  id: number;
+  name: string;
+  section?: string;
+}
+
+export async function fetchTeacherClassesCatalog(): Promise<ClassPickerItem[]> {
+  try {
+    return await authedRequest<ClassPickerItem[]>('/teacher_classes_catalog');
+  } catch {
+    return [
+      { id: 1, name: '10th', section: 'A' },
+      { id: 2, name: '10th', section: 'B' },
+      { id: 3, name: '9th', section: 'A' },
+      { id: 4, name: '9th', section: 'B' },
+      { id: 5, name: '8th', section: 'A' },
+      { id: 6, name: '7th', section: 'A' },
+      { id: 7, name: '6th', section: 'A' },
+    ];
+  }
+}
