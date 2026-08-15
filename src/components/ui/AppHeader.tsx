@@ -59,16 +59,6 @@ export function AppHeader() {
         ) : null}
       </View>
       <View style={styles.actions}>
-        <Pressable
-          hitSlop={8}
-          onPress={toggleLanguage}
-          style={({ pressed }) => [styles.langBtn, pressed && { opacity: 0.7 }]}
-          accessibilityLabel="Switch Language"
-        >
-          <ThemedText type="smallBold" style={{ color: '#FFFFFF', fontSize: 11 }}>
-            {language === 'en' ? '🌐 HI' : '🌐 EN'}
-          </ThemedText>
-        </Pressable>
         <ThemeToggle />
         <Pressable
           hitSlop={10}
