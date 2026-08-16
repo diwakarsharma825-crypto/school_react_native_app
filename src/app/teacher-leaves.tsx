@@ -103,8 +103,9 @@ export default function TeacherLeavesScreen() {
           style={[
             styles.filterRow,
             {
-              backgroundColor: theme.backgroundElement,
-              borderColor: theme.border,
+              backgroundColor: theme.dark ? '#1E293B' : '#F1F5F9',
+              borderColor: theme.dark ? '#334155' : '#CBD5E1',
+              borderWidth: 1,
               width: '100%',
               marginBottom: Spacing.three,
               padding: 4,
@@ -115,17 +116,33 @@ export default function TeacherLeavesScreen() {
           {STATUS_FILTERS.map((f) => {
             const isActive = statusFilter === f.value;
             const activeBg = theme.dark ? '#2563EB' : theme.tint;
+            const inactiveTextColor = theme.dark ? '#CBD5E1' : '#475569';
             return (
               <Pressable
                 key={f.value}
                 onPress={() => setStatusFilter(f.value)}
                 style={[
                   styles.filterButton,
-                  { flex: 1, alignItems: 'center', paddingVertical: 8, borderRadius: Radius.sm },
-                  isActive && { backgroundColor: activeBg },
+                  { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 10, paddingHorizontal: 2, borderRadius: Radius.sm },
+                  isActive && {
+                    backgroundColor: activeBg,
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowOpacity: 0.2,
+                    shadowRadius: 2,
+                    elevation: 2,
+                  },
                 ]}
               >
-                <ThemedText type={isActive ? 'smallBold' : 'small'} style={{ color: isActive ? '#FFFFFF' : theme.textSecondary }}>
+                <ThemedText
+                  numberOfLines={1}
+                  style={{
+                    fontSize: 13,
+                    fontWeight: isActive ? '700' : '600',
+                    color: isActive ? '#FFFFFF' : inactiveTextColor,
+                    textAlign: 'center',
+                  }}
+                >
                   {f.label}
                 </ThemedText>
               </Pressable>

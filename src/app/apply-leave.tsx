@@ -25,11 +25,27 @@ const LEAVE_TYPES = [
   { label: 'Other', value: 'Other' },
 ];
 
-const STATUS_META: Record<LeaveStatus, { label: string; color: string; bg: string }> = {
-  pending: { label: 'Pending', color: '#B8860B', bg: '#FBEFD3' },
-  approved: { label: 'Approved', color: '#2E7D32', bg: '#DFF1E1' },
-  rejected: { label: 'Rejected', color: '#C62828', bg: '#FBE2E2' },
-};
+function getLeaveStatusMeta(status: LeaveStatus, isDark: boolean): { label: string; color: string; bg: string } {
+  if (status === 'approved') {
+    return {
+      label: 'Approved',
+      color: isDark ? '#86EFAC' : '#15803D',
+      bg: isDark ? 'rgba(34, 197, 94, 0.2)' : '#DCFCE7',
+    };
+  }
+  if (status === 'rejected') {
+    return {
+      label: 'Rejected',
+      color: isDark ? '#FCA5A5' : '#B91C1C',
+      bg: isDark ? 'rgba(239, 68, 68, 0.2)' : '#FEE2E2',
+    };
+  }
+  return {
+    label: 'Pending',
+    color: isDark ? '#FDE047' : '#B45309',
+    bg: isDark ? 'rgba(234, 179, 8, 0.2)' : '#FEF3C7',
+  };
+}
 
 export default function ApplyLeaveScreen() {
   const theme = useTheme();
@@ -214,7 +230,7 @@ export default function ApplyLeaveScreen() {
                 rows: history.map((h) => ({
                   ...h,
                   dates: `${h.date_from} to ${h.date_to}`,
-                  statusLabel: STATUS_META[h.status]?.label ?? h.status,
+                  statusLabel: getLeaveStatusMeta(h.status, theme.dark).label,
                 })),
               });
             }}
@@ -229,13 +245,13 @@ export default function ApplyLeaveScreen() {
         <EmptyState message="No leave requests yet." icon="calendar-outline" />
       ) : (
         history.map((h) => {
-          const meta = STATUS_META[h.status];
+          const meta = getLeaveStatusMeta(h.status, theme.dark);
           return (
             <Card key={h.id} style={styles.historyRow}>
               <View style={styles.historyTop}>
                 <ThemedText type="smallBold">{h.leave_type}</ThemedText>
                 <View style={[styles.pill, { backgroundColor: meta.bg }]}>
-                  <ThemedText type="small" style={{ color: meta.color }}>
+                  <ThemedText type="small" style={{ color: meta.color, fontWeight: '700' }}>
                     {meta.label}
                   </ThemedText>
                 </View>
