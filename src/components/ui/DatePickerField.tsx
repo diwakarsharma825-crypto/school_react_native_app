@@ -41,33 +41,43 @@ export function DatePickerField({ label, placeholder, value, onChange, minDate, 
   const theme = useTheme();
   const [open, setOpen] = useState(false);
   const [showYearSelector, setShowYearSelector] = useState(false);
-  const min = minDate ?? '1970-01-01';
 
-  const initial = parseDate(value) ?? parseDate(min) ?? { y: new Date().getFullYear(), m: new Date().getMonth() + 1, d: 1 };
+  const initial = useMemo(() => {
+    const parsedValue = parseDate(value);
+    if (parsedValue) return parsedValue;
+
+    const today = new Date();
+    return { y: today.getFullYear(), m: today.getMonth() + 1, d: today.getDate() };
+  }, [value]);
+
   const [viewYear, setViewYear] = useState(initial.y);
   const [viewMonth, setViewMonth] = useState(initial.m);
 
-  // Synchronize calendar view with the current value whenever opened or value changes
   useEffect(() => {
-    if (value) {
-      const parsed = parseDate(value);
-      if (parsed) {
-        setViewYear(parsed.y);
-        setViewMonth(parsed.m);
+    if (open) {
+      const parsedValue = parseDate(value);
+      if (parsedValue) {
+        setViewYear(parsedValue.y);
+        setViewMonth(parsedValue.m);
+      } else {
+        const today = new Date();
+        setViewYear(today.getFullYear());
+        setViewMonth(today.getMonth() + 1);
       }
     }
   }, [value, open]);
 
   const years = useMemo(() => {
     const currentYr = new Date().getFullYear();
-    const startYr = 1970;
-    const endYr = currentYr + 5;
+    const startYr = 1950;
+    const parsedMax = parseDate(maxDate ?? null);
+    const endYr = parsedMax ? Math.max(parsedMax.y, currentYr) : currentYr;
     const yrs: number[] = [];
     for (let y = endYr; y >= startYr; y--) {
       yrs.push(y);
     }
     return yrs;
-  }, []);
+  }, [maxDate]);
 
   const days = useMemo(() => {
     const firstOfMonth = new Date(viewYear, viewMonth - 1, 1);
@@ -94,6 +104,8 @@ export function DatePickerField({ label, placeholder, value, onChange, minDate, 
         return `${p.d} ${MONTH_NAMES[p.m - 1]} ${p.y}`;
       })()
     : null;
+
+  const activeHeaderColor = theme.dark ? '#60A5FA' : theme.tint;
 
   return (
     <>
@@ -122,15 +134,22 @@ export function DatePickerField({ label, placeholder, value, onChange, minDate, 
               </ThemedText>
               <Pressable
                 onPress={() => setShowYearSelector((prev) => !prev)}
-                style={[styles.yearToggleButton, { backgroundColor: theme.backgroundSelected }]}
+                style={[
+                  styles.yearToggleButton,
+                  {
+                    backgroundColor: theme.dark ? 'rgba(59, 130, 246, 0.25)' : theme.backgroundSelected,
+                    borderColor: theme.dark ? 'rgba(96, 165, 250, 0.4)' : 'transparent',
+                    borderWidth: theme.dark ? 1 : 0,
+                  },
+                ]}
               >
-                <ThemedText type="smallBold" themeColor="tint">
+                <ThemedText type="smallBold" style={{ color: activeHeaderColor }}>
                   {showYearSelector ? 'Show Calendar' : 'Select Year'}
                 </ThemedText>
                 <Ionicons
                   name={showYearSelector ? 'calendar' : 'chevron-down'}
                   size={14}
-                  color={theme.tint}
+                  color={activeHeaderColor}
                 />
               </Pressable>
             </View>
@@ -146,8 +165,14 @@ export function DatePickerField({ label, placeholder, value, onChange, minDate, 
                           key={y}
                           style={[
                             styles.yearChip,
-                            { borderColor: theme.border },
-                            isSelectedYear && { backgroundColor: theme.tint, borderColor: theme.tint },
+                            {
+                              borderColor: isSelectedYear ? theme.tint : theme.border,
+                              backgroundColor: isSelectedYear
+                                ? theme.tint
+                                : theme.dark
+                                ? '#0F172A'
+                                : '#F8FAFC',
+                            },
                           ]}
                           onPress={() => {
                             setViewYear(y);
@@ -170,7 +195,7 @@ export function DatePickerField({ label, placeholder, value, onChange, minDate, 
               <>
                 <View style={styles.calendarHeader}>
                   <Pressable onPress={() => changeMonth(-1)} hitSlop={8}>
-                    <Ionicons name="chevron-back" size={20} color={theme.tint} />
+                    <Ionicons name="chevron-back" size={20} color={activeHeaderColor} />
                   </Pressable>
 
                   <Pressable
@@ -180,11 +205,11 @@ export function DatePickerField({ label, placeholder, value, onChange, minDate, 
                     <ThemedText type="smallBold">
                       {MONTH_NAMES[viewMonth - 1]} {viewYear}
                     </ThemedText>
-                    <Ionicons name="chevron-down" size={14} color={theme.tint} style={{ marginLeft: 4 }} />
+                    <Ionicons name="chevron-down" size={14} color={activeHeaderColor} style={{ marginLeft: 4 }} />
                   </Pressable>
 
                   <Pressable onPress={() => changeMonth(1)} hitSlop={8}>
-                    <Ionicons name="chevron-forward" size={20} color={theme.tint} />
+                    <Ionicons name="chevron-forward" size={20} color={activeHeaderColor} />
                   </Pressable>
                 </View>
 
@@ -200,7 +225,7 @@ export function DatePickerField({ label, placeholder, value, onChange, minDate, 
                   {days.map((day, i) => {
                     if (day === null) return <View key={i} style={styles.dayCell} />;
                     const dateStr = `${viewYear}-${pad(viewMonth)}-${pad(day)}`;
-                    const disabled = dateStr < min || (!!maxDate && dateStr > maxDate);
+                    const disabled = (!!minDate && dateStr < minDate) || (!!maxDate && dateStr > maxDate);
                     const isSelected = dateStr === value;
                     return (
                       <Pressable
