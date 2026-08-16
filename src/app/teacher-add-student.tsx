@@ -126,9 +126,10 @@ export default function TeacherAddStudentScreen() {
         </ThemedText>
         <TextInput
           value={rollNo}
-          onChangeText={setRollNo}
+          onChangeText={(val) => setRollNo(val.replace(/[^0-9]/g, ''))}
           placeholder="e.g. 1090"
           placeholderTextColor={theme.textSecondary}
+          keyboardType="number-pad"
           style={[styles.input, { borderColor: theme.border, color: theme.text }]}
         />
 
@@ -137,9 +138,10 @@ export default function TeacherAddStudentScreen() {
         </ThemedText>
         <TextInput
           value={srn}
-          onChangeText={setSrn}
-          placeholder="e.g. SRN1000"
+          onChangeText={(val) => setSrn(val.replace(/[^0-9]/g, ''))}
+          placeholder="e.g. 1001"
           placeholderTextColor={theme.textSecondary}
+          keyboardType="number-pad"
           style={[styles.input, { borderColor: theme.border, color: theme.text }]}
         />
         <ThemedText type="small" themeColor="textSecondary" style={styles.fieldHint}>

@@ -118,9 +118,10 @@ export default function ResultScreen() {
           </ThemedText>
           <TextInput
             value={srn}
-            onChangeText={setSrn}
-            placeholder="Enter your SRN"
+            onChangeText={(val) => setSrn(val.replace(/[^0-9]/g, ''))}
+            placeholder="e.g. 1001"
             placeholderTextColor={theme.textSecondary}
+            keyboardType="number-pad"
             style={[styles.input, { borderColor: theme.border, color: theme.text }]}
           />
 

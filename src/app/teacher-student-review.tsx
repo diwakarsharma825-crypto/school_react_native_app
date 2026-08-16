@@ -226,10 +226,10 @@ export default function TeacherStudentReviewScreen() {
         </ThemedText>
         <TextInput
           value={rollNo}
-          onChangeText={setRollNo}
-          placeholder="Roll number"
+          onChangeText={(val) => setRollNo(val.replace(/[^0-9]/g, ''))}
+          placeholder="e.g. 1090"
           placeholderTextColor={theme.textSecondary}
-          keyboardType="default"
+          keyboardType="number-pad"
           autoComplete="off"
           textContentType="none"
           style={[styles.input, { borderColor: theme.border, color: theme.text }]}
