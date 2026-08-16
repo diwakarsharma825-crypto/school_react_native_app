@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   backdropOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   sheet: {
     maxHeight: '85%',

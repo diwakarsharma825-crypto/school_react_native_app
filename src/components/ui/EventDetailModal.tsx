@@ -106,7 +106,7 @@ export function EventDetailModal({
             {displayImages.length > 0 || (media && media.length > 0) ? (
               <View style={styles.heroWrap}>
                 <EventMediaCarousel
-                  media={media}
+                  coverMedia={media && media.length > 0 ? media[0] : null}
                   images={displayImages}
                   fallbackUrl={imageUrl ?? undefined}
                   style={styles.heroCarousel}
@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   backdropOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   sheet: {
     maxHeight: '85%',
