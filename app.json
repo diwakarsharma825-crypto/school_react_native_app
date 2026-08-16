@@ -1,20 +1,20 @@
 {
   "expo": {
-    "name": "Institute App",
-    "slug": "institute-app",
+    "name": "Our Public School",
+    "slug": "saarthak-app",
     "version": "1.9.8",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "instituteapp",
+    "scheme": "saarthakapp",
     "userInterfaceStyle": "automatic",
     "backgroundColor": "#F5F7FA",
     "ios": {
       "icon": "./assets/images/icon.png",
-      "bundleIdentifier": "org.institute.app",
+      "bundleIdentifier": "org.saarthakgimsss.app",
       "supportsTablet": true
     },
     "android": {
-      "package": "org.institute.app",
+      "package": "org.saarthakgimsss.app",
       "versionCode": 25,
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
@@ -48,7 +48,7 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Our School App uses your location to show school-area relevant information."
+          "locationWhenInUsePermission": "Saarthak GIMSSS uses your location to show school-area relevant information."
         }
       ],
       [
