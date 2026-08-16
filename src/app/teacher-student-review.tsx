@@ -215,7 +215,7 @@ export default function TeacherStudentReviewScreen() {
         <ThemedText type="smallBold" style={styles.fieldLabel}>
           Reset Password (optional)
         </ThemedText>
-        <PasswordInput value={newPassword} onChangeText={setNewPassword} placeholder="Leave blank to keep the current password" />
+        <PasswordInput value={newPassword} onChangeText={setNewPassword} placeholder="New password (optional)" />
         <ThemedText type="small" themeColor="textSecondary" style={styles.fieldHint}>
           Only fill this in to set a new login password for this student — needs a mobile number
           above.

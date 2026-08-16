@@ -127,7 +127,7 @@ export default function TeacherAddStudentScreen() {
         <TextInput
           value={rollNo}
           onChangeText={setRollNo}
-          placeholder="Required — must be unique in this class"
+          placeholder="e.g. 1090"
           placeholderTextColor={theme.textSecondary}
           style={[styles.input, { borderColor: theme.border, color: theme.text }]}
         />
@@ -138,7 +138,7 @@ export default function TeacherAddStudentScreen() {
         <TextInput
           value={srn}
           onChangeText={setSrn}
-          placeholder="Required — school-assigned, must be unique"
+          placeholder="e.g. SRN1000"
           placeholderTextColor={theme.textSecondary}
           style={[styles.input, { borderColor: theme.border, color: theme.text }]}
         />
@@ -195,7 +195,7 @@ export default function TeacherAddStudentScreen() {
         <TextInput
           value={phone}
           onChangeText={setPhone}
-          placeholder="10-digit mobile (optional, lets them log in later)"
+          placeholder="10-digit mobile number (optional)"
           placeholderTextColor={theme.textSecondary}
           keyboardType="number-pad"
           style={[styles.input, { borderColor: theme.border, color: theme.text }]}
@@ -207,7 +207,7 @@ export default function TeacherAddStudentScreen() {
         <PasswordInput
           value={password}
           onChangeText={setPassword}
-          placeholder="Set a login password (optional, needs mobile number above)"
+          placeholder="Create password (optional)"
         />
 
         {error ? (

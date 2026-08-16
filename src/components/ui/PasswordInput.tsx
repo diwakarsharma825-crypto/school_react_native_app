@@ -21,6 +21,8 @@ export function PasswordInput({ containerStyle, style, ...props }: PasswordInput
     <View style={[styles.wrap, { borderColor: theme.border }, containerStyle]}>
       <TextInput
         {...props}
+        numberOfLines={1}
+        multiline={false}
         secureTextEntry={!visible}
         placeholderTextColor={theme.textSecondary}
         style={[styles.input, { color: theme.text }, style]}
