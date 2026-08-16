@@ -15,12 +15,15 @@ import { useTheme } from '@/hooks/use-theme';
 import { ExportPdfButton } from '@/components/ui/ExportPdfButton';
 import { exportToPdf } from '@/lib/pdf-export';
 
+import { EventDetailModal } from '@/components/ui/EventDetailModal';
+
 export default function TeacherEventsScreen() {
   const theme = useTheme();
   const router = useRouter();
   const [events, setEvents] = useState<TeacherEvent[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<TeacherEvent | null>(null);
 
   function load() {
     setLoading(true);
@@ -108,7 +111,7 @@ export default function TeacherEventsScreen() {
           const active = Number(e.is_view_on_web) === 1;
           return (
             <Card key={e.id} style={[styles.card, !active && styles.cardInactive]}>
-              <View style={styles.row}>
+              <Pressable onPress={() => setSelectedEvent(e)} style={styles.row}>
                 {cover ? (
                   <View style={styles.thumbWrap}>
                     <Image source={{ uri: cover }} style={styles.thumb} contentFit="cover" />
@@ -168,7 +171,7 @@ export default function TeacherEventsScreen() {
                     </ThemedText>
                   ) : null}
                 </View>
-              </View>
+              </Pressable>
               <View style={styles.actionsRow}>
                 <Pressable
                   onPress={() =>
@@ -209,6 +212,37 @@ export default function TeacherEventsScreen() {
           );
         })
       )}
+
+      {selectedEvent ? (
+        <EventDetailModal
+          visible={!!selectedEvent}
+          onClose={() => setSelectedEvent(null)}
+          title={selectedEvent.title}
+          eventFrom={selectedEvent.event_from}
+          eventTo={selectedEvent.event_to}
+          eventPlace={selectedEvent.event_place}
+          classLabel={selectedEvent.class_label}
+          note={selectedEvent.note}
+          media={selectedEvent.media}
+          imageUrl={selectedEvent.image_url}
+          statusLabel={Number(selectedEvent.is_view_on_web) === 1 ? 'Active' : 'Inactive'}
+          isActiveStatus={Number(selectedEvent.is_view_on_web) === 1}
+          onEdit={() =>
+            router.push({
+              pathname: '/teacher-event-add',
+              params: {
+                id: String(selectedEvent.id),
+                initialTitle: selectedEvent.title,
+                initialPlace: selectedEvent.event_place ?? '',
+                initialFrom: selectedEvent.event_from,
+                initialTo: selectedEvent.event_to,
+                initialNote: selectedEvent.note ?? '',
+                existingMedia: JSON.stringify(selectedEvent.media),
+              },
+            } as any)
+          }
+        />
+      ) : null}
     </Screen>
     </TeacherGuard>
   );

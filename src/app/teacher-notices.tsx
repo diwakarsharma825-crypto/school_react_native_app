@@ -14,12 +14,15 @@ import { useTheme } from '@/hooks/use-theme';
 import { ExportPdfButton } from '@/components/ui/ExportPdfButton';
 import { exportToPdf } from '@/lib/pdf-export';
 
+import { NoticeDetailModal } from '@/components/ui/NoticeDetailModal';
+
 export default function TeacherNoticesScreen() {
   const theme = useTheme();
   const router = useRouter();
   const [notices, setNotices] = useState<TeacherNotice[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [selectedNotice, setSelectedNotice] = useState<TeacherNotice | null>(null);
 
   function load() {
     setLoading(true);
@@ -101,48 +104,58 @@ export default function TeacherNoticesScreen() {
       ) : (
         notices.map((n) => {
           const active = Number(n.is_view_on_web) === 1;
+          const image = (n as any).image_url || (n as any).photo || (n as any).attachment || null;
           return (
             <Card key={n.id} style={[styles.card, !active && styles.cardInactive]}>
-              <View style={styles.cardHeader}>
-                <ThemedText type="smallBold" style={styles.cardTitle} numberOfLines={1}>
-                  {n.title}
-                </ThemedText>
-                <View
-                  style={[
-                    styles.statusTag,
-                    {
-                      backgroundColor: active
-                        ? theme.dark
-                          ? '#1B4D24'
-                          : '#DFF1E1'
-                        : theme.dark
-                        ? '#3E351A'
-                        : '#F1E9D9',
-                    },
-                  ]}
-                >
-                  <ThemedText
-                    type="smallBold"
-                    style={{
-                      color: active
-                        ? theme.dark
-                          ? '#81C784'
-                          : '#2E7D32'
-                        : theme.dark
-                        ? '#FFD54F'
-                        : '#9A7B2E',
-                    }}
-                  >
-                    {active ? 'Active' : 'Inactive'}
+              <Pressable onPress={() => setSelectedNotice(n)}>
+                <View style={styles.cardHeader}>
+                  <ThemedText type="smallBold" style={styles.cardTitle} numberOfLines={1}>
+                    {n.title}
                   </ThemedText>
+                  <View
+                    style={[
+                      styles.statusTag,
+                      {
+                        backgroundColor: active
+                          ? theme.dark
+                            ? '#1B4D24'
+                            : '#DFF1E1'
+                          : theme.dark
+                          ? '#3E351A'
+                          : '#F1E9D9',
+                      },
+                    ]}
+                  >
+                    <ThemedText
+                      type="smallBold"
+                      style={{
+                        color: active
+                          ? theme.dark
+                            ? '#81C784'
+                            : '#2E7D32'
+                          : theme.dark
+                          ? '#FFD54F'
+                          : '#9A7B2E',
+                      }}
+                    >
+                      {active ? 'Active' : 'Inactive'}
+                    </ThemedText>
+                  </View>
                 </View>
-              </View>
-              <ThemedText type="small" style={{ color: theme.dark ? '#FFFFFF' : theme.textSecondary }}>
-                {n.date}
-              </ThemedText>
-              <ThemedText type="small" style={{ color: theme.dark ? '#FFFFFF' : theme.textSecondary, marginTop: 4 }} numberOfLines={3}>
-                {n.notice}
-              </ThemedText>
+                <ThemedText type="small" style={{ color: theme.dark ? '#FFFFFF' : theme.textSecondary }}>
+                  {n.date}
+                </ThemedText>
+                <ThemedText type="small" style={{ color: theme.dark ? '#FFFFFF' : theme.textSecondary, marginTop: 4 }} numberOfLines={3}>
+                  {n.notice}
+                </ThemedText>
+
+                {image ? (
+                  <View style={{ marginTop: Spacing.two, height: 140, borderRadius: Radius.md, overflow: 'hidden' }}>
+                    <Image source={{ uri: image }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+                  </View>
+                ) : null}
+              </Pressable>
+
               <View style={styles.actionsRow}>
                 <Pressable
                   onPress={() =>
@@ -175,6 +188,25 @@ export default function TeacherNoticesScreen() {
           );
         })
       )}
+
+      {selectedNotice ? (
+        <NoticeDetailModal
+          visible={!!selectedNotice}
+          onClose={() => setSelectedNotice(null)}
+          title={selectedNotice.title}
+          date={selectedNotice.date}
+          notice={selectedNotice.notice}
+          statusLabel={Number(selectedNotice.is_view_on_web) === 1 ? 'Active' : 'Inactive'}
+          isActiveStatus={Number(selectedNotice.is_view_on_web) === 1}
+          imageUrl={(selectedNotice as any).image_url || (selectedNotice as any).photo || (selectedNotice as any).attachment || null}
+          onEdit={() =>
+            router.push({
+              pathname: '/teacher-add-notice',
+              params: { id: String(selectedNotice.id), initialTitle: selectedNotice.title, initialBody: selectedNotice.notice },
+            } as any)
+          }
+        />
+      ) : null}
     </Screen>
     </TeacherGuard>
   );

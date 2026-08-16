@@ -56,6 +56,8 @@ function VideoSlide({ uri, width, onEnd }: { uri: string; width: number; onEnd: 
  * once it finishes. Users can also swipe or use the arrow buttons to move
  * between slides manually at any time. Falls back to a single static image
  * when there's exactly one photo and no video. */
+import { FullScreenGallery } from './FullScreenGallery';
+
 export function EventMediaCarousel({
   coverMedia,
   images,
@@ -68,8 +70,11 @@ export function EventMediaCarousel({
   style?: ViewStyle;
 }) {
   const slides = buildSlides(coverMedia, images);
+  const imageSlides = slides.filter((s) => s.type === 'image').map((s) => s.url);
   const [width, setWidth] = useState(0);
   const [index, setIndex] = useState(0);
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [galleryIndex, setGalleryIndex] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
 
   function handleScroll(e: NativeSyntheticEvent<NativeScrollEvent>) {
@@ -86,55 +91,86 @@ export function EventMediaCarousel({
     setIndex(clamped);
   }
 
+  function openImageGallery(url: string) {
+    const imgIndex = imageSlides.indexOf(url);
+    if (imgIndex >= 0) {
+      setGalleryIndex(imgIndex);
+      setGalleryOpen(true);
+    }
+  }
+
   if (slides.length === 0) {
     return fallbackUrl ? (
-      <View style={[style, styles.clip]}>
-        <Image source={{ uri: fallbackUrl }} style={StyleSheet.absoluteFill} contentFit="cover" />
-      </View>
+      <>
+        <Pressable style={[style, styles.clip]} onPress={() => openImageGallery(fallbackUrl)}>
+          <Image source={{ uri: fallbackUrl }} style={StyleSheet.absoluteFill} contentFit="cover" />
+        </Pressable>
+        {galleryOpen ? (
+          <FullScreenGallery
+            visible={galleryOpen}
+            photoUrls={[fallbackUrl]}
+            initialIndex={0}
+            onClose={() => setGalleryOpen(false)}
+          />
+        ) : null}
+      </>
     ) : null;
   }
 
   return (
-    <View style={[style, styles.clip]} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
-      {width > 0 ? (
-        <ScrollView
-          ref={scrollRef}
-          horizontal
-          pagingEnabled
-          showsHorizontalScrollIndicator={false}
-          onScroll={handleScroll}
-          scrollEventThrottle={32}
-        >
-          {slides.map((slide, i) =>
-            slide.type === 'video' ? (
-              <VideoSlide key={i} uri={slide.url} width={width} onEnd={() => goTo(index + 1)} />
-            ) : (
-              <Image key={i} source={{ uri: slide.url }} style={{ width, height: '100%' }} contentFit="cover" />
-            )
-          )}
-        </ScrollView>
-      ) : null}
+    <>
+      <View style={[style, styles.clip]} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
+        {width > 0 ? (
+          <ScrollView
+            ref={scrollRef}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onScroll={handleScroll}
+            scrollEventThrottle={32}
+          >
+            {slides.map((slide, i) =>
+              slide.type === 'video' ? (
+                <VideoSlide key={i} uri={slide.url} width={width} onEnd={() => goTo(index + 1)} />
+              ) : (
+                <Pressable key={i} onPress={() => openImageGallery(slide.url)} style={{ width, height: '100%' }}>
+                  <Image source={{ uri: slide.url }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+                </Pressable>
+              )
+            )}
+          </ScrollView>
+        ) : null}
 
-      {slides.length > 1 ? (
-        <>
-          {index > 0 ? (
-            <Pressable onPress={() => goTo(index - 1)} style={[styles.navButton, styles.navButtonLeft]} hitSlop={8}>
-              <Ionicons name="chevron-back" size={18} color="#fff" />
-            </Pressable>
-          ) : null}
-          {index < slides.length - 1 ? (
-            <Pressable onPress={() => goTo(index + 1)} style={[styles.navButton, styles.navButtonRight]} hitSlop={8}>
-              <Ionicons name="chevron-forward" size={18} color="#fff" />
-            </Pressable>
-          ) : null}
-          <View style={styles.dots}>
-            {slides.map((_, i) => (
-              <View key={i} style={[styles.dot, i === index && styles.dotActive]} />
-            ))}
-          </View>
-        </>
+        {slides.length > 1 ? (
+          <>
+            {index > 0 ? (
+              <Pressable onPress={() => goTo(index - 1)} style={[styles.navButton, styles.navButtonLeft]} hitSlop={8}>
+                <Ionicons name="chevron-back" size={18} color="#fff" />
+              </Pressable>
+            ) : null}
+            {index < slides.length - 1 ? (
+              <Pressable onPress={() => goTo(index + 1)} style={[styles.navButton, styles.navButtonRight]} hitSlop={8}>
+                <Ionicons name="chevron-forward" size={18} color="#fff" />
+              </Pressable>
+            ) : null}
+            <View style={styles.dots}>
+              {slides.map((_, i) => (
+                <View key={i} style={[styles.dot, i === index && styles.dotActive]} />
+              ))}
+            </View>
+          </>
+        ) : null}
+      </View>
+
+      {galleryOpen && imageSlides.length > 0 ? (
+        <FullScreenGallery
+          visible={galleryOpen}
+          photoUrls={imageSlides}
+          initialIndex={galleryIndex}
+          onClose={() => setGalleryOpen(false)}
+        />
       ) : null}
-    </View>
+    </>
   );
 }
 

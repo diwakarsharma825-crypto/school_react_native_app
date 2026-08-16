@@ -27,11 +27,14 @@ const TABS: { key: TabKey; label: string; color: string; icon: keyof typeof Ioni
 
 const TRUNCATE_LENGTH = 140;
 
+import { NoticeDetailModal } from '@/components/ui/NoticeDetailModal';
+
 export default function NoticesScreen() {
   const theme = useTheme();
   const enabled = useSectionEnabled('notices');
   const [active, setActive] = useState<TabKey>('notice');
   const [expandedIds, setExpandedIds] = useState<Set<number | string>>(new Set());
+  const [selectedItem, setSelectedItem] = useState<{ title: string; date: string; detail: string; imageUrl?: string | null } | null>(null);
   const { t } = useLanguage();
 
   const news = useFetch(fetchNews);
@@ -43,12 +46,12 @@ export default function NoticesScreen() {
 
   const items = useMemo(() => {
     if (active === 'news') {
-      return (news.data ?? []).map((n) => ({ id: n.id, title: n.title, date: n.date, detail: stripHtml(n.news ?? '') }));
+      return (news.data ?? []).map((n) => ({ id: n.id, title: n.title, date: n.date, detail: stripHtml(n.news ?? ''), imageUrl: (n as any).image_url || (n as any).photo || null }));
     }
     if (active === 'notice') {
-      return (notices.data ?? []).map((n) => ({ id: n.id, title: n.title, date: n.date, detail: stripHtml(n.notice ?? '') }));
+      return (notices.data ?? []).map((n) => ({ id: n.id, title: n.title, date: n.date, detail: stripHtml(n.notice ?? ''), imageUrl: (n as any).image_url || (n as any).photo || null }));
     }
-    return (holidays.data ?? []).map((h) => ({ id: h.id, title: h.title, date: h.date_from, detail: stripHtml(h.note ?? '') }));
+    return (holidays.data ?? []).map((h) => ({ id: h.id, title: h.title, date: h.date_from, detail: stripHtml(h.note ?? ''), imageUrl: (h as any).image_url || null }));
   }, [active, news.data, notices.data, holidays.data]);
 
   if (!enabled) return <SectionUnavailable />;
@@ -99,22 +102,24 @@ export default function NoticesScreen() {
               expanded || !isLong ? item.detail : `${item.detail.slice(0, TRUNCATE_LENGTH).trim()}…`;
             return (
               <Card key={item.id} style={[styles.card, { borderLeftColor: activeTab.color, borderLeftWidth: 4 }]}>
-                <ThemedText type="smallBold">{t(item.title)}</ThemedText>
-                <View style={styles.dateRow}>
-                  <Ionicons name="calendar-outline" size={13} color={activeTab.color} />
-                  <ThemedText type="small" style={[styles.date, { color: activeTab.color }]}>
-                    {formatDate(item.date)}
-                  </ThemedText>
-                </View>
-                {shownDetail ? (
-                  <ThemedText type="small" themeColor="textSecondary">
-                    {t(shownDetail)}
-                  </ThemedText>
-                ) : null}
+                <Pressable onPress={() => setSelectedItem({ title: item.title, date: item.date, detail: item.detail, imageUrl: item.imageUrl })}>
+                  <ThemedText type="smallBold">{t(item.title)}</ThemedText>
+                  <View style={styles.dateRow}>
+                    <Ionicons name="calendar-outline" size={13} color={activeTab.color} />
+                    <ThemedText type="small" style={[styles.date, { color: activeTab.color }]}>
+                      {formatDate(item.date)}
+                    </ThemedText>
+                  </View>
+                  {shownDetail ? (
+                    <ThemedText type="small" themeColor="textSecondary">
+                      {t(shownDetail)}
+                    </ThemedText>
+                  ) : null}
+                </Pressable>
                 {isLong ? (
-                  <Pressable onPress={() => toggleExpanded(item.id)} hitSlop={8}>
+                  <Pressable onPress={() => setSelectedItem({ title: item.title, date: item.date, detail: item.detail, imageUrl: item.imageUrl })} hitSlop={8}>
                     <ThemedText type="smallBold" themeColor="tint" style={styles.readMore}>
-                      {expanded ? 'Read less ⌃' : 'Read more ⌄'}
+                      View full details ➔
                     </ThemedText>
                   </Pressable>
                 ) : null}
@@ -125,6 +130,17 @@ export default function NoticesScreen() {
       ) : (
         <EmptyState message="No items in this category." icon="megaphone-outline" />
       )}
+
+      {selectedItem ? (
+        <NoticeDetailModal
+          visible={!!selectedItem}
+          onClose={() => setSelectedItem(null)}
+          title={selectedItem.title}
+          date={formatDate(selectedItem.date)}
+          notice={selectedItem.detail}
+          imageUrl={selectedItem.imageUrl}
+        />
+      ) : null}
     </Screen>
   );
 }
