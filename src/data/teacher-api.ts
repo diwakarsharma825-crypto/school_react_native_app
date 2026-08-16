@@ -9,16 +9,35 @@ import { getCurrentDeviceLocation } from '@/lib/permissions';
 
 const TOKEN_KEY = 'saarthak.teacher_token';
 
-export async function createFileBlob(uri: string, mimeType?: string | null, filename = 'attachment.png'): Promise<any> {
-  if (Platform.OS === 'web' || uri.startsWith('blob:') || uri.startsWith('data:')) {
-    try {
-      const res = await fetch(uri);
-      return await res.blob();
-    } catch {
-      return { uri, name: filename, type: mimeType || 'image/png' };
+export async function createFileBlob(
+  uri: string | any,
+  mimeType?: string | null,
+  filename = 'attachment.png'
+): Promise<any> {
+  const finalMime = mimeType || 'image/png';
+  const finalName = filename || 'attachment.png';
+
+  if (typeof File !== 'undefined' && uri instanceof File) {
+    return uri;
+  }
+
+  if (Platform.OS === 'web' && typeof uri === 'string') {
+    if (uri.startsWith('data:') || uri.startsWith('blob:') || uri.startsWith('http')) {
+      try {
+        const res = await fetch(uri);
+        const blob = await res.blob();
+        return new File([blob], finalName, { type: finalMime });
+      } catch {
+        // Fallback to object representation if fetch fails
+      }
     }
   }
-  return { uri, name: filename, type: mimeType || 'image/png' };
+
+  return {
+    uri,
+    name: finalName,
+    type: finalMime,
+  };
 }
 
 interface ApiEnvelope<T> {
