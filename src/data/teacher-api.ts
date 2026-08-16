@@ -71,6 +71,38 @@ async function authedRequest<T>(path: string, options: RequestInit = {}): Promis
   return json.data;
 }
 
+export async function postFormData<T>(
+  endpoint: string,
+  body: FormData,
+  token?: string | null
+): Promise<T> {
+  const fullUrl = endpoint.startsWith('http') ? endpoint : `${BASE_URL}${endpoint}`;
+  const authToken = token !== undefined ? token : await getTeacherToken();
+
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', fullUrl);
+    if (authToken) {
+      xhr.setRequestHeader('Authorization', `Bearer ${authToken}`);
+    }
+    xhr.onload = () => {
+      try {
+        const json = JSON.parse(xhr.responseText);
+        resolve(json);
+      } catch (e) {
+        reject(new Error(`Server error (${xhr.status}): ${xhr.responseText.substring(0, 100)}`));
+      }
+    };
+    xhr.onerror = () => {
+      reject(new Error('Network request failed'));
+    };
+    xhr.ontimeout = () => {
+      reject(new Error('Network request timed out'));
+    };
+    xhr.send(body);
+  });
+}
+
 export interface TeacherLoginResult {
   token: string;
   name: string;
@@ -257,12 +289,11 @@ export async function saveTeacherProfile(
     const filePart = await createFileBlob(signatureUri, 'image/png', 'signature.png');
     body.append('signature', filePart);
   }
-  const response = await fetch(`${BASE_URL}/teacher_save_profile`, {
-    method: 'POST',
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  const json = await postFormData<ApiEnvelope<{ completed: boolean }>>(
+    '/teacher_save_profile',
     body,
-  });
-  const json = (await response.json()) as ApiEnvelope<{ completed: boolean }>;
+    token
+  );
   if (!json.status) throw new Error(json.message);
   return json.data;
 }
@@ -423,12 +454,11 @@ export async function saveHomework(params: {
       body.append('photos[]', filePart);
     }
   }
-  const response = await fetch(`${BASE_URL}/teacher_save_homework`, {
-    method: 'POST',
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  const json = await postFormData<ApiEnvelope<{ id: number }>>(
+    '/teacher_save_homework',
     body,
-  });
-  const json = (await response.json()) as ApiEnvelope<{ id: number }>;
+    token
+  );
   if (!json.status) throw new Error(json.message);
   sendTeacherNotification({
     classId: params.classId,
@@ -469,12 +499,11 @@ export async function updateHomework(params: {
       body.append('photos[]', filePart);
     }
   }
-  const response = await fetch(`${BASE_URL}/teacher_update_homework`, {
-    method: 'POST',
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  const json = await postFormData<ApiEnvelope<{ updated: boolean }>>(
+    '/teacher_update_homework',
     body,
-  });
-  const json = (await response.json()) as ApiEnvelope<{ updated: boolean }>;
+    token
+  );
   if (!json.status) throw new Error(json.message);
 }
 
@@ -535,12 +564,11 @@ export async function reviewStudent(params: {
     const filePart = await createFileBlob(params.photoUri, 'image/jpeg', 'student.jpg');
     body.append('photo', filePart);
   }
-  const response = await fetch(`${BASE_URL}/teacher_review_student`, {
-    method: 'POST',
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  const json = await postFormData<ApiEnvelope<{ updated: boolean }>>(
+    '/teacher_review_student',
     body,
-  });
-  const json = (await response.json()) as ApiEnvelope<{ updated: boolean }>;
+    token
+  );
   if (!json.status) throw new Error(json.message);
 }
 
@@ -612,12 +640,11 @@ export async function addTeacherEvent(params: TeacherEventParams): Promise<AddTe
       body.append('media[]', { uri: m.uri, name: filename, type: m.mimeType || 'image/jpeg' } as any);
     }
   }
-  const response = await fetch(`${BASE_URL}/teacher_add_event`, {
-    method: 'POST',
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  const json = await postFormData<ApiEnvelope<AddTeacherEventResult>>(
+    '/teacher_add_event',
     body,
-  });
-  const json = (await response.json()) as ApiEnvelope<AddTeacherEventResult>;
+    token
+  );
   if (!json.status) throw new Error(json.message);
   sendTeacherNotification({
     classId: params.classId,
@@ -831,12 +858,11 @@ export async function addTeacherStudent(params: AddStudentParams): Promise<{ id:
     const filePart = await createFileBlob(params.photoUri, 'image/jpeg', 'student.jpg');
     body.append('photo', filePart);
   }
-  const response = await fetch(`${BASE_URL}/teacher_add_student`, {
-    method: 'POST',
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  const json = await postFormData<ApiEnvelope<{ id: number }>>(
+    '/teacher_add_student',
     body,
-  });
-  const json = (await response.json()) as ApiEnvelope<{ id: number }>;
+    token
+  );
   if (!json.status) throw new Error(json.message);
   return json.data;
 }
@@ -1076,13 +1102,11 @@ export async function importTeacherResult(
     body.append('file', { uri: file.uri, name: filename, type } as any);
   }
 
-  const response = await fetch(`${BASE_URL}/teacher_import_result`, {
-    method: 'POST',
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  const json = await postFormData<ApiEnvelope<{ message: string }>>(
+    '/teacher_import_result',
     body,
-  });
-
-  const json = (await response.json()) as ApiEnvelope<{ message: string }>;
+    token
+  );
   if (!json.status) throw new Error(json.message || 'Import failed.');
   return { message: json.data?.message || json.message || 'Results imported successfully.' };
 }
@@ -1150,13 +1174,11 @@ export async function importTeacherStudents(
     body.append('file', { uri: file.uri, name: filename, type } as any);
   }
 
-  const response = await fetch(`${BASE_URL}/teacher_import_students`, {
-    method: 'POST',
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  const json = await postFormData<ApiEnvelope<{ message: string }>>(
+    '/teacher_import_students',
     body,
-  });
-
-  const json = (await response.json()) as ApiEnvelope<{ message: string }>;
+    token
+  );
   if (!json.status) throw new Error(json.message || 'Import failed.');
   return { message: json.data?.message || json.message || 'Students imported successfully.' };
 }
