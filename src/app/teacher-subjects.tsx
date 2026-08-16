@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
-import { Alert, Modal, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -88,6 +88,7 @@ export default function TeacherSubjectsScreen() {
         const formatted: SubjectItem[] = data.map((item) => ({
           id: String(item.id),
           name: item.name,
+          code: item.code || item.subject_code || undefined,
         }));
         setSubjects(formatted.length > 0 ? formatted : DEFAULT_CLASS_SUBJECTS['Class 10th'] || []);
       })
@@ -157,7 +158,7 @@ export default function TeacherSubjectsScreen() {
         );
         Alert.alert('Subject Updated!', `Subject "${trimmedName}" has been updated.`);
       } else {
-        await addTeacherSubject(selectedClassId, trimmedName);
+        await addTeacherSubject(selectedClassId, trimmedName, trimmedCode || undefined);
         loadSubjects(selectedClassId);
         Alert.alert('Subject Added!', `${trimmedName} has been mapped to ${className}.`);
       }
@@ -327,45 +328,56 @@ export default function TeacherSubjectsScreen() {
 
       {/* Add / Edit Subject Modal */}
       <Modal visible={modalVisible} transparent animationType="slide" onRequestClose={() => setModalVisible(false)}>
-        <View style={styles.modalBackdrop}>
-          <View style={[styles.modalSheet, { backgroundColor: theme.surface }]}>
-            <View style={styles.modalHeader}>
-              <ThemedText type="subtitle">{editingSubject ? 'Edit Subject' : 'Add New Subject'}</ThemedText>
-              <Pressable onPress={() => setModalVisible(false)} hitSlop={10}>
-                <Ionicons name="close" size={22} color={theme.text} />
-              </Pressable>
-            </View>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.keyboardAvoidingView}
+        >
+          <Pressable style={styles.modalBackdrop} onPress={() => setModalVisible(false)}>
+            <Pressable style={[styles.modalSheet, { backgroundColor: theme.surface }]} onPress={(e) => e.stopPropagation()}>
+              <ScrollView
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ paddingBottom: Spacing.two }}
+              >
+                <View style={styles.modalHeader}>
+                  <ThemedText type="subtitle">{editingSubject ? 'Edit Subject' : 'Add New Subject'}</ThemedText>
+                  <Pressable onPress={() => setModalVisible(false)} hitSlop={10}>
+                    <Ionicons name="close" size={22} color={theme.text} />
+                  </Pressable>
+                </View>
 
-            <ThemedText type="smallBold" style={styles.label}>
-              Subject Name * (Must be Unique)
-            </ThemedText>
-            <TextInput
-              value={subjectName}
-              onChangeText={setSubjectName}
-              placeholder="e.g. Computer Science, Economics"
-              placeholderTextColor={theme.textSecondary}
-              style={[styles.input, { borderColor: theme.border, color: theme.text, backgroundColor: theme.background }]}
-            />
+                <ThemedText type="smallBold" style={styles.label}>
+                  Subject Name * (Must be Unique)
+                </ThemedText>
+                <TextInput
+                  value={subjectName}
+                  onChangeText={setSubjectName}
+                  placeholder="e.g. Computer Science, Economics"
+                  placeholderTextColor={theme.textSecondary}
+                  style={[styles.input, { borderColor: theme.border, color: theme.text, backgroundColor: theme.background }]}
+                />
 
-            <ThemedText type="smallBold" style={styles.label}>
-              Subject Code (Optional)
-            </ThemedText>
-            <TextInput
-              value={subjectCode}
-              onChangeText={setSubjectCode}
-              placeholder="e.g. CS-101"
-              placeholderTextColor={theme.textSecondary}
-              style={[styles.input, { borderColor: theme.border, color: theme.text, backgroundColor: theme.background }]}
-            />
+                <ThemedText type="smallBold" style={styles.label}>
+                  Subject Code (Optional)
+                </ThemedText>
+                <TextInput
+                  value={subjectCode}
+                  onChangeText={setSubjectCode}
+                  placeholder="e.g. CS-101"
+                  placeholderTextColor={theme.textSecondary}
+                  style={[styles.input, { borderColor: theme.border, color: theme.text, backgroundColor: theme.background }]}
+                />
 
-            <Button
-              label={submitting ? 'Saving…' : editingSubject ? 'Save Changes' : 'Add Subject to Curriculum'}
-              onPress={handleSaveSubject}
-              disabled={submitting}
-              style={{ marginTop: Spacing.four }}
-            />
-          </View>
-        </View>
+                <Button
+                  label={submitting ? 'Saving…' : editingSubject ? 'Save Changes' : 'Add Subject to Curriculum'}
+                  onPress={handleSaveSubject}
+                  disabled={submitting}
+                  style={{ marginTop: Spacing.four }}
+                />
+              </ScrollView>
+            </Pressable>
+          </Pressable>
+        </KeyboardAvoidingView>
       </Modal>
     </Screen>
   );
@@ -434,6 +446,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  keyboardAvoidingView: {
+    flex: 1,
+  },
   modalBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
@@ -442,7 +457,10 @@ const styles = StyleSheet.create({
   modalSheet: {
     borderTopLeftRadius: Radius.large,
     borderTopRightRadius: Radius.large,
-    padding: Spacing.four,
+    paddingHorizontal: Spacing.four,
+    paddingTop: Spacing.four,
+    paddingBottom: Spacing.two,
+    maxHeight: '85%',
   },
   modalHeader: {
     flexDirection: 'row',

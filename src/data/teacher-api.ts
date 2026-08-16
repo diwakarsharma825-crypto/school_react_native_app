@@ -1352,6 +1352,8 @@ export async function deleteTeacherStorageItems(type: StorageCategory, ids: numb
 export interface MappedSubjectItem {
   id: string | number;
   name: string;
+  code?: string;
+  subject_code?: string;
   is_active?: boolean;
 }
 
@@ -1359,10 +1361,11 @@ export async function fetchTeacherSubjects(classId: number): Promise<MappedSubje
   return authedRequest<MappedSubjectItem[]>(`/teacher_subjects?class_id=${classId}`);
 }
 
-export async function addTeacherSubject(classId: number, name: string): Promise<void> {
+export async function addTeacherSubject(classId: number, name: string, code?: string): Promise<void> {
   const body = new FormData();
   body.append('class_id', String(classId));
   body.append('name', name);
+  if (code) body.append('code', code);
   await authedRequest<{ created: boolean }>('/teacher_add_subject', { method: 'POST', body });
 }
 
