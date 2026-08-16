@@ -28,14 +28,14 @@ export function InvoiceViewerModal({ visible, onClose, url, fileType }: InvoiceV
     if (!url || downloading) return;
     setDownloading(true);
     try {
-      const file = await FileSystem.File.downloadFileAsync(url, new FileSystem.Directory(FileSystem.Paths.cache), {
-        idempotent: true,
-      });
+      const filename = url.split('/').pop() || `invoice-${Date.now()}.pdf`;
+      const targetUri = `${FileSystem.cacheDirectory}${filename}`;
+      await FileSystem.downloadAsync(url, targetUri);
       const canShare = await Sharing.isAvailableAsync();
       if (canShare) {
-        await Sharing.shareAsync(file.uri, { dialogTitle: 'Save Invoice' });
+        await Sharing.shareAsync(targetUri, { dialogTitle: 'Save Invoice' });
       } else {
-        Alert.alert('Downloaded', `Saved to ${file.uri}`);
+        Alert.alert('Downloaded', `Saved to ${targetUri}`);
       }
     } catch (e) {
       Alert.alert('Could not download', e instanceof Error ? e.message : 'Please try again.');

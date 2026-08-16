@@ -3,7 +3,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
 import { Brand, Radius, Spacing } from '@/constants/theme';
 import { Card } from '@/components/ui/Card';
@@ -102,13 +102,21 @@ export default function TeacherProfileSetupScreen() {
 
   async function handleSignatureCaptured(dataUrl: string) {
     setSignaturePadVisible(false);
-    // dataUrl is "data:image/png;base64,...." — write it to a real file so the
-    // upload gets a proper file:// uri (a raw data-uri here is what caused the
-    // native "Unsupported FormDataPart implementation" error).
-    const base64 = dataUrl.replace(/^data:image\/png;base64,/, '');
-    const file = new FileSystem.File(FileSystem.Paths.cache, `signature-${Date.now()}.png`);
-    file.write(base64, { encoding: 'base64' });
-    setSignatureUri(file.uri);
+    if (!dataUrl) return;
+    try {
+      if (Platform.OS === 'web') {
+        setSignatureUri(dataUrl);
+        return;
+      }
+      const base64 = dataUrl.replace(/^data:image\/png;base64,/, '');
+      const uri = `${FileSystem.cacheDirectory}signature-${Date.now()}.png`;
+      await FileSystem.writeAsStringAsync(uri, base64, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      setSignatureUri(uri);
+    } catch {
+      setSignatureUri(dataUrl);
+    }
   }
 
   async function handleSave() {

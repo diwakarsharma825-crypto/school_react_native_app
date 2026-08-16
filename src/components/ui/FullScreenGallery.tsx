@@ -29,14 +29,14 @@ export function FullScreenGallery({ visible, photoUrls, initialIndex, onClose }:
     if (!uri || downloading) return;
     setDownloading(true);
     try {
-      const file = await FileSystem.File.downloadFileAsync(uri, new FileSystem.Directory(FileSystem.Paths.cache), {
-        idempotent: true,
-      });
+      const filename = uri.split('/').pop() || `photo-${Date.now()}.png`;
+      const targetUri = `${FileSystem.cacheDirectory}${filename}`;
+      await FileSystem.downloadAsync(uri, targetUri);
       const canShare = await Sharing.isAvailableAsync();
       if (canShare) {
-        await Sharing.shareAsync(file.uri, { dialogTitle: 'Save Photo' });
+        await Sharing.shareAsync(targetUri, { dialogTitle: 'Save Photo' });
       } else {
-        Alert.alert('Downloaded', `Saved to ${file.uri}`);
+        Alert.alert('Downloaded', `Saved to ${targetUri}`);
       }
     } catch (e) {
       Alert.alert('Could not download', e instanceof Error ? e.message : 'Please try again.');

@@ -79,9 +79,10 @@ function CategoryView({ type, onBack, onChanged }: { type: StorageCategory; onBa
       const targets = items.filter((i) => selected.has(i.id));
       for (const item of targets) {
         const filename = item.url.split('/').pop() || `file-${item.id}`;
-        const file = await FileSystem.File.downloadFileAsync(item.url, new FileSystem.Directory(FileSystem.Paths.cache), { idempotent: true });
+        const targetUri = `${FileSystem.cacheDirectory}${filename}`;
+        await FileSystem.downloadAsync(item.url, targetUri);
         if (canShare) {
-          await Sharing.shareAsync(file.uri, { dialogTitle: filename });
+          await Sharing.shareAsync(targetUri, { dialogTitle: filename });
         }
       }
     } catch (e) {

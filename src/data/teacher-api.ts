@@ -9,25 +9,16 @@ import { getCurrentDeviceLocation } from '@/lib/permissions';
 
 const TOKEN_KEY = 'saarthak.teacher_token';
 
-export async function createFileBlob(uri: string, mimeType?: string | null, filename = 'attachment'): Promise<any> {
-  if (Platform.OS === 'web' || uri.startsWith('blob:') || uri.startsWith('data:') || uri.startsWith('http')) {
+export async function createFileBlob(uri: string, mimeType?: string | null, filename = 'attachment.png'): Promise<any> {
+  if (Platform.OS === 'web' || uri.startsWith('blob:') || uri.startsWith('data:')) {
     try {
       const res = await fetch(uri);
       return await res.blob();
     } catch {
-      return { uri, name: filename, type: mimeType || 'application/octet-stream' };
+      return { uri, name: filename, type: mimeType || 'image/png' };
     }
   }
-  try {
-    return new FileSystem.File(uri);
-  } catch {
-    try {
-      const res = await fetch(uri);
-      return await res.blob();
-    } catch {
-      return { uri, name: filename, type: mimeType || 'application/octet-stream' };
-    }
-  }
+  return { uri, name: filename, type: mimeType || 'image/png' };
 }
 
 interface ApiEnvelope<T> {
@@ -244,10 +235,8 @@ export async function saveTeacherProfile(
   );
   body.append('signature_url_prev', previousSignatureUrl ?? '');
   if (signatureUri) {
-    // Expo's fetch (SDK 57+) requires a real Blob/File on the FormData part —
-    // the classic RN {uri,name,type} object throws "Unsupported FormDataPart
-    // implementation" since it isn't a Blob and has no .bytes() method.
-    body.append('signature', new FileSystem.File(signatureUri) as unknown as Blob);
+    const filePart = await createFileBlob(signatureUri, 'image/png', 'signature.png');
+    body.append('signature', filePart);
   }
   const response = await fetch(`${BASE_URL}/teacher_save_profile`, {
     method: 'POST',
@@ -409,9 +398,12 @@ export async function saveHomework(params: {
   if (params.chapter) body.append('chapter', params.chapter);
   body.append('date', params.date);
   body.append('description', params.description);
-  params.photoUris.forEach((uri) => {
-    body.append('photos[]', new FileSystem.File(uri) as unknown as Blob);
-  });
+  if (params.photoUris) {
+    for (const uri of params.photoUris) {
+      const filePart = await createFileBlob(uri, 'image/jpeg', 'photo.jpg');
+      body.append('photos[]', filePart);
+    }
+  }
   const response = await fetch(`${BASE_URL}/teacher_save_homework`, {
     method: 'POST',
     headers: token ? { Authorization: `Bearer ${token}` } : undefined,
@@ -453,9 +445,10 @@ export async function updateHomework(params: {
   if (params.chapter) body.append('chapter', params.chapter);
   body.append('description', params.description);
   if (params.photoUris) {
-    params.photoUris.forEach((uri) => {
-      body.append('photos[]', new FileSystem.File(uri) as unknown as Blob);
-    });
+    for (const uri of params.photoUris) {
+      const filePart = await createFileBlob(uri, 'image/jpeg', 'photo.jpg');
+      body.append('photos[]', filePart);
+    }
   }
   const response = await fetch(`${BASE_URL}/teacher_update_homework`, {
     method: 'POST',
@@ -520,7 +513,8 @@ export async function reviewStudent(params: {
   if (params.motherName !== undefined) body.append('mother_name', params.motherName);
   if (params.active !== undefined) body.append('account_status', params.active ? '1' : '0');
   if (params.photoUri) {
-    body.append('photo', new FileSystem.File(params.photoUri) as unknown as Blob);
+    const filePart = await createFileBlob(params.photoUri, 'image/jpeg', 'student.jpg');
+    body.append('photo', filePart);
   }
   const response = await fetch(`${BASE_URL}/teacher_review_student`, {
     method: 'POST',
@@ -815,7 +809,8 @@ export async function addTeacherStudent(params: AddStudentParams): Promise<{ id:
   if (params.phone) body.append('phone', params.phone);
   if (params.password) body.append('password', params.password);
   if (params.photoUri) {
-    body.append('photo', new FileSystem.File(params.photoUri) as unknown as Blob);
+    const filePart = await createFileBlob(params.photoUri, 'image/jpeg', 'student.jpg');
+    body.append('photo', filePart);
   }
   const response = await fetch(`${BASE_URL}/teacher_add_student`, {
     method: 'POST',
