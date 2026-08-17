@@ -276,7 +276,9 @@ export interface ProfileClassSelection {
 export async function saveTeacherProfile(
   signatureUri: string | null,
   classes: ProfileClassSelection[],
-  previousSignatureUrl: string | null
+  previousSignatureUrl: string | null,
+  name?: string,
+  canEditClasses?: boolean
 ): Promise<{ completed: boolean }> {
   const token = await getTeacherToken();
   const body = new FormData();
@@ -285,6 +287,13 @@ export async function saveTeacherProfile(
     JSON.stringify(classes.map((c) => ({ class_id: c.classId, section_id: c.sectionId, stream: c.stream })))
   );
   body.append('signature_url_prev', previousSignatureUrl ?? '');
+  if (name && name.trim()) {
+    body.append('name', name.trim());
+  }
+  // Inform backend to bypass classes lock when the teacher is allowed to edit
+  if (canEditClasses) {
+    body.append('force_classes', '1');
+  }
   if (signatureUri) {
     const filePart = await createFileBlob(signatureUri, 'image/png', 'signature.png');
     body.append('signature', filePart);
@@ -297,6 +306,7 @@ export async function saveTeacherProfile(
   if (!json.status) throw new Error(json.message);
   return json.data;
 }
+
 
 export interface Achiever {
   name: string;

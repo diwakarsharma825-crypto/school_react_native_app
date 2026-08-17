@@ -35,9 +35,18 @@ interface DatePickerFieldProps {
   onChange: (date: string) => void;
   minDate?: string;
   maxDate?: string;
+  disableSundays?: boolean;
 }
 
-export function DatePickerField({ label, placeholder, value, onChange, minDate, maxDate }: DatePickerFieldProps) {
+export function DatePickerField({
+  label,
+  placeholder,
+  value,
+  onChange,
+  minDate,
+  maxDate,
+  disableSundays,
+}: DatePickerFieldProps) {
   const theme = useTheme();
   const [open, setOpen] = useState(false);
   const [showYearSelector, setShowYearSelector] = useState(false);
@@ -71,7 +80,7 @@ export function DatePickerField({ label, placeholder, value, onChange, minDate, 
     const currentYr = new Date().getFullYear();
     const startYr = 1950;
     const parsedMax = parseDate(maxDate ?? null);
-    const endYr = parsedMax ? Math.max(parsedMax.y, currentYr) : currentYr;
+    const endYr = parsedMax ? Math.max(parsedMax.y, currentYr + 5) : currentYr + 5;
     const yrs: number[] = [];
     for (let y = endYr; y >= startYr; y--) {
       yrs.push(y);
@@ -225,7 +234,9 @@ export function DatePickerField({ label, placeholder, value, onChange, minDate, 
                   {days.map((day, i) => {
                     if (day === null) return <View key={i} style={styles.dayCell} />;
                     const dateStr = `${viewYear}-${pad(viewMonth)}-${pad(day)}`;
-                    const disabled = (!!minDate && dateStr < minDate) || (!!maxDate && dateStr > maxDate);
+                    const cellDate = new Date(viewYear, viewMonth - 1, day);
+                    const isSunday = cellDate.getDay() === 0;
+                    const disabled = (!!minDate && dateStr < minDate) || (!!maxDate && dateStr > maxDate) || (!!disableSundays && isSunday);
                     const isSelected = dateStr === value;
                     return (
                       <Pressable

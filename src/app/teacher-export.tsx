@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Sharing from 'expo-sharing';
-import React, { useState } from 'react';
-import { Alert, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
 import { Brand, Radius, Spacing } from '@/constants/theme';
 import { Card } from '@/components/ui/Card';
@@ -64,9 +64,27 @@ export default function TeacherExportScreen() {
   const [format, setFormat] = useState<ExportFormat>('pdf');
   const [dateFrom, setDateFrom] = useState(daysAgoStr(30));
   const [dateTo, setDateTo] = useState(todayStr());
-  const [studentSearchQuery, setStudentSearchQuery] = useState('');
+  const [studentId, setStudentId] = useState<string | null>(null);
+  const [rosterStudents, setRosterStudents] = useState<RosterStudent[]>([]);
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!classId) return;
+    const selected = classes.find((c) => String(c.class_id) === classId);
+    fetchTeacherStudents(Number(classId), selected?.section_id ?? undefined)
+      .then(setRosterStudents)
+      .catch(() => setRosterStudents([]));
+    setStudentId(null);
+  }, [classId]);
+
+  const studentOptions = [
+    { label: 'All Students', value: '' },
+    ...rosterStudents.map((s) => ({
+      label: `${s.name}${s.roll_no ? ` (Roll ${s.roll_no})` : ''}${s.srn ? ` [SRN ${s.srn}]` : ''}`,
+      value: String(s.id),
+    })),
+  ];
 
   async function handleExport() {
     if (!classId && (kind === 'homework' || kind === 'attendance' || kind === 'leaves' || kind === 'fees' || kind === 'roster')) {
@@ -83,7 +101,7 @@ export default function TeacherExportScreen() {
       const selected = classes.find((c) => String(c.class_id) === classId);
       const classIdNum = Number(classId);
       const sectionIdNum = selected?.section_id;
-      const q = studentSearchQuery.trim().toLowerCase();
+      const targetStudent = rosterStudents.find((s) => String(s.id) === studentId);
 
       if (kind === 'homework') {
         const params = { classId: classIdNum, sectionId: sectionIdNum ?? undefined, dateFrom, dateTo, format };
@@ -95,19 +113,16 @@ export default function TeacherExportScreen() {
         await shareFile(uri, 'Attendance Report', format);
       } else if (kind === 'notices') {
         const notices = await fetchTeacherNotices();
-        const filteredNotices = q
-          ? notices.filter((n) => n.title.toLowerCase().includes(q) || n.notice.toLowerCase().includes(q))
-          : notices;
         await exportToPdf({
           title: 'Notices & Announcements Database Report',
-          subtitle: `Total Notices: ${filteredNotices.length}${q ? ` | Filter: "${studentSearchQuery}"` : ''}`,
+          subtitle: `Total Notices: ${notices.length}`,
           columns: [
             { header: 'Date', key: 'date', width: '20%' },
             { header: 'Title', key: 'title', width: '30%' },
             { header: 'Notice Body', key: 'notice', width: '40%' },
             { header: 'Status', key: 'statusLabel', width: '10%' },
           ],
-          rows: filteredNotices.map((n) => ({
+          rows: notices.map((n) => ({
             ...n,
             statusLabel: Number(n.is_view_on_web) === 1 ? 'Active' : 'Inactive',
           })),
@@ -115,17 +130,16 @@ export default function TeacherExportScreen() {
       } else if (kind === 'leaves') {
         const leaves = await fetchTeacherLeaveApplications(classIdNum, sectionIdNum ?? undefined);
         let filtered = leaves.filter((l) => l.date_from >= dateFrom && l.date_from <= dateTo);
-        if (q) {
+        if (targetStudent) {
           filtered = filtered.filter(
             (l) =>
-              l.student_name.toLowerCase().includes(q) ||
-              l.student_srn?.toString().includes(q) ||
-              l.leave_type.toLowerCase().includes(q)
+              l.student_name.toLowerCase() === targetStudent.name.toLowerCase() ||
+              l.student_srn === targetStudent.srn
           );
         }
         await exportToPdf({
           title: `Class Student Leaves Report - ${selected?.class_name ?? ''}${selected?.section_name ? ` (${selected.section_name})` : ''}`,
-          subtitle: `Date Range: ${dateFrom} to ${dateTo}${q ? ` | Search: "${studentSearchQuery}"` : ''} | Total: ${filtered.length}`,
+          subtitle: `Date Range: ${dateFrom} to ${dateTo}${targetStudent ? ` | Student: ${targetStudent.name}` : ''} | Total: ${filtered.length}`,
           columns: [
             { header: 'Student Name', key: 'student_name', width: '25%' },
             { header: 'SRN', key: 'student_srn', width: '15%' },
@@ -139,18 +153,17 @@ export default function TeacherExportScreen() {
       } else if (kind === 'fees') {
         const fees = await fetchTeacherFeeInvoices(classIdNum, sectionIdNum ?? undefined, undefined, undefined, dateFrom, dateTo);
         let filteredFees = fees;
-        if (q) {
+        if (targetStudent) {
           filteredFees = fees.filter(
             (f) =>
-              f.student_name?.toLowerCase().includes(q) ||
-              (f as any).student_srn?.toString().includes(q) ||
-              f.student_roll_no?.toString().includes(q) ||
-              f.title.toLowerCase().includes(q)
+              f.student_name?.toLowerCase() === targetStudent.name.toLowerCase() ||
+              (f as any).student_srn === targetStudent.srn ||
+              f.student_roll_no === targetStudent.roll_no
           );
         }
         await exportToPdf({
           title: `Fee Dues & Statements - ${selected?.class_name ?? ''}${selected?.section_name ? ` (${selected.section_name})` : ''}`,
-          subtitle: `Date Range: ${dateFrom} to ${dateTo}${q ? ` | Search: "${studentSearchQuery}"` : ''} | Total Records: ${filteredFees.length}`,
+          subtitle: `Date Range: ${dateFrom} to ${dateTo}${targetStudent ? ` | Student: ${targetStudent.name}` : ''} | Total Records: ${filteredFees.length}`,
           columns: [
             { header: 'Student Name', key: 'student_name', width: '25%' },
             { header: 'Title', key: 'title', width: '25%' },
@@ -163,19 +176,13 @@ export default function TeacherExportScreen() {
       } else if (kind === 'roster') {
         const roster = await fetchTeacherStudents(classIdNum, sectionIdNum ?? undefined);
         let filteredRoster = roster;
-        if (q) {
-          filteredRoster = roster.filter(
-            (s) =>
-              s.name.toLowerCase().includes(q) ||
-              s.srn?.toString().includes(q) ||
-              s.roll_no?.toString().includes(q) ||
-              s.father_name?.toLowerCase().includes(q)
-          );
+        if (targetStudent) {
+          filteredRoster = roster.filter((s) => String(s.id) === String(targetStudent.id));
         }
         const images = filteredRoster.map((s) => s.photo_url).filter(Boolean) as string[];
         await exportToPdf({
           title: `Class Student Roster - ${selected?.class_name ?? ''}${selected?.section_name ? ` (${selected.section_name})` : ''}`,
-          subtitle: `Total Enrolled Students: ${filteredRoster.length}${q ? ` | Filter: "${studentSearchQuery}"` : ''}`,
+          subtitle: `Total Enrolled Students: ${filteredRoster.length}${targetStudent ? ` | Student: ${targetStudent.name}` : ''}`,
           columns: [
             { header: 'Roll No', key: 'roll_no', width: '15%' },
             { header: 'Student Name', key: 'name', width: '30%' },
@@ -252,24 +259,14 @@ export default function TeacherExportScreen() {
         <Card style={styles.card}>
           <SelectField label="Class" placeholder="Select class" value={classId} options={classOptions} onChange={setClassId} />
 
-          <ThemedText type="smallBold" style={{ marginTop: Spacing.two, marginBottom: Spacing.one }}>
-            Student Search (Optional)
-          </ThemedText>
-          <View style={[styles.searchWrap, { backgroundColor: theme.dark ? '#1E293B' : '#F8FAFC', borderColor: theme.border }]}>
-            <Ionicons name="search" size={16} color={theme.dark ? '#60A5FA' : theme.textSecondary} />
-            <TextInput
-              value={studentSearchQuery}
-              onChangeText={setStudentSearchQuery}
-              placeholder="Search by student name, roll no or SRN..."
-              placeholderTextColor={theme.dark ? '#64748B' : '#94A3B8'}
-              style={[styles.searchInput, { color: theme.text }]}
-            />
-            {studentSearchQuery ? (
-              <Pressable onPress={() => setStudentSearchQuery('')} hitSlop={8}>
-                <Ionicons name="close-circle" size={16} color={theme.textSecondary} />
-              </Pressable>
-            ) : null}
-          </View>
+          <SelectField
+            label="Student (Optional)"
+            placeholder="All Students"
+            value={studentId ?? ''}
+            options={studentOptions}
+            onChange={(v) => setStudentId(v || null)}
+            searchable
+          />
 
           <View style={styles.dateRow}>
             <View style={styles.dateField}>

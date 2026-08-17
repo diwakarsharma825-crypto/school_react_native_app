@@ -788,7 +788,7 @@ export default function SubjectSyllabusScreen() {
               </Pressable>
             </View>
 
-            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: Spacing.two }} showsVerticalScrollIndicator={true}>
+            <ScrollView style={{ flex: 1, width: '100%' }} contentContainerStyle={{ paddingVertical: Spacing.one }} showsVerticalScrollIndicator={true} keyboardShouldPersistTaps="handled">
               {/* Chapter Number */}
               <View style={styles.inputGroup}>
                 <ThemedText type="smallBold" style={styles.fieldLabel}>
@@ -1197,13 +1197,13 @@ const styles = StyleSheet.create({
   },
   modalCard: {
     width: '100%',
-    maxWidth: 480,
-    maxHeight: '85%',
+    maxWidth: 500,
+    height: '82%',
+    maxHeight: 650,
+    minHeight: 420,
     borderRadius: Radius.large,
     borderWidth: 1,
     padding: Spacing.three,
-    display: 'flex',
-    flexDirection: 'column',
     ...Shadow.card,
   },
   modalHeader: {

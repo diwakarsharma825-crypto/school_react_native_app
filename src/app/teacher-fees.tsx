@@ -411,23 +411,6 @@ export default function TeacherFeesScreen() {
           ))}
         </View>
 
-        {/* Optional Search Input for Student Name, SRN or Roll Number */}
-        <View style={[styles.searchWrap, { backgroundColor: theme.dark ? '#1E293B' : '#F8FAFC', borderColor: theme.border }]}>
-          <Ionicons name="search" size={16} color={theme.dark ? '#60A5FA' : theme.textSecondary} />
-          <TextInput
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholder="Search student by name, roll no or SRN..."
-            placeholderTextColor={theme.dark ? '#64748B' : '#94A3B8'}
-            style={[styles.searchInput, { color: theme.text }]}
-          />
-          {searchQuery ? (
-            <Pressable onPress={() => setSearchQuery('')} hitSlop={8}>
-              <Ionicons name="close-circle" size={16} color={theme.textSecondary} />
-            </Pressable>
-          ) : null}
-        </View>
-
         <SelectField
           label="Filter by Student"
           placeholder="All Students"

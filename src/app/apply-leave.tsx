@@ -18,6 +18,15 @@ import { SectionUnavailable } from '@/components/ui/SectionUnavailable';
 import { ExportPdfButton } from '@/components/ui/ExportPdfButton';
 import { exportToPdf } from '@/lib/pdf-export';
 
+function pad(n: number) {
+  return n < 10 ? `0${n}` : String(n);
+}
+
+function todayStr() {
+  const t = new Date();
+  return `${t.getFullYear()}-${pad(t.getMonth() + 1)}-${pad(t.getDate())}`;
+}
+
 const LEAVE_TYPES = [
   { label: 'Sick Leave', value: 'Sick' },
   { label: 'Personal', value: 'Personal' },
@@ -157,11 +166,9 @@ export default function ApplyLeaveScreen() {
               value={dateFrom}
               onChange={(date) => {
                 setDateFrom(date);
-                // Keep the range valid — if "To" was already picked and now
-                // falls before the new "From", clear it rather than submit
-                // an inverted range.
                 if (dateTo && dateTo < date) setDateTo(null);
               }}
+              minDate={todayStr()}
             />
           </View>
           <View style={styles.rowItem}>
@@ -170,7 +177,7 @@ export default function ApplyLeaveScreen() {
               placeholder="Select date"
               value={dateTo}
               onChange={setDateTo}
-              minDate={dateFrom ?? undefined}
+              minDate={dateFrom ?? todayStr()}
             />
           </View>
         </View>

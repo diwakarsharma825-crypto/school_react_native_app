@@ -137,7 +137,13 @@ export default function TeacherProfileSetupScreen() {
         sectionId: a.sectionId ? Number(a.sectionId) : undefined,
         stream: a.stream ?? undefined,
       }));
-      await saveTeacherProfile(signatureUri, payload, profile?.signature_url ?? null);
+      await saveTeacherProfile(
+        signatureUri,
+        payload,
+        profile?.signature_url ?? null,
+        teacherName.trim() || undefined,
+        true // teacher is in edit mode — always allow class updates
+      );
       await refresh();
       setIsEditing(false);
       router.replace('/teacher-dashboard');
@@ -147,6 +153,7 @@ export default function TeacherProfileSetupScreen() {
       setSubmitting(false);
     }
   }
+
 
   if (loadingCatalog) {
     return (

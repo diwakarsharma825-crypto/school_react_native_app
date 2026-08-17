@@ -120,7 +120,7 @@ export default function TeacherAttendanceScreen() {
     <TeacherGuard>
     <Screen scroll>
       <SelectField label="Class" placeholder="Select class" value={classId} options={classOptions} onChange={setClassId} />
-      <DatePickerField label="Date" placeholder="Select date" value={date} onChange={setDate} minDate="2000-01-01" maxDate={todayStr()} />
+      <DatePickerField label="Date" placeholder="Select date" value={date} onChange={setDate} minDate="2000-01-01" disableSundays={true} />
 
       {students && students.length > 0 ? (
         <View style={{ marginTop: Spacing.two, marginBottom: Spacing.two }}>

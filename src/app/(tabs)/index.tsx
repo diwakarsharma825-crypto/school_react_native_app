@@ -76,13 +76,6 @@ export default function HomeScreen() {
   const achievers = useFetch(fetchTopAchievers);
   const eventsEnabled = useSectionEnabled('events');
   const topStudentsEnabled = useSectionEnabled('top_students');
-  const [pendingRegistration, setPendingRegistration] = useState<PendingRegistration | null>(null);
-
-  useFocusEffect(
-    useCallback(() => {
-      getPendingRegistration().then(setPendingRegistration);
-    }, [])
-  );
 
   if (instituteMode) {
     if (studentLoggedIn) return <StudentDashboardScreen />;
@@ -97,42 +90,6 @@ export default function HomeScreen() {
     <Screen>
       {home.data.sliders && home.data.sliders.length > 0 ? (
         <Carousel sliders={home.data.sliders} />
-      ) : null}
-      {pendingRegistration && !studentLoggedIn ? (
-        <Card
-          style={{
-            marginBottom: Spacing.four,
-            backgroundColor: theme.dark ? '#451A03' : '#FEF3C7',
-            borderColor: theme.dark ? '#92400E' : '#F59E0B',
-            borderWidth: 1,
-          }}
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.three }}>
-            <View
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: 18,
-                backgroundColor: '#F59E0B',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Ionicons name="time-outline" size={20} color="#FFFFFF" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <ThemedText type="smallBold" style={{ color: theme.dark ? '#FDE047' : '#92400E' }}>
-                {t('account_pending')}
-              </ThemedText>
-              <ThemedText
-                type="small"
-                style={{ color: theme.dark ? 'rgba(255,255,255,0.85)' : '#B45309', fontSize: 12 }}
-              >
-                Registration for {pendingRegistration.name} ({pendingRegistration.className}) is submitted. Your class teacher needs to activate your account before you can view homework.
-              </ThemedText>
-            </View>
-          </View>
-        </Card>
       ) : null}
       <QuickActionGrid />
 
