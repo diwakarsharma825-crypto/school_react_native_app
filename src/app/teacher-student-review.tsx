@@ -12,7 +12,7 @@ import { PasswordInput } from '@/components/ui/PasswordInput';
 import { Screen } from '@/components/ui/Screen';
 import { SelectField } from '@/components/ui/SelectField';
 import { ThemedText } from '@/components/ui/ThemedText';
-import { fetchStudentDetail, reviewStudent } from '@/data/teacher-api';
+import { fetchStudentDetail, fetchStudentSiblings, reviewStudent, StudentSibling } from '@/data/teacher-api';
 import { useTheme } from '@/hooks/use-theme';
 
 /** One screen for both first-time activation and later edits of a
@@ -53,6 +53,7 @@ export default function TeacherStudentReviewScreen() {
   const [remotePhotoUrl, setRemotePhotoUrl] = useState<string | null>(params.photoUrl ?? null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [siblings, setSiblings] = useState<StudentSibling[]>([]);
 
   // Pull the authoritative stored record on open and pre-fill every field
   // the student entered at onboarding — the roster list that launched this
@@ -66,7 +67,20 @@ export default function TeacherStudentReviewScreen() {
         if (cancelled) return;
         if (d.name) setName(d.name);
         if (d.srn) setSrn(d.srn);
-        if (d.phone) setPhone(d.phone);
+        if (d.phone) {
+          setPhone(d.phone);
+          fetchStudentSiblings(d.phone, params.id)
+            .then((sibs) => {
+              if (!cancelled) setSiblings(sibs);
+            })
+            .catch(() => {});
+        } else if (params.phone) {
+          fetchStudentSiblings(params.phone, params.id)
+            .then((sibs) => {
+              if (!cancelled) setSiblings(sibs);
+            })
+            .catch(() => {});
+        }
         if (d.gender) setGender(d.gender);
         if (d.dob) setDob(d.dob);
         if (d.roll_no) setRollNo(d.roll_no);
@@ -79,7 +93,7 @@ export default function TeacherStudentReviewScreen() {
     return () => {
       cancelled = true;
     };
-  }, [params.id]);
+  }, [params.id, params.phone]);
 
   async function pickPhoto() {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -149,6 +163,28 @@ export default function TeacherStudentReviewScreen() {
             </ThemedText>
           </View>
         </View>
+
+        {siblings.length > 0 ? (
+          <View style={{ marginTop: Spacing.three, paddingTop: Spacing.two, borderTopWidth: 1, borderTopColor: theme.border }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: Spacing.one }}>
+              <Ionicons name="people" size={16} color={theme.dark ? '#60A5FA' : '#2563EB'} />
+              <ThemedText type="smallBold" style={{ color: theme.dark ? '#60A5FA' : '#2563EB' }}>
+                Linked Sibling Account(s) (Same Phone: {phone || params.phone})
+              </ThemedText>
+            </View>
+            {siblings.map((sib, i) => (
+              <View key={i} style={{ backgroundColor: theme.dark ? '#1E293B' : '#F1F5F9', borderRadius: Radius.sm, padding: Spacing.two, marginTop: 4 }}>
+                <ThemedText type="smallBold">{sib.name}</ThemedText>
+                <ThemedText type="small" themeColor="textSecondary">
+                  {sib.class_name ? `Class: ${sib.class_name}` : ''}
+                  {sib.section_name ? ` - ${sib.section_name}` : ''}
+                  {sib.srn ? ` · SRN: ${sib.srn}` : ''}
+                  {sib.roll_no ? ` · Roll: ${sib.roll_no}` : ''}
+                </ThemedText>
+              </View>
+            ))}
+          </View>
+        ) : null}
 
         <ThemedText type="smallBold" style={styles.fieldLabel}>
           Name

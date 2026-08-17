@@ -11,6 +11,7 @@ export interface ExportPdfOptions {
   title: string;
   subtitle?: string;
   logoUrl?: string | null;
+  hideLogo?: boolean;
   columns?: PdfColumn[];
   rows?: Record<string, any>[];
   htmlBody?: string;
@@ -18,7 +19,7 @@ export interface ExportPdfOptions {
 }
 
 export async function exportToPdf(options: ExportPdfOptions): Promise<void> {
-  const { title, subtitle, logoUrl, columns = [], rows = [], htmlBody, images = [] } = options;
+  const { title, subtitle, logoUrl, hideLogo, columns = [], rows = [], htmlBody, images = [] } = options;
 
   let tableHtml = '';
   if (columns.length > 0 && rows.length > 0) {
@@ -72,7 +73,9 @@ export async function exportToPdf(options: ExportPdfOptions): Promise<void> {
     `;
   }
 
-  const logoHtml = logoUrl && logoUrl.startsWith('http') ? `<img src="${logoUrl}" class="header-logo" alt="School Logo" />` : '';
+  const logoHtml = !hideLogo && logoUrl && logoUrl.startsWith('http')
+    ? `<img src="${logoUrl}" class="header-logo" alt="School Logo" />`
+    : '';
 
   const fullHtml = `
     <!DOCTYPE html>

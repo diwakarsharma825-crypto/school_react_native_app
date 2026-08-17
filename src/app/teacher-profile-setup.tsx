@@ -36,11 +36,15 @@ interface Assignment {
 
 const STREAM_ELIGIBLE_KEYWORDS = ['11', '12'];
 
+import { TextInput } from 'react-native';
+
 export default function TeacherProfileSetupScreen() {
   const theme = useTheme();
   const router = useRouter();
   const { profile, refresh } = useTeacherAuth();
 
+  const [isEditing, setIsEditing] = useState<boolean>(!profile?.completed);
+  const [teacherName, setTeacherName] = useState<string>(profile?.name ?? '');
   const [catalog, setCatalog] = useState<ClassPickerItem[]>([]);
   const [loadingCatalog, setLoadingCatalog] = useState(true);
   const [assignments, setAssignments] = useState<Assignment[]>([{ classId: null, sectionId: null, stream: null }]);
@@ -56,25 +60,20 @@ export default function TeacherProfileSetupScreen() {
       .finally(() => setLoadingCatalog(false));
   }, []);
 
-  // Prefill from whatever was already saved — otherwise reopening this
-  // screen to tweak one class shows an empty "Select class" and looks like
-  // the save never took, even though the server has it.
   useEffect(() => {
-    if (profile && profile.classes.length > 0) {
-      setAssignments(
-        profile.classes.map((c) => ({
-          classId: String(c.class_id),
-          sectionId: c.section_id ? String(c.section_id) : null,
-          stream: c.stream ?? null,
-        }))
-      );
+    if (profile) {
+      if (profile.name) setTeacherName(profile.name);
+      if (profile.classes.length > 0) {
+        setAssignments(
+          profile.classes.map((c) => ({
+            classId: String(c.class_id),
+            sectionId: c.section_id ? String(c.section_id) : null,
+            stream: c.stream ?? null,
+          }))
+        );
+      }
     }
   }, [profile]);
-
-  // Once a teacher's initial setup is complete, class/section assignment can
-  // only be changed by the principal from the admin panel — this screen just
-  // reflects that lock by showing the saved classes read-only.
-  const classesLocked = !!profile?.completed && !profile?.can_edit_classes;
 
   const classOptions = catalog.map((c) => ({ label: c.name, value: String(c.id) }));
 
@@ -140,6 +139,7 @@ export default function TeacherProfileSetupScreen() {
       }));
       await saveTeacherProfile(signatureUri, payload, profile?.signature_url ?? null);
       await refresh();
+      setIsEditing(false);
       router.replace('/teacher-dashboard');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not save your profile.');
@@ -158,140 +158,232 @@ export default function TeacherProfileSetupScreen() {
 
   return (
     <Screen>
-      {profile?.name || profile?.email ? (
-        <Card style={styles.card}>
-          {profile.name ? <ThemedText type="smallBold">{profile.name}</ThemedText> : null}
-          {profile.email ? (
-            <ThemedText type="small" themeColor="textSecondary">
-              {profile.email}
-            </ThemedText>
-          ) : null}
-        </Card>
-      ) : null}
-
-      <ThemedText type="default" themeColor="textSecondary" style={styles.intro}>
-        Complete your profile once — this stays saved until you finish, so you'll only see
-        this screen again if you need to change something.
-      </ThemedText>
-
+      {/* Top Profile Header & Edit Mode Toggle */}
       <Card style={styles.card}>
-        <ThemedText type="smallBold" style={styles.fieldLabel}>
-          Signature
-        </ThemedText>
-        <Pressable
-          onPress={() => setSignaturePadVisible(true)}
-          style={[styles.signatureBox, { borderColor: theme.border }, (signatureUri || profile?.signature_url) && styles.signatureBoxWithImage]}
-        >
-          {signatureUri || profile?.signature_url ? (
-            <Image source={{ uri: signatureUri ?? profile!.signature_url! }} style={styles.signatureImage} contentFit="contain" />
-          ) : (
-            <View style={styles.signaturePlaceholder}>
-              <Ionicons name="create-outline" size={28} color={theme.textSecondary} />
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.two }}>
+          <View style={{ flex: 1 }}>
+            <ThemedText type="subtitle" style={{ fontSize: 18 }}>
+              {profile?.name || teacherName || 'Teacher Profile'}
+            </ThemedText>
+
+            {profile?.email ? (
               <ThemedText type="small" themeColor="textSecondary">
-                Tap to draw your signature
+                {profile.email}
               </ThemedText>
-            </View>
-          )}
-        </Pressable>
-        {signatureUri || profile?.signature_url ? (
-          <Pressable onPress={() => setSignaturePadVisible(true)} hitSlop={8} style={styles.redrawRow}>
-            <ThemedText type="small" style={{ color: theme.dark ? '#60A5FA' : theme.tint }}>
-              Redraw signature
+            ) : null}
+          </View>
+
+          <Pressable
+            onPress={() => setIsEditing(!isEditing)}
+            style={({ pressed }) => [
+              styles.editToggleBtn,
+              {
+                backgroundColor: isEditing
+                  ? theme.dark
+                    ? 'rgba(239,68,68,0.2)'
+                    : '#FEF2F2'
+                  : theme.dark
+                  ? 'rgba(59,130,246,0.2)'
+                  : '#EFF6FF',
+                borderColor: isEditing ? '#EF4444' : '#3B82F6',
+              },
+              pressed && { opacity: 0.7 },
+            ]}
+          >
+            <Ionicons
+              name={isEditing ? 'close' : 'pencil-outline'}
+              size={15}
+              color={isEditing ? '#EF4444' : theme.dark ? '#60A5FA' : '#2563EB'}
+            />
+            <ThemedText
+              type="smallBold"
+              style={{ color: isEditing ? '#EF4444' : theme.dark ? '#60A5FA' : '#2563EB', fontSize: 12 }}
+            >
+              {isEditing ? 'Cancel Edit' : 'Edit Profile'}
             </ThemedText>
           </Pressable>
-        ) : null}
+        </View>
       </Card>
 
-      <SignaturePadModal
-        visible={signaturePadVisible}
-        onClose={() => setSignaturePadVisible(false)}
-        onSave={handleSignatureCaptured}
-      />
-
-      <ThemedText type="smallBold" themeColor="textSecondary" style={styles.sectionTitle}>
-        CLASSES YOU TEACH
-      </ThemedText>
-      {classesLocked ? (
-        <ThemedText type="small" themeColor="textSecondary" style={styles.intro}>
-          Your class assignment is set by the school. Contact the principal if it needs to change.
-        </ThemedText>
-      ) : null}
-      {assignments.map((a, i) =>
-        classesLocked ? (
-          <Card key={i} style={styles.card}>
-            <ThemedText type="smallBold">{classOptions.find((c) => c.value === a.classId)?.label ?? '—'}</ThemedText>
-            {a.sectionId ? (
-              <ThemedText type="small" themeColor="textSecondary">
-                Section: {sectionOptionsFor(a.classId).find((s) => s.value === a.sectionId)?.label ?? a.sectionId}
-              </ThemedText>
-            ) : null}
-            {a.stream ? (
-              <ThemedText type="small" themeColor="textSecondary">
-                Stream: {a.stream}
-              </ThemedText>
-            ) : null}
+      {!isEditing ? (
+        /* READ-ONLY VIEW MODE */
+        <View style={{ gap: Spacing.three }}>
+          <Card style={styles.card}>
+            <ThemedText type="smallBold" style={styles.sectionTitle}>
+              TEACHER INFORMATION
+            </ThemedText>
+            <View style={styles.infoRow}>
+              <ThemedText type="small" themeColor="textSecondary">Full Name</ThemedText>
+              <ThemedText type="smallBold">{profile?.name || teacherName || '—'}</ThemedText>
+            </View>
+            <View style={styles.infoRow}>
+              <ThemedText type="small" themeColor="textSecondary">Email Address</ThemedText>
+              <ThemedText type="smallBold">{profile?.email || '—'}</ThemedText>
+            </View>
+            <View style={styles.infoRow}>
+              <ThemedText type="small" themeColor="textSecondary">Phone Number</ThemedText>
+              <ThemedText type="smallBold">{(profile as any)?.phone || '—'}</ThemedText>
+            </View>
           </Card>
-        ) : (
-          <Card key={i} style={styles.card}>
-            {assignments.length > 1 ? (
-              <View style={styles.rowEnd}>
-                <Pressable onPress={() => removeAssignment(i)} hitSlop={8}>
-                  <Ionicons name="trash-outline" size={18} color={Brand.red} />
-                </Pressable>
+
+          <Card style={styles.card}>
+            <ThemedText type="smallBold" style={styles.sectionTitle}>
+              TEACHER SIGNATURE
+            </ThemedText>
+            {signatureUri || profile?.signature_url ? (
+              <View style={[styles.signatureBox, { borderColor: theme.border }, styles.signatureBoxWithImage]}>
+                <Image source={{ uri: signatureUri ?? profile!.signature_url! }} style={styles.signatureImage} contentFit="contain" />
               </View>
-            ) : null}
-            <SelectField
-              label="Class"
-              placeholder="Select class"
-              value={a.classId}
-              options={classOptions}
-              onChange={(v) => updateAssignment(i, { classId: v, sectionId: null, stream: null })}
+            ) : (
+              <ThemedText type="small" themeColor="textSecondary">
+                No digital signature recorded yet. Tap 'Edit Profile' to draw your signature.
+              </ThemedText>
+            )}
+          </Card>
+
+          <Card style={styles.card}>
+            <ThemedText type="smallBold" style={styles.sectionTitle}>
+              ASSIGNED CLASSES & MULTI-CLASS
+            </ThemedText>
+            {!profile?.classes || profile.classes.length === 0 ? (
+              <ThemedText type="small" themeColor="textSecondary">
+                No classes assigned yet. Tap 'Edit Profile' to select classes.
+              </ThemedText>
+            ) : (
+              <View style={styles.chipRow}>
+                {profile.classes.map((c, i) => (
+                  <View key={i} style={[styles.chip, { backgroundColor: theme.dark ? '#1E293B' : '#F1F5F9', borderColor: theme.border, borderWidth: 1 }]}>
+                    <ThemedText type="smallBold">
+                      {c.class_name}
+                      {c.section_name ? ` - ${c.section_name}` : ''}
+                      {c.stream ? ` (${c.stream})` : ''}
+                    </ThemedText>
+                  </View>
+                ))}
+              </View>
+            )}
+          </Card>
+        </View>
+      ) : (
+        /* EDITABLE FORM MODE */
+        <View style={{ gap: Spacing.three }}>
+          <Card style={styles.card}>
+            <ThemedText type="smallBold" style={styles.fieldLabel}>
+              Full Name
+            </ThemedText>
+            <TextInput
+              value={teacherName}
+              onChangeText={setTeacherName}
+              placeholder="Enter your full name"
+              placeholderTextColor={theme.dark ? '#64748B' : '#94A3B8'}
+              style={[
+                styles.input,
+                {
+                  backgroundColor: theme.dark ? '#0F172A' : '#F8FAFC',
+                  borderColor: theme.dark ? '#334155' : '#CBD5E1',
+                  color: theme.dark ? '#FFFFFF' : '#0F172A',
+                },
+              ]}
             />
-            {a.classId ? (
-              <SelectField
-                label="Section (optional)"
-                placeholder="All sections"
-                value={a.sectionId}
-                options={sectionOptionsFor(a.classId)}
-                onChange={(v) => updateAssignment(i, { sectionId: v })}
-              />
-            ) : null}
-            {a.classId && needsStream(a.classId) ? (
-              <SelectField
-                label="Stream"
-                placeholder="Select stream"
-                value={a.stream}
-                options={STREAM_OPTIONS}
-                onChange={(v) => updateAssignment(i, { stream: v })}
-              />
+
+            <ThemedText type="smallBold" style={[styles.fieldLabel, { marginTop: Spacing.three }]}>
+              Digital Signature
+            </ThemedText>
+            <Pressable
+              onPress={() => setSignaturePadVisible(true)}
+              style={[styles.signatureBox, { borderColor: theme.border }, (signatureUri || profile?.signature_url) && styles.signatureBoxWithImage]}
+            >
+              {signatureUri || profile?.signature_url ? (
+                <Image source={{ uri: signatureUri ?? profile!.signature_url! }} style={styles.signatureImage} contentFit="contain" />
+              ) : (
+                <View style={styles.signaturePlaceholder}>
+                  <Ionicons name="create-outline" size={28} color={theme.textSecondary} />
+                  <ThemedText type="small" themeColor="textSecondary">
+                    Tap to draw or edit your signature
+                  </ThemedText>
+                </View>
+              )}
+            </Pressable>
+            {signatureUri || profile?.signature_url ? (
+              <Pressable onPress={() => setSignaturePadVisible(true)} hitSlop={8} style={styles.redrawRow}>
+                <ThemedText type="small" style={{ color: theme.dark ? '#60A5FA' : theme.tint }}>
+                  Redraw signature
+                </ThemedText>
+              </Pressable>
             ) : null}
           </Card>
-        )
-      )}
-      {!classesLocked ? (
-        <Pressable onPress={addAssignment} style={styles.addRow}>
-          <Ionicons name="add-circle-outline" size={18} color={theme.dark ? '#60A5FA' : theme.tint} />
-          <ThemedText type="smallBold" style={{ color: theme.dark ? '#60A5FA' : theme.tint }}>
-            Add another class
+
+          <SignaturePadModal
+            visible={signaturePadVisible}
+            onClose={() => setSignaturePadVisible(false)}
+            onSave={handleSignatureCaptured}
+          />
+
+          <ThemedText type="smallBold" themeColor="textSecondary" style={styles.sectionTitle}>
+            CLASSES & MULTI-CLASS SELECTIONS
           </ThemedText>
-        </Pressable>
-      ) : null}
 
-      {error ? (
-        <ThemedText type="small" style={styles.error}>
-          {error}
-        </ThemedText>
-      ) : null}
+          {assignments.map((a, i) => (
+            <Card key={i} style={styles.card}>
+              {assignments.length > 1 ? (
+                <View style={styles.rowEnd}>
+                  <Pressable onPress={() => removeAssignment(i)} hitSlop={8}>
+                    <Ionicons name="trash-outline" size={18} color={Brand.red} />
+                  </Pressable>
+                </View>
+              ) : null}
+              <SelectField
+                label="Class"
+                placeholder="Select class"
+                value={a.classId}
+                options={classOptions}
+                onChange={(v) => updateAssignment(i, { classId: v, sectionId: null, stream: null })}
+              />
+              {a.classId ? (
+                <SelectField
+                  label="Section (optional)"
+                  placeholder="All sections"
+                  value={a.sectionId}
+                  options={sectionOptionsFor(a.classId)}
+                  onChange={(v) => updateAssignment(i, { sectionId: v })}
+                />
+              ) : null}
+              {a.classId && needsStream(a.classId) ? (
+                <SelectField
+                  label="Stream"
+                  placeholder="Select stream"
+                  value={a.stream}
+                  options={STREAM_OPTIONS}
+                  onChange={(v) => updateAssignment(i, { stream: v })}
+                />
+              ) : null}
+            </Card>
+          ))}
 
-      <Pressable
-        onPress={handleSave}
-        disabled={submitting}
-        style={[styles.button, { backgroundColor: theme.tint, opacity: submitting ? 0.6 : 1 }]}
-      >
-        <ThemedText type="smallBold" style={styles.buttonLabel}>
-          {submitting ? 'Saving…' : 'Save & Continue'}
-        </ThemedText>
-      </Pressable>
+          <Pressable onPress={addAssignment} style={styles.addRow}>
+            <Ionicons name="add-circle-outline" size={18} color={theme.dark ? '#60A5FA' : theme.tint} />
+            <ThemedText type="smallBold" style={{ color: theme.dark ? '#60A5FA' : theme.tint }}>
+              + Add multi-class selection
+            </ThemedText>
+          </Pressable>
+
+          {error ? (
+            <ThemedText type="small" style={styles.error}>
+              {error}
+            </ThemedText>
+          ) : null}
+
+          <Pressable
+            onPress={handleSave}
+            disabled={submitting}
+            style={[styles.button, { backgroundColor: theme.dark ? '#2563EB' : theme.tint, opacity: submitting ? 0.6 : 1 }]}
+          >
+            <ThemedText type="smallBold" style={styles.buttonLabel}>
+              {submitting ? 'Saving…' : 'Save Profile Changes'}
+            </ThemedText>
+          </Pressable>
+        </View>
+      )}
     </Screen>
   );
 }
@@ -359,6 +451,41 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.three,
     borderRadius: Radius.pill,
     marginBottom: Spacing.five,
+  },
+  editToggleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: Spacing.two + 2,
+    paddingVertical: 6,
+    borderRadius: Radius.pill,
+    borderWidth: 1,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: Spacing.two,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(148, 163, 184, 0.15)',
+  },
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.two,
+    marginTop: Spacing.one,
+  },
+  chip: {
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.one + 2,
+    borderRadius: Radius.pill,
+  },
+  input: {
+    borderWidth: 1,
+    borderRadius: Radius.sm,
+    paddingHorizontal: Spacing.two,
+    paddingVertical: Spacing.two + 2,
+    fontSize: 15,
   },
   buttonLabel: {
     color: Brand.white,

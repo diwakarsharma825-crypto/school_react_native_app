@@ -6,7 +6,9 @@ import React, { useEffect, useState } from 'react';
 import {
   Alert,
   Image,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -465,10 +467,10 @@ export default function SubjectSyllabusScreen() {
         {/* Progress Card */}
         <Card style={styles.progressCard}>
           <View style={styles.progressTop}>
-            <ThemedText type="smallBold" style={styles.progressTitle}>
+            <ThemedText type="smallBold" style={styles.progressTitle} numberOfLines={1} ellipsizeMode="tail">
               {selectedClass} - {selectedSubject} Syllabus
             </ThemedText>
-            <ThemedText type="smallBold" style={{ color: theme.dark ? '#60A5FA' : '#2563EB' }}>
+            <ThemedText type="smallBold" style={[styles.progressBadge, { color: theme.dark ? '#60A5FA' : '#2563EB' }]}>
               {progressPercent}% {t('Completed')}
             </ThemedText>
           </View>
@@ -775,7 +777,7 @@ export default function SubjectSyllabusScreen() {
 
       {/* Add / Edit Chapter Modal with Real File Upload Buttons & High-Contrast Submit Button */}
       <Modal visible={modalVisible} animationType="slide" transparent={true} onRequestClose={() => setModalVisible(false)}>
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
           <View style={[styles.modalCard, { backgroundColor: theme.dark ? '#1E293B' : '#FFFFFF', borderColor: theme.dark ? '#334155' : '#E2E8F0' }]}>
             <View style={styles.modalHeader}>
               <ThemedText type="subtitle" style={styles.modalTitle}>
@@ -993,7 +995,7 @@ export default function SubjectSyllabusScreen() {
               </Pressable>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </Screen>
   );
@@ -1025,7 +1027,12 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.two,
   },
   progressTitle: {
+    flex: 1,
     fontSize: 14,
+    marginRight: Spacing.two,
+  },
+  progressBadge: {
+    flexShrink: 0,
   },
   progressTrack: {
     height: 10,

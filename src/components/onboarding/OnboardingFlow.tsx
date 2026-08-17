@@ -171,27 +171,30 @@ export function OnboardingFlow({ onDone }: OnboardingFlowProps) {
 
     if (needsPassword) {
       try {
-        // One phone can be the login for several sibling children — save
-        // every one returned, the app defaults to the first.
-        const results = await studentLogin(trimmedMobile, password);
-        const children: HomeworkAccess[] = results.map((result: any) => ({
-          name: result.name,
-          srn: String(result.srn ?? ''),
-          rollNo: result.roll_no || result.rollNo || result.roll_number || undefined,
-          fatherName: result.father_name || result.fatherName || result.father || undefined,
-          motherName: result.mother_name || result.motherName || result.mother || undefined,
-          className: result.class || result.className || result.class_name || '',
-          section: result.section || result.section_name || '',
-          phone: result.phone || result.mobile || result.mobile_no || result.contact || undefined,
-          gender: result.gender || undefined,
-          dob: result.dob || result.date_of_birth || undefined,
-          photoUrl: result.photo_url || result.photoUrl || result.image_url || undefined,
-        }));
-        await saveHomeworkChildren(children);
-        await refreshStudentAuth();
-      } catch (loginError) {
-        const loginMsg = loginError instanceof Error ? loginError.message : String(loginError);
-        if (/pending|verify|verification|already|registered/i.test(loginMsg)) {
+        const cleanSrn = String(Math.floor(100000000 + Math.random() * 900000000));
+        await studentRegister({
+          name: trimmedName,
+          className: studentClass ?? '',
+          section: section.trim() || undefined,
+          phone: trimmedMobile,
+          password,
+          srn: cleanSrn,
+          gender: gender ?? undefined,
+        });
+        await savePendingRegistration({ name: trimmedName, className: studentClass ?? '' });
+        setTimeout(() => {
+          if (typeof window !== 'undefined' && window.alert) {
+            window.alert("Registered!\n\nYour class teacher needs to verify your account before you can view homework. You'll be able to log in once that's done.");
+          } else {
+            Alert.alert(
+              'Registered!',
+              "Your class teacher needs to verify your account before you can view homework. You'll be able to log in once that's done."
+            );
+          }
+        }, 400);
+      } catch (registerError) {
+        const regMsg = registerError instanceof Error ? registerError.message : 'Could not register. Please try again.';
+        if (/already|registered|srn|exist|conflict/i.test(regMsg)) {
           await savePendingRegistration({ name: trimmedName, className: studentClass ?? '' });
           setTimeout(() => {
             if (typeof window !== 'undefined' && window.alert) {
@@ -204,49 +207,10 @@ export function OnboardingFlow({ onDone }: OnboardingFlowProps) {
             }
           }, 400);
         } else {
-          try {
-            const cleanSrn = String(Math.floor(100000000 + Math.random() * 900000000));
-            await studentRegister({
-              name: trimmedName,
-              className: studentClass ?? '',
-              section: section.trim() || undefined,
-              phone: trimmedMobile,
-              password,
-              srn: cleanSrn,
-              gender: gender ?? undefined,
-            });
-            await savePendingRegistration({ name: trimmedName, className: studentClass ?? '' });
-            setTimeout(() => {
-              if (typeof window !== 'undefined' && window.alert) {
-                window.alert("Registered!\n\nYour class teacher needs to verify your account before you can view homework. You'll be able to log in once that's done.");
-              } else {
-                Alert.alert(
-                  'Registered!',
-                  "Your class teacher needs to verify your account before you can view homework. You'll be able to log in once that's done."
-                );
-              }
-            }, 400);
-          } catch (registerError) {
-            const regMsg = registerError instanceof Error ? registerError.message : 'Could not register. Please try again.';
-            if (/already|registered|srn|exist|conflict/i.test(regMsg)) {
-              await savePendingRegistration({ name: trimmedName, className: studentClass ?? '' });
-              setTimeout(() => {
-                if (typeof window !== 'undefined' && window.alert) {
-                  window.alert("Registered!\n\nYour class teacher needs to verify your account before you can view homework. You'll be able to log in once that's done.");
-                } else {
-                  Alert.alert(
-                    'Registered!',
-                    "Your class teacher needs to verify your account before you can view homework. You'll be able to log in once that's done."
-                  );
-                }
-              }, 400);
-            } else {
-              setFinishing(false);
-              setPasswordError(regMsg);
-              setStep(3);
-              return;
-            }
-          }
+          setFinishing(false);
+          setPasswordError(regMsg);
+          setStep(3);
+          return;
         }
       }
     }

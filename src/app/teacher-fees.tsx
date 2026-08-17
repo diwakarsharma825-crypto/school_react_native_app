@@ -343,6 +343,18 @@ export default function TeacherFeesScreen() {
     }
   }
 
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredInvoices = (invoices ?? []).filter((inv) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase().trim();
+    const nameMatch = inv.student_name?.toLowerCase().includes(q);
+    const rollMatch = inv.student_roll_no?.toString().includes(q);
+    const srnMatch = (inv as any).student_srn?.toString().includes(q);
+    const titleMatch = inv.title?.toLowerCase().includes(q);
+    return nameMatch || rollMatch || srnMatch || titleMatch;
+  });
+
   if (!enabled) return <SectionUnavailable />;
 
   return (
@@ -353,7 +365,7 @@ export default function TeacherFeesScreen() {
         ) : null}
 
         <View style={{ flexDirection: 'row', gap: Spacing.two, marginBottom: Spacing.three }}>
-          <Pressable onPress={() => setAddOpen(true)} style={[styles.addButton, { backgroundColor: theme.tint, flex: 1, marginBottom: 0 }]}>
+          <Pressable onPress={() => setAddOpen(true)} style={[styles.addButton, { backgroundColor: theme.dark ? '#2563EB' : theme.tint, flex: 1, marginBottom: 0 }]}>
             <Ionicons name="add" size={16} color={Brand.white} />
             <ThemedText type="smallBold" style={styles.addButtonLabel}>
               Add Fee Due
@@ -364,10 +376,10 @@ export default function TeacherFeesScreen() {
             variant="outline"
             style={{ flex: 1, marginBottom: 0 }}
             onPress={() => {
-              if (!invoices || invoices.length === 0) return;
+              if (!filteredInvoices || filteredInvoices.length === 0) return;
               exportToPdf({
                 title: `Class Fee Records - ${selected?.class_name ?? ''}${selected?.section_name ? ` (${selected.section_name})` : ''}`,
-                subtitle: `Filter: ${statusFilter.toUpperCase()} | Total Records: ${invoices.length}`,
+                subtitle: `Filter: ${statusFilter.toUpperCase()}${searchQuery ? ` | Search: "${searchQuery}"` : ''} | Total Records: ${filteredInvoices.length}`,
                 columns: [
                   { header: 'Student Name', key: 'student_name', width: '25%' },
                   { header: 'Invoice Title', key: 'title', width: '25%' },
@@ -375,7 +387,7 @@ export default function TeacherFeesScreen() {
                   { header: 'Due Date', key: 'due_date', width: '20%' },
                   { header: 'Status', key: 'statusLabel', width: '15%' },
                 ],
-                rows: invoices.map((inv) => ({
+                rows: filteredInvoices.map((inv) => ({
                   ...inv,
                   amountLabel: `₹${inv.amount}`,
                   statusLabel: STATUS_META[inv.status]?.label ?? inv.status,
@@ -385,18 +397,35 @@ export default function TeacherFeesScreen() {
           />
         </View>
 
-        <View style={[styles.filterRow, { borderColor: theme.border }]}>
+        <View style={[styles.filterRow, { borderColor: theme.border, backgroundColor: theme.dark ? '#1E293B' : '#F1F5F9' }]}>
           {(['due', 'paid', 'all'] as const).map((s) => (
             <Pressable
               key={s}
               onPress={() => setStatusFilter(s)}
-              style={[styles.filterButton, statusFilter === s && { backgroundColor: theme.tint }]}
+              style={[styles.filterButton, statusFilter === s && { backgroundColor: theme.dark ? '#2563EB' : theme.tint }]}
             >
-              <ThemedText type="small" themeColor={statusFilter === s ? 'textOnBrand' : 'textSecondary'}>
+              <ThemedText type="small" style={{ color: statusFilter === s ? '#FFFFFF' : theme.dark ? '#94A3B8' : '#64748B', fontWeight: statusFilter === s ? '700' : '500' }}>
                 {s === 'all' ? 'All' : STATUS_META[s].label}
               </ThemedText>
             </Pressable>
           ))}
+        </View>
+
+        {/* Optional Search Input for Student Name, SRN or Roll Number */}
+        <View style={[styles.searchWrap, { backgroundColor: theme.dark ? '#1E293B' : '#F8FAFC', borderColor: theme.border }]}>
+          <Ionicons name="search" size={16} color={theme.dark ? '#60A5FA' : theme.textSecondary} />
+          <TextInput
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="Search student by name, roll no or SRN..."
+            placeholderTextColor={theme.dark ? '#64748B' : '#94A3B8'}
+            style={[styles.searchInput, { color: theme.text }]}
+          />
+          {searchQuery ? (
+            <Pressable onPress={() => setSearchQuery('')} hitSlop={8}>
+              <Ionicons name="close-circle" size={16} color={theme.textSecondary} />
+            </Pressable>
+          ) : null}
         </View>
 
         <SelectField
@@ -434,23 +463,23 @@ export default function TeacherFeesScreen() {
           <Loading label="Loading fees…" />
         ) : error ? (
           <ErrorState message="Could not load fees." onRetry={load} />
-        ) : !invoices || invoices.length === 0 ? (
+        ) : !filteredInvoices || filteredInvoices.length === 0 ? (
           <EmptyState message="No fee dues here." icon="cash-outline" />
         ) : (
-          invoices.map((inv) => {
+          filteredInvoices.map((inv) => {
             const meta = STATUS_META[inv.status];
             return (
               <Card key={inv.id} style={styles.invoiceCard}>
                 <View style={styles.invoiceTop}>
                   <ThemedText type="smallBold">{inv.title}</ThemedText>
                   <View style={[styles.pill, { backgroundColor: meta.bg }]}>
-                    <ThemedText type="small" style={{ color: meta.color }}>
+                    <ThemedText type="small" style={{ color: meta.color, fontWeight: '700' }}>
                       {meta.label}
                     </ThemedText>
                   </View>
                 </View>
                 {inv.student_name ? (
-                  <ThemedText type="small" themeColor="tint" style={styles.studentLine}>
+                  <ThemedText type="small" style={[styles.studentLine, { color: theme.dark ? '#60A5FA' : theme.tint, fontWeight: '600' }]}>
                     {inv.student_name}
                     {inv.student_roll_no ? ` · Roll No. ${inv.student_roll_no}` : ''}
                   </ThemedText>
@@ -547,6 +576,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.two,
     paddingVertical: 4,
     borderRadius: Radius.pill,
+  },
+  searchWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    borderWidth: 1,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+    marginBottom: Spacing.three,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    padding: 0,
   },
   viewLink: {
     marginTop: Spacing.two,

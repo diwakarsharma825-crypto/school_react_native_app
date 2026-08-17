@@ -14,6 +14,7 @@ import { useStudentAuth } from '@/hooks/use-student-auth';
 import { useTeacherAuth } from '@/hooks/use-teacher-auth';
 import { useTheme } from '@/hooks/use-theme';
 import { saveHomeworkChildren } from '@/lib/homework-access';
+import TeacherProfileSetupScreen from '@/app/teacher-profile-setup';
 
 /** YYYY-MM-DD → "12 Aug 2015" for display; falls back to the raw value if
  * it isn't in the expected shape. */
@@ -104,64 +105,8 @@ export default function ProfileScreen() {
     );
   }
 
-  if (teacherLoggedIn && teacherProfile) {
-    return (
-      <Screen>
-        <Card style={styles.headerCard}>
-          <View style={[styles.avatar, { backgroundColor: theme.dark ? theme.tint : theme.backgroundSelected }]}>
-            <Ionicons name="briefcase" size={28} color={theme.dark ? '#FFFFFF' : theme.tint} />
-          </View>
-          <ThemedText type="subtitle" style={styles.name}>
-            {teacherProfile.name ?? 'Teacher'}
-          </ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">
-            {teacherProfile.email ?? '—'}
-          </ThemedText>
-          <Pressable
-            onPress={() => router.push('/teacher-profile-setup' as any)}
-            style={[
-              styles.editButton,
-              {
-                borderColor: theme.dark ? '#60A5FA' : theme.tint,
-                backgroundColor: theme.dark ? 'rgba(96, 165, 250, 0.15)' : theme.surface,
-              },
-            ]}
-          >
-            <Ionicons name="pencil-outline" size={16} color={theme.dark ? '#FFFFFF' : theme.tint} />
-            <ThemedText type="smallBold" style={{ color: theme.dark ? '#FFFFFF' : theme.tint }}>
-              Edit Profile
-            </ThemedText>
-          </Pressable>
-        </Card>
-
-        <Card style={styles.section}>
-          <ThemedText type="smallBold" style={styles.sectionTitle}>
-            Classes
-          </ThemedText>
-          {teacherProfile.classes.length === 0 ? (
-            <ThemedText type="small" themeColor="textSecondary">
-              No classes assigned yet.
-            </ThemedText>
-          ) : (
-            <View style={styles.chipRow}>
-              {teacherProfile.classes.map((c, i) => (
-                <View key={i} style={[styles.chip, { backgroundColor: theme.backgroundSelected }]}>
-                  <ThemedText type="small">
-                    {c.class_name}
-                    {c.section_name ? ` - ${c.section_name}` : ''}
-                    {c.stream ? ` (${c.stream})` : ''}
-                  </ThemedText>
-                </View>
-              ))}
-            </View>
-          )}
-        </Card>
-
-        <Card style={styles.section}>
-          <InfoRow icon="mail-outline" label="Email" value={teacherProfile.email ?? '—'} />
-        </Card>
-      </Screen>
-    );
+  if (teacherLoggedIn) {
+    return <TeacherProfileSetupScreen />;
   }
 
   const activeStudent = liveAccess || access;

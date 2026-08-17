@@ -371,6 +371,30 @@ export async function fetchTeacherStudents(classId: number, sectionId?: number):
   return authedRequest<RosterStudent[]>(`/teacher_students?${qs}`);
 }
 
+export interface StudentSibling {
+  id: string | number;
+  name: string;
+  class_name?: string;
+  section_name?: string;
+  srn?: string | null;
+  roll_no?: string | null;
+  phone?: string | null;
+  account_status?: number;
+}
+
+export async function fetchStudentSiblings(phone: string, currentId?: string | number): Promise<StudentSibling[]> {
+  if (!phone || !phone.trim()) return [];
+  try {
+    const res = await authedRequest<StudentSibling[]>(`/teacher_search_siblings?phone=${encodeURIComponent(phone.trim())}`).catch(() => []);
+    if (Array.isArray(res)) {
+      return res.filter((s) => String(s.id) !== String(currentId));
+    }
+    return [];
+  } catch {
+    return [];
+  }
+}
+
 export interface PendingRegistration {
   id: number;
   name: string;
@@ -1266,20 +1290,14 @@ export async function addFeeInvoice(params: {
       body.append('invoice', { uri: params.fileUri, name: filename, type } as any);
     }
   }
-  const response = await fetch(`${BASE_URL}/teacher_add_fee_invoice`, {
-    method: 'POST',
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-    body,
-  });
-  const json = (await response.json()) as ApiEnvelope<{ id: number }>;
-  if (!json.status) throw new Error(json.message);
+  const res = await postFormData<{ id: number }>('/teacher_add_fee_invoice', body);
   sendTeacherNotification({
     classId: 0,
     studentRef: params.srn,
     title: `New Fee Invoice: ${params.title}`,
     body: `Fee amount ₹${params.amount} is due ${params.dueDate ? `by ${params.dueDate}` : ''}.`,
   }).catch(() => {});
-  return json.data;
+  return res;
 }
 
 export async function fetchTeacherFeeInvoices(
