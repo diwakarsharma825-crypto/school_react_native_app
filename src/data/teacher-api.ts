@@ -1336,7 +1336,7 @@ export async function updateFeeInvoiceStatus(id: number, status: FeeStatus): Pro
   await authedRequest<{ updated: boolean }>('/teacher_update_fee_invoice_status', { method: 'POST', body });
 }
 
-export type StorageCategory = 'homework' | 'events' | 'student_photos';
+export type StorageCategory = 'homework' | 'events' | 'student_photos' | 'syllabus';
 
 export interface StorageCategorySummary {
   count: number;
@@ -1347,15 +1347,19 @@ export interface TeacherStorageSummary {
   homework: StorageCategorySummary;
   events: StorageCategorySummary;
   student_photos: StorageCategorySummary;
+  syllabus?: StorageCategorySummary;
   total_bytes: number;
+  limit_bytes?: number;
+  used_percent?: number;
+  remaining_bytes?: number;
 }
 
 export interface StorageItem {
-  id: number;
+  id: number | string;
   url: string;
   label: string;
   created_at: string;
-  media_type: 'image' | 'video';
+  media_type: 'image' | 'video' | 'pdf' | 'document';
 }
 
 /** What THIS teacher personally uploaded — across every class they teach,
@@ -1370,7 +1374,7 @@ export async function fetchTeacherStorageItems(type: StorageCategory): Promise<S
 
 /** Deletes from disk AND removes the DB reference — irreversible.
  * Server re-verifies every id belongs to this teacher. */
-export async function deleteTeacherStorageItems(type: StorageCategory, ids: number[]): Promise<{ deleted: number }> {
+export async function deleteTeacherStorageItems(type: StorageCategory, ids: (number | string)[]): Promise<{ deleted: number }> {
   const body = new FormData();
   body.append('type', type);
   body.append('ids', JSON.stringify(ids));
@@ -1490,6 +1494,7 @@ export async function addSyllabusChapterApi(params: {
   pdf_file?: any;
   image_file?: any;
 }): Promise<{ id: string; pdf_url?: string; image_url?: string }> {
+  const token = await getTeacherToken();
   const body = new FormData();
   body.append('class', params.class);
   body.append('subject', params.subject);
@@ -1499,11 +1504,30 @@ export async function addSyllabusChapterApi(params: {
   body.append('status', String(params.status));
   if (params.pdf_url) body.append('pdf_url', params.pdf_url);
   if (params.image_url) body.append('image_url', params.image_url);
-  if (params.pdf_file) body.append('pdf_file', params.pdf_file);
-  if (params.image_file) body.append('image_file', params.image_file);
 
-  const response = await fetch(`${BASE_URL}/teacher_add_syllabus`, { method: 'POST', body });
-  const json = await response.json();
+  if (params.pdf_file) {
+    const pdfBlob = await createFileBlob(
+      params.pdf_file.uri || params.pdf_file,
+      params.pdf_file.type || 'application/pdf',
+      params.pdf_file.name || 'syllabus_doc.pdf'
+    );
+    body.append('pdf_file', pdfBlob);
+  }
+
+  if (params.image_file) {
+    const imgBlob = await createFileBlob(
+      params.image_file.uri || params.image_file,
+      params.image_file.type || 'image/jpeg',
+      params.image_file.name || 'syllabus_img.jpg'
+    );
+    body.append('image_file', imgBlob);
+  }
+
+  const json = await postFormData<ApiEnvelope<{ id: string; pdf_url?: string; image_url?: string }>>(
+    '/teacher_add_syllabus',
+    body,
+    token
+  );
   if (!json.status) throw new Error(json.message || 'Failed to add syllabus chapter');
   return json.data;
 }
@@ -1519,6 +1543,7 @@ export async function editSyllabusChapterApi(params: {
   pdf_file?: any;
   image_file?: any;
 }): Promise<{ pdf_url?: string; image_url?: string }> {
+  const token = await getTeacherToken();
   const body = new FormData();
   body.append('id', params.id);
   body.append('chapter_number', String(params.chapter_number));
@@ -1527,11 +1552,30 @@ export async function editSyllabusChapterApi(params: {
   body.append('status', String(params.status));
   if (params.pdf_url) body.append('pdf_url', params.pdf_url);
   if (params.image_url) body.append('image_url', params.image_url);
-  if (params.pdf_file) body.append('pdf_file', params.pdf_file);
-  if (params.image_file) body.append('image_file', params.image_file);
 
-  const response = await fetch(`${BASE_URL}/teacher_edit_syllabus`, { method: 'POST', body });
-  const json = await response.json();
+  if (params.pdf_file) {
+    const pdfBlob = await createFileBlob(
+      params.pdf_file.uri || params.pdf_file,
+      params.pdf_file.type || 'application/pdf',
+      params.pdf_file.name || 'syllabus_doc.pdf'
+    );
+    body.append('pdf_file', pdfBlob);
+  }
+
+  if (params.image_file) {
+    const imgBlob = await createFileBlob(
+      params.image_file.uri || params.image_file,
+      params.image_file.type || 'image/jpeg',
+      params.image_file.name || 'syllabus_img.jpg'
+    );
+    body.append('image_file', imgBlob);
+  }
+
+  const json = await postFormData<ApiEnvelope<{ pdf_url?: string; image_url?: string }>>(
+    '/teacher_edit_syllabus',
+    body,
+    token
+  );
   if (!json.status) throw new Error(json.message || 'Failed to update syllabus chapter');
   return json.data || {};
 }

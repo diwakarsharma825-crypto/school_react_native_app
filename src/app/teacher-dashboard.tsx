@@ -1136,6 +1136,7 @@ const TEACHER_QUICK_LINKS: TeacherQuickLink[] = [
   { label: 'Fees', icon: 'cash-outline', bg: '#FBE2E2', fg: '#C62828', route: '/teacher-fees', permKey: 'fees' },
   { label: 'Notices', icon: 'megaphone-outline', bg: '#E3EEFD', fg: '#2E6FBE', route: '/teacher-notices', permKey: 'notices' },
   { label: 'Events', icon: 'calendar-outline', bg: '#EDE3FD', fg: '#6A3EBE', route: '/teacher-events', permKey: 'events' },
+  { label: 'Storage', icon: 'cloud-done-outline', bg: '#E0F2FE', fg: '#0284C7', route: '/teacher-storage', permKey: 'teacher_storage' },
   { label: 'Export', icon: 'download-outline', bg: '#E7E7E7', fg: '#444B54', route: '/teacher-export', permKey: 'teacher_export' },
 ];
 

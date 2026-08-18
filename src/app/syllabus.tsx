@@ -448,6 +448,7 @@ export default function SubjectSyllabusScreen() {
             <View style={{ flex: 1 }}>
               <SelectField
                 label={t('class') || 'Class'}
+                placeholder="Select class"
                 options={classOptions}
                 value={selectedClass}
                 onChange={(val) => setSelectedClass(val)}
@@ -457,6 +458,7 @@ export default function SubjectSyllabusScreen() {
           <View style={{ flex: 1 }}>
             <SelectField
               label={t('select_subject') || 'Subject'}
+              placeholder="Select subject"
               options={subjectOptions}
               value={selectedSubject}
               onChange={(val) => setSelectedSubject(val)}
@@ -648,7 +650,7 @@ export default function SubjectSyllabusScreen() {
                 {ch.topics.map((topic, i) => (
                   <View key={i} style={styles.topicRow}>
                     <Ionicons name="ellipse" size={6} color={theme.dark ? '#94A3B8' : '#64748B'} style={{ marginTop: 6 }} />
-                    <ThemedText type="body" style={styles.topicText}>
+                    <ThemedText type="small" style={styles.topicText}>
                       {topic}
                     </ThemedText>
                   </View>
@@ -1055,7 +1057,7 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: Radius.medium,
+    borderRadius: Radius.sm,
   },
   chapterCard: {
     marginBottom: Spacing.three,
@@ -1076,7 +1078,7 @@ const styles = StyleSheet.create({
   badge: {
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: Radius.full,
+    borderRadius: Radius.pill,
     borderWidth: 1,
   },
   chTitle: {
@@ -1094,7 +1096,7 @@ const styles = StyleSheet.create({
     gap: 4,
     paddingHorizontal: 9,
     paddingVertical: 4,
-    borderRadius: Radius.full,
+    borderRadius: Radius.pill,
     borderWidth: 1,
   },
   actionBtnRow: {
@@ -1105,7 +1107,7 @@ const styles = StyleSheet.create({
   },
   iconBtn: {
     padding: 6,
-    borderRadius: Radius.medium,
+    borderRadius: Radius.sm,
     borderWidth: 1,
   },
   topicsList: {
@@ -1128,7 +1130,7 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   imagePreviewWrap: {
-    borderRadius: Radius.medium,
+    borderRadius: Radius.sm,
     overflow: 'hidden',
     height: 140,
     backgroundColor: '#000000',
@@ -1143,7 +1145,7 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: Radius.medium,
+    borderRadius: Radius.sm,
     borderWidth: 1,
   },
   /* In-App Media Viewer Modal */
@@ -1158,7 +1160,7 @@ const styles = StyleSheet.create({
     width: '95%',
     maxWidth: 600,
     height: '80%',
-    borderRadius: Radius.large,
+    borderRadius: Radius.lg,
     borderWidth: 1,
     padding: Spacing.three,
     display: 'flex',
@@ -1201,7 +1203,7 @@ const styles = StyleSheet.create({
     height: '82%',
     maxHeight: 650,
     minHeight: 420,
-    borderRadius: Radius.large,
+    borderRadius: Radius.lg,
     borderWidth: 1,
     padding: Spacing.three,
     ...Shadow.card,
@@ -1224,7 +1226,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   inputField: {
-    borderRadius: Radius.medium,
+    borderRadius: Radius.sm,
     borderWidth: 1,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -1246,7 +1248,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
     paddingVertical: 12,
-    borderRadius: Radius.medium,
+    borderRadius: Radius.sm,
     borderWidth: 1.5,
   },
   selectedFileCard: {
@@ -1254,7 +1256,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
     padding: 10,
-    borderRadius: Radius.medium,
+    borderRadius: Radius.sm,
     borderWidth: 1,
     marginTop: 6,
   },
@@ -1263,7 +1265,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
     padding: 12,
-    borderRadius: Radius.medium,
+    borderRadius: Radius.sm,
     borderWidth: 1,
     marginBottom: Spacing.two,
   },
@@ -1278,7 +1280,7 @@ const styles = StyleSheet.create({
   modalCancelBtn: {
     paddingHorizontal: 16,
     paddingVertical: 10,
-    borderRadius: Radius.medium,
+    borderRadius: Radius.sm,
     borderWidth: 1,
   },
   modalSubmitBtn: {
@@ -1288,6 +1290,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     paddingVertical: 12,
-    borderRadius: Radius.medium,
+    borderRadius: Radius.sm,
   },
 });
