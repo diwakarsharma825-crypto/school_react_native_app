@@ -16,8 +16,10 @@ import { Brand, Radius, Spacing } from '@/constants/theme';
 import {
   fetchPendingRegistrations,
   fetchTeacherStudents,
+  getSavedSelectedClassId,
   PendingRegistration,
   RosterStudent,
+  saveSelectedClassId,
 } from '@/data/teacher-api';
 import { useTeacherAuth } from '@/hooks/use-teacher-auth';
 import { useTheme } from '@/hooks/use-theme';
@@ -104,7 +106,24 @@ export default function TeacherStudentsScreen() {
     value: String(c.class_id),
   }));
 
-  const [classId, setClassId] = useState<string | null>(params.classId ?? classOptions[0]?.value ?? null);
+  const [classId, setClassId] = useState<string | null>(params.classId ?? null);
+
+  useEffect(() => {
+    if (!classId) {
+      getSavedSelectedClassId().then((saved) => {
+        if (saved && classes.some((c) => String(c.class_id) === saved)) {
+          setClassId(saved);
+        } else if (classOptions[0]?.value) {
+          setClassId(classOptions[0].value);
+        }
+      });
+    }
+  }, [classes, classId]);
+
+  function handleClassChange(val: string | null) {
+    setClassId(val);
+    if (val) saveSelectedClassId(val);
+  }
   const selectedClassObj = classes.find((c) => String(c.class_id) === classId);
   const classIdNum = Number(classId ?? classes[0]?.class_id ?? 0);
   const sectionIdNum = selectedClassObj?.section_id;
@@ -179,8 +198,8 @@ export default function TeacherStudentsScreen() {
           </View>
         </View>
 
-        {classes.length > 1 ? (
-          <SelectField label="Class" placeholder="Select class" value={classId} options={classOptions} onChange={setClassId} />
+        {classes.length > 0 ? (
+          <SelectField label="Class" placeholder="Select class" value={classId} options={classOptions} onChange={handleClassChange} />
         ) : null}
 
         <PendingRegistrationsSection classId={classIdNum} sectionId={sectionIdNum} />

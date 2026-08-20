@@ -3,8 +3,14 @@
 # dependencies
 node_modules/
 
-# Expo
+# Expo & Caches
+.cache/
 .expo/
+.config/
+.mozilla/
+.npm/
+.nvm/
+.local/
 dist/
 web-build/
 expo-env.d.ts

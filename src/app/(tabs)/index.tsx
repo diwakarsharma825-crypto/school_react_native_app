@@ -84,7 +84,7 @@ export default function HomeScreen() {
   }
 
   if (home.loading || settings.loading) return <Loading />;
-  if (home.error || !home.data) return <ErrorState message={home.error ?? 'Failed to load'} onRetry={home.refetch} />;
+  if (home.error || !home.data) return <ErrorState message={home.error ? (home.error.message || String(home.error)) : 'Failed to load'} onRetry={home.refetch} />;
 
   return (
     <Screen>

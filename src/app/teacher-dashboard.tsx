@@ -22,10 +22,12 @@ import {
   fetchHomeworkForDate,
   fetchPendingRegistrations,
   fetchTeacherStudents,
+  getSavedSelectedClassId,
   HomeworkEntry,
   PendingRegistration,
   registerTeacherPushToken,
   RosterStudent,
+  saveSelectedClassId,
   TeacherProfile,
 } from '@/data/teacher-api';
 import { useTeacherAuth } from '@/hooks/use-teacher-auth';
@@ -1144,7 +1146,7 @@ const TEACHER_QUICK_LINKS: TeacherQuickLink[] = [
  * same visual pattern, filtered by the teacher's per-section permissions
  * (see 10-teacher-app.md's "Per-teacher section permissions"), so a link
  * that's hidden from the role menu is hidden here too. */
-function TeacherQuickLinks({ permissions }: { permissions?: TeacherProfile['permissions'] }) {
+function TeacherQuickLinks({ permissions, selectedClassId }: { permissions?: TeacherProfile['permissions']; selectedClassId?: string | null }) {
   const router = useRouter();
   const links = TEACHER_QUICK_LINKS.filter((l) => !l.permKey || permissions?.[l.permKey] !== false);
 
@@ -1157,7 +1159,16 @@ function TeacherQuickLinks({ permissions }: { permissions?: TeacherProfile['perm
       </ThemedText>
       <View style={quickLinkStyles.grid}>
         {links.map((link) => (
-          <Pressable key={link.route} style={quickLinkStyles.tileWrap} onPress={() => router.push(link.route as any)}>
+          <Pressable
+            key={link.route}
+            style={quickLinkStyles.tileWrap}
+            onPress={() =>
+              router.push({
+                pathname: link.route as any,
+                params: { classId: selectedClassId || '', class_id: selectedClassId || '' },
+              })
+            }
+          >
             <Card style={quickLinkStyles.tile}>
               <View style={[quickLinkStyles.iconCircle, { backgroundColor: link.bg }]}>
                 <Ionicons name={link.icon} size={22} color={link.fg} />
@@ -1221,10 +1232,21 @@ export default function TeacherDashboardScreen() {
   const classes = profile?.classes ?? [];
 
   useEffect(() => {
-    if (classes.length > 0 && !classId) {
-      setClassId(String(classes[0].class_id));
-    }
-  }, [classes, classId]);
+    getSavedSelectedClassId().then((saved) => {
+      if (saved && classes.some((c) => String(c.class_id) === saved)) {
+        setClassId(saved);
+      } else if (classes.length > 0 && !classId) {
+        const defaultId = String(classes[0].class_id);
+        setClassId(defaultId);
+        saveSelectedClassId(defaultId);
+      }
+    });
+  }, [classes]);
+
+  function handleClassChange(val: string | null) {
+    setClassId(val);
+    if (val) saveSelectedClassId(val);
+  }
 
   useEffect(() => {
     if (!loggedIn) return;
@@ -1271,10 +1293,10 @@ export default function TeacherDashboardScreen() {
       />
 
       {classes.length > 0 ? (
-        <SelectField label="Class" placeholder="Select class" value={classId} options={classOptions} onChange={setClassId} />
+        <SelectField label="Class" placeholder="Select class" value={classId} options={classOptions} onChange={handleClassChange} />
       ) : null}
 
-      <TeacherQuickLinks permissions={profile?.permissions} />
+      <TeacherQuickLinks permissions={profile?.permissions} selectedClassId={classId} />
     </Screen>
   );
 }

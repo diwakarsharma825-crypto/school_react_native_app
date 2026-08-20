@@ -3,6 +3,24 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
 
 import { BASE_URL } from './api';
+
+const SELECTED_CLASS_KEY = '@school_app_teacher_selected_class_id';
+
+export async function getSavedSelectedClassId(): Promise<string | null> {
+  try {
+    return await AsyncStorage.getItem(SELECTED_CLASS_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export async function saveSelectedClassId(classId: string | number): Promise<void> {
+  try {
+    if (classId) {
+      await AsyncStorage.setItem(SELECTED_CLASS_KEY, String(classId));
+    }
+  } catch {}
+}
 import { getDeviceId } from '@/lib/device';
 import { getFcmPushToken } from '@/lib/notifications';
 import { getCurrentDeviceLocation } from '@/lib/permissions';
@@ -1399,6 +1417,15 @@ export async function addTeacherSubject(classId: number, name: string, code?: st
   body.append('name', name);
   if (code) body.append('code', code);
   await authedRequest<{ created: boolean }>('/teacher_add_subject', { method: 'POST', body });
+}
+
+export async function editTeacherSubject(id: string | number, name: string, code?: string): Promise<void> {
+  const body = new FormData();
+  body.append('id', String(id));
+  body.append('name', name);
+  if (code) body.append('code', code);
+  else body.append('code', '');
+  await authedRequest<{ updated: boolean }>('/teacher_edit_subject', { method: 'POST', body });
 }
 
 export async function deleteTeacherSubject(id: string | number): Promise<void> {

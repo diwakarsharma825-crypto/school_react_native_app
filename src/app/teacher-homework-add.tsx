@@ -10,15 +10,26 @@ import { Card } from '@/components/ui/Card';
 import { Screen } from '@/components/ui/Screen';
 import { SelectField } from '@/components/ui/SelectField';
 import { ThemedText } from '@/components/ui/ThemedText';
-import { fetchSubjectsCatalog, saveHomework, updateHomework } from '@/data/teacher-api';
+import {
+  fetchSubjectsCatalog,
+  fetchSyllabusApi,
+  getSavedSelectedClassId,
+  saveHomework,
+  saveSelectedClassId,
+  updateHomework,
+} from '@/data/teacher-api';
+import { useTeacherAuth } from '@/hooks/use-teacher-auth';
 import { useTheme } from '@/hooks/use-theme';
 
 export default function TeacherHomeworkAddScreen() {
   const theme = useTheme();
   const router = useRouter();
+  const { profile } = useTeacherAuth();
+  const classes = profile?.classes ?? [];
+
   const {
-    classId,
-    sectionId,
+    classId: paramClassId,
+    sectionId: paramSectionId,
     date,
     homeworkId,
     initialSubject,
@@ -26,7 +37,7 @@ export default function TeacherHomeworkAddScreen() {
     initialDescription,
     existingPhotos,
   } = useLocalSearchParams<{
-    classId: string;
+    classId?: string;
     sectionId?: string;
     date: string;
     homeworkId?: string;
@@ -35,11 +46,15 @@ export default function TeacherHomeworkAddScreen() {
     initialDescription?: string;
     existingPhotos?: string;
   }>();
+
   const isEditing = !!homeworkId;
   const existingPhotoUrls = existingPhotos ? existingPhotos.split('|').filter(Boolean) : [];
 
+  const [selectedClassId, setSelectedClassId] = useState<string | null>(paramClassId ?? null);
   const [subject, setSubject] = useState(initialSubject ?? '');
   const [chapter, setChapter] = useState(initialChapter ?? '');
+  const [syllabusChapter, setSyllabusChapter] = useState<string | null>(null);
+  const [syllabusOptions, setSyllabusOptions] = useState<{ label: string; value: string }[]>([]);
   const [description, setDescription] = useState(initialDescription ?? '');
   const [photos, setPhotos] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -47,10 +62,65 @@ export default function TeacherHomeworkAddScreen() {
   const [subjectOptions, setSubjectOptions] = useState<{ label: string; value: string }[]>([]);
 
   useEffect(() => {
-    fetchSubjectsCatalog(Number(classId))
+    if (!selectedClassId) {
+      getSavedSelectedClassId().then((saved) => {
+        if (saved && classes.some((c) => String(c.class_id) === saved)) {
+          setSelectedClassId(saved);
+        } else if (classes.length > 0) {
+          setSelectedClassId(String(classes[0].class_id));
+        }
+      });
+    }
+  }, [classes, selectedClassId]);
+
+  const classOptions = classes.map((c) => ({
+    label: `${c.class_name}${c.section_name ? ` - ${c.section_name}` : ''}`,
+    value: String(c.class_id),
+  }));
+
+  const selectedClassObj = classes.find((c) => String(c.class_id) === selectedClassId);
+  const currentSectionId = selectedClassObj?.section_id ? String(selectedClassObj.section_id) : (paramSectionId ?? '');
+
+  function handleClassChange(val: string | null) {
+    setSelectedClassId(val);
+    if (val) saveSelectedClassId(val);
+    setSubject('');
+    setChapter('');
+    setSyllabusChapter(null);
+    setSyllabusOptions([]);
+  }
+
+  useEffect(() => {
+    if (!selectedClassId) return;
+    fetchSubjectsCatalog(Number(selectedClassId))
       .then((subjects) => setSubjectOptions(subjects.map((s) => ({ label: s.name, value: s.name }))))
       .catch(() => setSubjectOptions([]));
-  }, [classId]);
+  }, [selectedClassId]);
+
+  // Fetch optional Syllabus Chapters when class and subject are selected
+  useEffect(() => {
+    if (!selectedClassObj || !subject) {
+      setSyllabusOptions([]);
+      return;
+    }
+    const classNameStr = selectedClassObj.class_name;
+    fetchSyllabusApi(classNameStr, subject)
+      .then((chapters) => {
+        const options = chapters.map((ch) => ({
+          label: `Ch ${ch.chapter_number}: ${ch.chapter_title}`,
+          value: `Ch ${ch.chapter_number}: ${ch.chapter_title}`,
+        }));
+        setSyllabusOptions(options);
+      })
+      .catch(() => setSyllabusOptions([]));
+  }, [selectedClassObj, subject]);
+
+  function handleSyllabusChange(val: string | null) {
+    setSyllabusChapter(val);
+    if (val) {
+      setChapter(val);
+    }
+  }
 
   async function addPhoto() {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -67,7 +137,11 @@ export default function TeacherHomeworkAddScreen() {
 
   async function handleSave() {
     if (!subject.trim()) {
-      setError('Enter a subject.');
+      setError('Please select or enter a subject.');
+      return;
+    }
+    if (!selectedClassId) {
+      setError('Please select a class.');
       return;
     }
     setSubmitting(true);
@@ -83,8 +157,8 @@ export default function TeacherHomeworkAddScreen() {
         });
       } else {
         await saveHomework({
-          classId: Number(classId),
-          sectionId: sectionId ? Number(sectionId) : undefined,
+          classId: Number(selectedClassId),
+          sectionId: currentSectionId ? Number(currentSectionId) : undefined,
           subject: subject.trim(),
           chapter: chapter.trim() || undefined,
           date,
@@ -107,6 +181,18 @@ export default function TeacherHomeworkAddScreen() {
       </ThemedText>
 
       <Card>
+        {/* Class Selection Dropdown */}
+        {classes.length > 0 ? (
+          <SelectField
+            label="Class"
+            placeholder="Select Class"
+            value={selectedClassId}
+            options={classOptions}
+            onChange={handleClassChange}
+          />
+        ) : null}
+
+        {/* Subject Selection Dropdown / Text Field */}
         {subjectOptions.length > 0 ? (
           <SelectField
             label="Subject"
@@ -130,6 +216,17 @@ export default function TeacherHomeworkAddScreen() {
             />
           </>
         )}
+
+        {/* Optional Syllabus Chapter Dropdown */}
+        {syllabusOptions.length > 0 ? (
+          <SelectField
+            label="Syllabus Chapter (Optional)"
+            placeholder="Select chapter from syllabus"
+            value={syllabusChapter}
+            options={syllabusOptions}
+            onChange={handleSyllabusChange}
+          />
+        ) : null}
 
         <ThemedText type="smallBold" style={styles.fieldLabel}>
           Chapter / Unit (Optional)

@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet, TextInput, View } from 'react-native';
 
@@ -11,7 +11,7 @@ import { Screen } from '@/components/ui/Screen';
 import { SelectField } from '@/components/ui/SelectField';
 import { EmptyState, ErrorState, Loading } from '@/components/ui/states';
 import { ThemedText } from '@/components/ui/ThemedText';
-import { AttendanceStatus, AttendanceStudent, fetchAttendance, saveAttendance } from '@/data/teacher-api';
+import { AttendanceStatus, AttendanceStudent, fetchAttendance, getSavedSelectedClassId, saveAttendance, saveSelectedClassId } from '@/data/teacher-api';
 import { TeacherGuard } from '@/components/ui/TeacherGuard';
 import { useTeacherAuth } from '@/hooks/use-teacher-auth';
 import { useTheme } from '@/hooks/use-theme';
@@ -45,6 +45,7 @@ export default function TeacherAttendanceScreen() {
   const theme = useTheme();
   const { profile } = useTeacherAuth();
   const enabled = useSectionEnabled('attendance');
+  const { classId: paramClassId } = useLocalSearchParams<{ classId?: string }>();
 
   const classes = profile?.classes ?? [];
   const classOptions = classes.map((c) => ({
@@ -52,7 +53,24 @@ export default function TeacherAttendanceScreen() {
     value: String(c.class_id),
   }));
 
-  const [classId, setClassId] = useState<string | null>(classOptions[0]?.value ?? null);
+  const [classId, setClassId] = useState<string | null>(paramClassId ?? null);
+
+  useEffect(() => {
+    if (!classId) {
+      getSavedSelectedClassId().then((saved) => {
+        if (saved && classes.some((c) => String(c.class_id) === saved)) {
+          setClassId(saved);
+        } else if (classOptions[0]?.value) {
+          setClassId(classOptions[0].value);
+        }
+      });
+    }
+  }, [classes, classId]);
+
+  function handleClassChange(val: string | null) {
+    setClassId(val);
+    if (val) saveSelectedClassId(val);
+  }
   const [date, setDate] = useState(todayStr());
   const [students, setStudents] = useState<AttendanceStudent[] | null>(null);
   const [loading, setLoading] = useState(true);
@@ -66,7 +84,10 @@ export default function TeacherAttendanceScreen() {
     setLoading(true);
     setError(false);
     fetchAttendance(Number(classId), selected?.section_id ?? undefined, date)
-      .then(setStudents)
+      .then((data) => {
+        const activeOnly = data.filter((s) => s.enrollment_status !== 0);
+        setStudents(activeOnly);
+      })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
   }
@@ -119,7 +140,7 @@ export default function TeacherAttendanceScreen() {
   return (
     <TeacherGuard>
     <Screen scroll>
-      <SelectField label="Class" placeholder="Select class" value={classId} options={classOptions} onChange={setClassId} />
+      <SelectField label="Class" placeholder="Select class" value={classId} options={classOptions} onChange={handleClassChange} />
       <DatePickerField label="Date" placeholder="Select date" value={date} onChange={setDate} minDate="2000-01-01" disableSundays={true} />
 
       {students && students.length > 0 ? (

@@ -1,15 +1,25 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
 import { Brand, Radius, Spacing } from '@/constants/theme';
 import { Card } from '@/components/ui/Card';
+import { HomeworkDetailModal } from '@/components/ui/HomeworkDetailModal';
 import { Screen } from '@/components/ui/Screen';
+import { SelectField } from '@/components/ui/SelectField';
 import { EmptyState, ErrorState, Loading } from '@/components/ui/states';
 import { ThemedText } from '@/components/ui/ThemedText';
-import { deleteHomework, fetchHomeworkDates, fetchHomeworkForDate, HomeworkEntry } from '@/data/teacher-api';
+import {
+  deleteHomework,
+  fetchHomeworkDates,
+  fetchHomeworkForDate,
+  getSavedSelectedClassId,
+  HomeworkEntry,
+  saveSelectedClassId,
+} from '@/data/teacher-api';
+import { useTeacherAuth } from '@/hooks/use-teacher-auth';
 import { useTheme } from '@/hooks/use-theme';
 import { ExportPdfButton } from '@/components/ui/ExportPdfButton';
 import { exportToPdf } from '@/lib/pdf-export';
@@ -24,34 +34,74 @@ function pad(n: number) {
   return n < 10 ? `0${n}` : String(n);
 }
 
+function todayStr() {
+  const t = new Date();
+  return `${t.getFullYear()}-${pad(t.getMonth() + 1)}-${pad(t.getDate())}`;
+}
+
 export default function TeacherHomeworkScreen() {
   const theme = useTheme();
   const router = useRouter();
-  const { classId, sectionId } = useLocalSearchParams<{ classId: string; sectionId?: string }>();
-  const classIdNum = Number(classId);
-  const sectionIdNum = sectionId ? Number(sectionId) : undefined;
+  const { profile } = useTeacherAuth();
+  const classes = profile?.classes ?? [];
+
+  const { classId: paramClassId, sectionId: paramSectionId } = useLocalSearchParams<{ classId?: string; sectionId?: string }>();
+  const [selectedClassId, setSelectedClassId] = useState<string | null>(paramClassId ?? null);
+
+  useEffect(() => {
+    if (!selectedClassId) {
+      getSavedSelectedClassId().then((saved) => {
+        if (saved && classes.some((c) => String(c.class_id) === saved)) {
+          setSelectedClassId(saved);
+        } else if (classes.length > 0) {
+          setSelectedClassId(String(classes[0].class_id));
+        }
+      });
+    }
+  }, [classes, selectedClassId]);
+
+  const classOptions = classes.map((c) => ({
+    label: `${c.class_name}${c.section_name ? ` - ${c.section_name}` : ''}`,
+    value: String(c.class_id),
+  }));
+
+  const selectedClassObj = classes.find((c) => String(c.class_id) === selectedClassId);
+  const classIdNum = selectedClassId ? Number(selectedClassId) : 0;
+  const sectionIdNum = selectedClassObj?.section_id ? Number(selectedClassObj.section_id) : (paramSectionId ? Number(paramSectionId) : undefined);
+
+  function handleClassChange(val: string | null) {
+    setSelectedClassId(val);
+    if (val) saveSelectedClassId(val);
+  }
 
   const today = new Date();
+  const currentTodayDateStr = todayStr();
   const [viewYear, setViewYear] = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth() + 1);
-  const [selectedDate, setSelectedDate] = useState(
-    `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`
-  );
+  const [selectedDate, setSelectedDate] = useState(currentTodayDateStr);
   const [homeworkDates, setHomeworkDates] = useState<string[]>([]);
   const [entries, setEntries] = useState<HomeworkEntry[]>([]);
   const [loadingDates, setLoadingDates] = useState(true);
   const [loadingEntries, setLoadingEntries] = useState(true);
   const [error, setError] = useState(false);
 
-  useEffect(() => {
+  // Selected Detail Modal State
+  const [detailEntry, setDetailEntry] = useState<HomeworkEntry | null>(null);
+
+  // Edit/Delete restricted to current day only!
+  const isCurrentDay = selectedDate === currentTodayDateStr;
+
+  function loadDates() {
+    if (!classIdNum) return;
     setLoadingDates(true);
     fetchHomeworkDates(classIdNum, sectionIdNum, viewYear, viewMonth)
       .then(setHomeworkDates)
       .catch(() => setHomeworkDates([]))
       .finally(() => setLoadingDates(false));
-  }, [classIdNum, sectionIdNum, viewYear, viewMonth]);
+  }
 
   function loadEntries(date: string) {
+    if (!classIdNum) return;
     setLoadingEntries(true);
     setError(false);
     fetchHomeworkForDate(classIdNum, sectionIdNum, date)
@@ -61,9 +111,22 @@ export default function TeacherHomeworkScreen() {
   }
 
   useEffect(() => {
+    loadDates();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [classIdNum, sectionIdNum, viewYear, viewMonth]);
+
+  useEffect(() => {
     loadEntries(selectedDate);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedDate]);
+  }, [classIdNum, sectionIdNum, selectedDate]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadDates();
+      loadEntries(selectedDate);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [classIdNum, sectionIdNum, selectedDate])
+  );
 
   const days = useMemo(() => {
     const firstOfMonth = new Date(viewYear, viewMonth - 1, 1);
@@ -83,8 +146,52 @@ export default function TeacherHomeworkScreen() {
     setViewYear(y);
   }
 
+  function handleDelete(entry: HomeworkEntry) {
+    Alert.alert('Delete Homework', `Are you sure you want to delete homework for ${entry.subject}?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => {
+          deleteHomework(entry.id).then(() => {
+            loadDates();
+            loadEntries(selectedDate);
+          });
+        },
+      },
+    ]);
+  }
+
+  function handleEdit(entry: HomeworkEntry) {
+    const photosStr = entry.attachments.map((a) => a.photo_url).join('|');
+    router.push({
+      pathname: '/teacher-homework-add',
+      params: {
+        classId: String(classIdNum),
+        sectionId: sectionIdNum ? String(sectionIdNum) : '',
+        date: selectedDate,
+        homeworkId: String(entry.id),
+        initialSubject: entry.subject,
+        initialChapter: entry.chapter ?? '',
+        initialDescription: entry.description ?? '',
+        existingPhotos: photosStr,
+      },
+    });
+  }
+
   return (
     <Screen>
+      {/* Class Dropdown Selector at Top */}
+      {classes.length > 0 ? (
+        <SelectField
+          label="Class"
+          placeholder="Select Class"
+          value={selectedClassId}
+          options={classOptions}
+          onChange={handleClassChange}
+        />
+      ) : null}
+
       <Card style={styles.calendarCard}>
         <View style={styles.calendarHeader}>
           <Pressable onPress={() => changeMonth(-1)} hitSlop={8}>
@@ -124,11 +231,17 @@ export default function TeacherHomeworkScreen() {
             );
           })}
         </View>
-        {loadingDates ? null : null}
       </Card>
 
       <View style={styles.entriesHeader}>
-        <ThemedText type="smallBold" style={{ flex: 1 }}>Homework — {selectedDate}</ThemedText>
+        <View>
+          <ThemedText type="smallBold">Homework — {selectedDate}</ThemedText>
+          {selectedClassObj ? (
+            <ThemedText type="small" themeColor="textSecondary">
+              {selectedClassObj.class_name}{selectedClassObj.section_name ? ` (${selectedClassObj.section_name})` : ''}
+            </ThemedText>
+          ) : null}
+        </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.two }}>
           {entries.length > 0 ? (
             <ExportPdfButton
@@ -137,7 +250,7 @@ export default function TeacherHomeworkScreen() {
                 const images = entries.flatMap((e) => e.attachments.map((a) => a.photo_url));
                 exportToPdf({
                   title: `Teacher Homework Report - Date: ${selectedDate}`,
-                  subtitle: `Class ID: ${classIdNum} | Entries: ${entries.length}`,
+                  subtitle: `Class: ${selectedClassObj?.class_name ?? ''} | Entries: ${entries.length}`,
                   columns: [
                     { header: 'Subject', key: 'subject', width: '20%' },
                     { header: 'Chapter / Title', key: 'chapter', width: '20%' },
@@ -175,33 +288,71 @@ export default function TeacherHomeworkScreen() {
         <EmptyState message="No homework for this date yet." icon="book-outline" />
       ) : (
         entries.map((entry) => (
-          <Card key={entry.id} style={styles.entryCard}>
-            <View style={styles.entryHeader}>
-              <ThemedText type="smallBold">{entry.subject}</ThemedText>
-              <Pressable
-                onPress={() => {
-                  deleteHomework(entry.id).then(() => loadEntries(selectedDate));
-                }}
-                hitSlop={8}
-              >
-                <Ionicons name="trash-outline" size={16} color={Brand.red} />
-              </Pressable>
-            </View>
-            {entry.description ? (
-              <ThemedText type="small" themeColor="textSecondary" style={styles.entryDescription}>
-                {entry.description}
-              </ThemedText>
-            ) : null}
-            {entry.attachments.length > 0 ? (
-              <View style={styles.attachmentRow}>
-                {entry.attachments.map((att, i) => (
-                  <Image key={i} source={{ uri: att.photo_url }} style={styles.attachmentThumb} contentFit="cover" />
-                ))}
+          <Pressable key={entry.id} onPress={() => setDetailEntry(entry)}>
+            <Card style={styles.entryCard}>
+              <View style={styles.entryHeader}>
+                <View style={{ flex: 1, paddingRight: Spacing.two }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                    <ThemedText type="smallBold">{entry.subject}</ThemedText>
+                    {selectedClassObj ? (
+                      <View style={[styles.classBadge, { backgroundColor: theme.dark ? 'rgba(37,99,235,0.2)' : '#EFF6FF' }]}>
+                        <ThemedText type="small" style={{ color: theme.tint, fontSize: 11, fontWeight: '600' }}>
+                          {selectedClassObj.class_name}{selectedClassObj.section_name ? ` - ${selectedClassObj.section_name}` : ''}
+                        </ThemedText>
+                      </View>
+                    ) : null}
+                  </View>
+                  {entry.chapter ? (
+                    <ThemedText type="small" themeColor="textSecondary" style={{ marginTop: 2 }}>
+                      {entry.chapter}
+                    </ThemedText>
+                  ) : null}
+                </View>
+
+                {/* Edit & Delete are strictly hidden if not the current day! */}
+                {isCurrentDay ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.three }}>
+                    <Pressable onPress={() => handleEdit(entry)} hitSlop={8}>
+                      <Ionicons name="create-outline" size={18} color={theme.tint} />
+                    </Pressable>
+                    <Pressable onPress={() => handleDelete(entry)} hitSlop={8}>
+                      <Ionicons name="trash-outline" size={18} color={Brand.red} />
+                    </Pressable>
+                  </View>
+                ) : null}
               </View>
-            ) : null}
-          </Card>
+
+              {entry.description ? (
+                <ThemedText type="small" themeColor="textSecondary" style={styles.entryDescription} numberOfLines={2}>
+                  {entry.description}
+                </ThemedText>
+              ) : null}
+
+              {entry.attachments.length > 0 ? (
+                <View style={styles.attachmentRow}>
+                  {entry.attachments.map((att, i) => (
+                    <Image key={i} source={{ uri: att.photo_url }} style={styles.attachmentThumb} contentFit="cover" />
+                  ))}
+                </View>
+              ) : null}
+            </Card>
+          </Pressable>
         ))
       )}
+
+      {/* Homework Detail View Modal */}
+      {detailEntry ? (
+        <HomeworkDetailModal
+          visible={!!detailEntry}
+          onClose={() => setDetailEntry(null)}
+          subject={detailEntry.subject}
+          chapter={detailEntry.chapter ?? undefined}
+          date={selectedDate}
+          description={detailEntry.description ?? ''}
+          photoUrls={detailEntry.attachments.map((a) => a.photo_url)}
+          teacherName={profile?.name}
+        />
+      ) : null}
     </Screen>
   );
 }
@@ -266,6 +417,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  classBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: Radius.sm,
   },
   entryDescription: {
     marginTop: Spacing.one,

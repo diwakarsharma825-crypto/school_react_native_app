@@ -29,15 +29,26 @@ export function ErrorState({
   message = 'Something went wrong.',
   onRetry,
 }: {
-  message?: string;
+  message?: React.ReactNode;
   onRetry?: () => void;
 }) {
   const theme = useTheme();
+  let displayMsg: React.ReactNode = 'Something went wrong.';
+  if (message) {
+    if (typeof message === 'object' && 'message' in (message as any)) {
+      displayMsg = String((message as any).message);
+    } else if (typeof message === 'string' || typeof message === 'number') {
+      displayMsg = message;
+    } else {
+      displayMsg = String(message);
+    }
+  }
+
   return (
     <View style={styles.center}>
       <Ionicons name="alert-circle-outline" size={36} color={theme.textSecondary} />
       <ThemedText type="default" themeColor="textSecondary" style={styles.spacingTop}>
-        {message}
+        {displayMsg}
       </ThemedText>
       {onRetry ? (
         <View style={styles.spacingTop}>
