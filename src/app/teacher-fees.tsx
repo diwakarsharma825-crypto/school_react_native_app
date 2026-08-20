@@ -62,7 +62,8 @@ function AddFeeModal({
   const [feeType, setFeeType] = useState<FeeType | null>(null);
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
-  const [discount, setDiscount] = useState('');
+  const [discountType, setDiscountType] = useState<'fixed' | 'percent'>('fixed');
+  const [discountValue, setDiscountValue] = useState('');
   const [discountReason, setDiscountReason] = useState('');
   const [dueDate, setDueDate] = useState<string | null>(null);
   const [file, setFile] = useState<{ uri: string; mimeType?: string | null; name?: string | null } | null>(null);
@@ -97,6 +98,13 @@ function AddFeeModal({
     }
   }
 
+  const baseNum = Number(amount) || 0;
+  const discValNum = Number(discountValue) || 0;
+  const computedDiscountAmount = discountType === 'percent'
+    ? Math.round((baseNum * discValNum) / 100)
+    : discValNum;
+  const netPayable = Math.max(0, baseNum - computedDiscountAmount);
+
   async function handleSubmit() {
     if (!studentSrn || !feeType || !title.trim() || !amount.trim() || isNaN(Number(amount))) {
       setError('Student, fee type, title and a numeric amount are required.');
@@ -109,7 +117,8 @@ function AddFeeModal({
         srn: studentSrn,
         feeType,
         title: title.trim(),
-        amount: Number(amount),
+        amount: netPayable,
+        classId: classId || undefined,
         dueDate: dueDate || undefined,
         fileUri: file?.uri,
         fileMimeType: file?.mimeType,
@@ -119,6 +128,9 @@ function AddFeeModal({
       setFeeType(null);
       setTitle('');
       setAmount('');
+      setDiscountValue('');
+      setDiscountType('fixed');
+      setDiscountReason('');
       setDueDate(null);
       setFile(null);
       onAdded();
@@ -132,7 +144,7 @@ function AddFeeModal({
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.modalBackdrop}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalBackdrop}>
         <View style={[styles.modalSheet, { backgroundColor: theme.background }]}>
           <View style={styles.modalHeader}>
             <ThemedText type="subtitle">Add Fee Due</ThemedText>
@@ -145,8 +157,9 @@ function AddFeeModal({
             ref={scrollRef}
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="on-drag"
-            bottomOffset={24}
+            bottomOffset={40}
             showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: 30 }}
           >
           <SelectField
             label="Student"
@@ -198,34 +211,60 @@ function AddFeeModal({
 
           <View style={styles.row}>
             <View style={styles.rowItem}>
-              <ThemedText type="smallBold" style={styles.fieldLabel}>
-                Discount (₹)
-              </ThemedText>
+              <View style={styles.discountHeaderRow}>
+                <ThemedText type="smallBold" style={styles.fieldLabelNoMargin}>
+                  {discountType === 'percent' ? 'Discount (%)' : 'Discount (₹)'}
+                </ThemedText>
+                <View style={[styles.typeToggleRow, { borderColor: theme.border }]}>
+                  <Pressable
+                    onPress={() => setDiscountType('fixed')}
+                    style={[styles.typeToggleBtn, discountType === 'fixed' && { backgroundColor: theme.tint }]}
+                  >
+                    <ThemedText style={[styles.typeToggleText, { color: discountType === 'fixed' ? Brand.white : theme.text }]}>
+                      ₹
+                    </ThemedText>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => setDiscountType('percent')}
+                    style={[styles.typeToggleBtn, discountType === 'percent' && { backgroundColor: theme.tint }]}
+                  >
+                    <ThemedText style={[styles.typeToggleText, { color: discountType === 'percent' ? Brand.white : theme.text }]}>
+                      %
+                    </ThemedText>
+                  </Pressable>
+                </View>
+              </View>
               <TextInput
-                value={discount}
-                onChangeText={setDiscount}
+                value={discountValue}
+                onChangeText={setDiscountValue}
                 onFocus={() => scrollRef.current?.assureFocusedInputVisible()}
-                placeholder="0"
+                placeholder={discountType === 'percent' ? 'e.g. 10' : '0'}
                 keyboardType="decimal-pad"
                 autoComplete="off"
                 textContentType="none"
                 placeholderTextColor={theme.textSecondary}
                 style={[styles.input, { borderColor: theme.border, color: theme.text }]}
               />
+              {discountType === 'percent' && discValNum > 0 ? (
+                <ThemedText type="small" themeColor="textSecondary" style={styles.discountHelpText}>
+                  Concession: ₹{computedDiscountAmount} ({discValNum}%)
+                </ThemedText>
+              ) : null}
             </View>
+
             <View style={styles.rowItem}>
               <ThemedText type="smallBold" style={styles.fieldLabel}>
                 Net Payable
               </ThemedText>
-              <View style={[styles.input, { borderColor: theme.border, justifyContent: 'center', backgroundColor: theme.dark ? 'rgba(255,255,255,0.05)' : '#F1F5F9' }]}>
-                <ThemedText type="smallBold" style={{ color: theme.tint }}>
-                  ₹{Math.max(0, (Number(amount) || 0) - (Number(discount) || 0))}
+              <View style={[styles.netPayableBox, { borderColor: theme.dark ? '#38BDF8' : '#0284C7', backgroundColor: theme.dark ? '#0F172A' : '#F0F9FF' }]}>
+                <ThemedText style={[styles.netPayableText, { color: theme.dark ? '#38BDF8' : '#0284C7' }]}>
+                  ₹{netPayable.toLocaleString()}
                 </ThemedText>
               </View>
             </View>
           </View>
 
-          {(Number(discount) || 0) > 0 ? (
+          {computedDiscountAmount > 0 ? (
             <>
               <ThemedText type="smallBold" style={styles.fieldLabel}>
                 Discount Reason
@@ -259,12 +298,12 @@ function AddFeeModal({
             style={[styles.button, { backgroundColor: theme.tint, opacity: submitting ? 0.6 : 1 }]}
           >
             <ThemedText type="smallBold" style={styles.buttonLabel}>
-              {submitting ? 'Adding…' : 'Add Fee'}
+              {submitting ? 'Saving…' : 'Add Fee'}
             </ThemedText>
           </Pressable>
           </KeyboardAwareScrollView>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -472,7 +511,7 @@ export default function TeacherFeesScreen() {
                 </ThemedText>
                 {inv.file_url ? (
                   <Pressable onPress={() => setViewerInvoice(inv)}>
-                    <ThemedText type="small" themeColor="tint" style={styles.viewLink}>
+                    <ThemedText type="smallBold" style={{ color: theme.dark ? '#38BDF8' : '#0284C7', marginTop: Spacing.two }}>
                       View invoice
                     </ThemedText>
                   </Pressable>
@@ -481,10 +520,17 @@ export default function TeacherFeesScreen() {
                   <Pressable
                     onPress={() => handleMarkPaid(inv.id)}
                     disabled={actingId === inv.id}
-                    style={[styles.markPaidButton, { borderColor: theme.tint, opacity: actingId === inv.id ? 0.6 : 1 }]}
+                    style={[
+                      styles.markPaidButton,
+                      {
+                        backgroundColor: theme.dark ? 'rgba(34, 197, 94, 0.15)' : 'rgba(46, 125, 50, 0.1)',
+                        borderColor: theme.dark ? '#4ADE80' : '#15803D',
+                        opacity: actingId === inv.id ? 0.6 : 1,
+                      },
+                    ]}
                   >
-                    <ThemedText type="small" themeColor="tint">
-                      Mark as Paid
+                    <ThemedText type="smallBold" style={{ color: theme.dark ? '#4ADE80' : '#15803D' }}>
+                      {actingId === inv.id ? 'Updating…' : 'Mark as Paid'}
                     </ThemedText>
                   </Pressable>
                 ) : null}
@@ -606,6 +652,48 @@ const styles = StyleSheet.create({
   fieldLabel: {
     marginBottom: Spacing.one,
     marginTop: Spacing.three,
+  },
+  fieldLabelNoMargin: {
+    marginBottom: 0,
+  },
+  discountHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: Spacing.three,
+    marginBottom: Spacing.one,
+  },
+  typeToggleRow: {
+    flexDirection: 'row',
+    borderWidth: 1,
+    borderRadius: Radius.pill,
+    padding: 2,
+  },
+  typeToggleBtn: {
+    paddingHorizontal: Spacing.two,
+    paddingVertical: 2,
+    borderRadius: Radius.pill,
+  },
+  typeToggleText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  netPayableBox: {
+    borderWidth: 1.5,
+    borderRadius: Radius.sm,
+    paddingHorizontal: Spacing.two,
+    paddingVertical: Spacing.two + 2,
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+    height: 48,
+  },
+  netPayableText: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  discountHelpText: {
+    marginTop: 4,
+    fontSize: 11,
   },
   input: {
     borderWidth: 1,

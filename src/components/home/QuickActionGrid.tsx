@@ -18,7 +18,12 @@ export function QuickActionGrid() {
   const { homeTiles } = useLayout();
   const { t } = useLanguage();
 
-  if (homeTiles.length === 0) return null;
+  const visibleTiles = homeTiles.filter((tile) => {
+    const sectionKey = TARGET_SECTION_KEY[tile.target];
+    return !sectionKey || sections[sectionKey] !== false;
+  });
+
+  if (visibleTiles.length === 0) return null;
 
   const translateTileLabel = (rawLabel: string) => {
     const key = rawLabel.toLowerCase().trim();
@@ -39,15 +44,13 @@ export function QuickActionGrid() {
 
   return (
     <View style={styles.grid}>
-      {homeTiles.map((tile) => {
-        const sectionKey = TARGET_SECTION_KEY[tile.target];
-        const enabled = !sectionKey || sections[sectionKey];
+      {visibleTiles.map((tile) => {
         const bg = tile.colorBg ?? TileColors.blue.bg;
         const fg = tile.colorFg ?? TileColors.blue.fg;
         return (
           <Pressable
             key={`${tile.target}-${tile.label}`}
-            style={[styles.tileWrap, { width: `${100 / homeTiles.length - 2}%` }]}
+            style={[styles.tileWrap, { width: `${100 / Math.min(visibleTiles.length, 4) - 2}%` }]}
             onPress={() => {
               if (tile.target === 'url' && tile.targetUrl) {
                 Linking.openURL(tile.targetUrl);
@@ -60,11 +63,6 @@ export function QuickActionGrid() {
               <View style={[styles.iconCircle, { backgroundColor: bg }]}>
                 <Ionicons name={tile.icon as keyof typeof Ionicons.glyphMap} size={22} color={fg} />
               </View>
-              {!enabled ? (
-                <View style={[styles.lockBadge, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-                  <Ionicons name="hourglass-outline" size={10} color={theme.textSecondary} />
-                </View>
-              ) : null}
               <ThemedText
                 type="small"
                 style={styles.label}

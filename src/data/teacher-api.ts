@@ -248,33 +248,10 @@ export async function fetchSubjectsCatalog(classId: number, search?: string): Pr
     const json = (await response.json()) as ApiEnvelope<SubjectCatalogItem[]>;
     if (json.status && json.data.length > 0) return json.data;
   } catch {}
-  return [
-    { id: 1, name: 'Mathematics' },
-    { id: 2, name: 'Science' },
-    { id: 3, name: 'English' },
-    { id: 4, name: 'Social Science' },
-    { id: 5, name: 'Hindi' },
-  ];
+  return [];
 }
 
-const MASTER_CLASSES_CATALOG: ClassPickerItem[] = [
-  { id: 1, name: 'Pre-Nursery' },
-  { id: 2, name: 'Nursery' },
-  { id: 3, name: 'LKG' },
-  { id: 4, name: 'UKG' },
-  { id: 5, name: 'Class 1st' },
-  { id: 6, name: 'Class 2nd' },
-  { id: 7, name: 'Class 3rd' },
-  { id: 8, name: 'Class 4th' },
-  { id: 9, name: 'Class 5th' },
-  { id: 10, name: 'Class 6th' },
-  { id: 11, name: 'Class 7th' },
-  { id: 12, name: 'Class 8th' },
-  { id: 13, name: 'Class 9th' },
-  { id: 14, name: 'Class 10th' },
-  { id: 15, name: 'Class 11th' },
-  { id: 16, name: 'Class 12th' },
-];
+const MASTER_CLASSES_CATALOG: ClassPickerItem[] = [];
 
 export async function fetchClassesCatalog(): Promise<ClassPickerItem[]> {
   try {
@@ -491,7 +468,7 @@ export async function saveHomework(params: {
   date: string;
   description: string;
   photoUris: string[];
-}): Promise<{ id: number }> {
+}): Promise<{ id: number; notificationWarning?: string }> {
   const token = await getTeacherToken();
   const body = new FormData();
   body.append('class_id', String(params.classId));
@@ -512,13 +489,22 @@ export async function saveHomework(params: {
     token
   );
   if (!json.status) throw new Error(json.message);
-  sendTeacherNotification({
-    classId: params.classId,
-    sectionId: params.sectionId,
-    title: `New Homework: ${params.subject}${params.chapter ? ` - ${params.chapter}` : ''}`,
-    body: `Homework assigned for ${params.date}: ${params.description}`,
-  }).catch(() => {});
-  return json.data;
+
+  let warning: string | undefined;
+  try {
+    const notifRes = await sendTeacherNotification({
+      classId: params.classId,
+      sectionId: params.sectionId,
+      title: `New Homework: ${params.subject}${params.chapter ? ` - ${params.chapter}` : ''}`,
+      body: `Homework assigned for ${params.date}: ${params.description}`,
+    });
+    if (notifRes.message) {
+      warning = notifRes.message;
+    }
+  } catch (e: any) {
+    warning = e?.message;
+  }
+  return { id: json.data?.id, notificationWarning: warning };
 }
 
 export async function deleteHomework(id: number): Promise<void> {
@@ -793,7 +779,7 @@ export interface TeacherNoticeParams {
   sectionId?: number;
 }
 
-export async function addTeacherNotice(params: TeacherNoticeParams): Promise<void> {
+export async function addTeacherNotice(params: TeacherNoticeParams): Promise<{ notificationWarning?: string }> {
   await authedRequest('/teacher_add_notice', {
     method: 'POST',
     body: (() => {
@@ -806,12 +792,21 @@ export async function addTeacherNotice(params: TeacherNoticeParams): Promise<voi
     })(),
   });
 
-  sendTeacherNotification({
-    classId: params.classId,
-    sectionId: params.sectionId,
-    title: `Notice: ${params.title}`,
-    body: params.body,
-  }).catch(() => {});
+  let warning: string | undefined;
+  try {
+    const notifRes = await sendTeacherNotification({
+      classId: params.classId,
+      sectionId: params.sectionId,
+      title: `Notice: ${params.title}`,
+      body: params.body,
+    });
+    if (notifRes.message) {
+      warning = notifRes.message;
+    }
+  } catch (e: any) {
+    warning = e?.message;
+  }
+  return { notificationWarning: warning };
 }
 
 export interface TeacherNotice {
@@ -1050,20 +1045,29 @@ export async function sendTeacherNotification(params: {
   studentRef?: string;
   title: string;
   body: string;
-}): Promise<{ sentTo: number }> {
-  const data = await authedRequest<{ sent_to: number }>('/teacher_send_notification', {
-    method: 'POST',
-    body: (() => {
-      const body = new FormData();
-      body.append('class_id', String(params.classId));
-      if (params.sectionId) body.append('section_id', String(params.sectionId));
-      if (params.studentRef) body.append('student_ref', params.studentRef);
-      body.append('title', params.title);
-      body.append('body', params.body);
-      return body;
-    })(),
-  });
-  return { sentTo: data.sent_to };
+}): Promise<{ sentTo: number; message?: string }> {
+  const token = await getTeacherToken();
+  const body = new FormData();
+  body.append('class_id', String(params.classId));
+  if (params.sectionId) body.append('section_id', String(params.sectionId));
+  if (params.studentRef) body.append('student_ref', params.studentRef);
+  body.append('title', params.title);
+  body.append('body', params.body);
+
+  try {
+    const res = await fetch(`${BASE_URL}/teacher_send_notification`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      body,
+    });
+    const json = await res.json();
+    if (!json.status) {
+      return { sentTo: 0, message: json.message || 'No students registered for notification' };
+    }
+    return { sentTo: json.data?.sent_to ?? 0, message: json.message };
+  } catch (err: any) {
+    return { sentTo: 0, message: err?.message };
+  }
 }
 
 /** Uploads a result sheet (.csv/.xlsx) for the teacher's own class, matching
@@ -1296,6 +1300,7 @@ export async function addFeeInvoice(params: {
   feeType: FeeType;
   title: string;
   amount: number;
+  classId?: number;
   dueDate?: string;
   fileUri?: string;
   fileMimeType?: string | null;
@@ -1320,7 +1325,7 @@ export async function addFeeInvoice(params: {
   }
   const res = await postFormData<{ id: number }>('/teacher_add_fee_invoice', body);
   sendTeacherNotification({
-    classId: 0,
+    classId: params.classId || 1,
     studentRef: params.srn,
     title: `New Fee Invoice: ${params.title}`,
     body: `Fee amount ₹${params.amount} is due ${params.dueDate ? `by ${params.dueDate}` : ''}.`,
@@ -1502,10 +1507,23 @@ export async function fetchSyllabusApi(className: string, subjectName?: string):
   try {
     const res = await fetch(`${BASE_URL}/student_syllabus?${qs}`);
     const json = await res.json();
-    if (json.status && Array.isArray(json.data)) {
+    if (json.status && Array.isArray(json.data) && json.data.length > 0) {
       return json.data;
     }
   } catch {}
+
+  // Fallback: If no chapters found for "Pre-Nursery - A", try query by base class name "Pre-Nursery"
+  if (className.includes(' - ')) {
+    const baseClass = className.split(' - ')[0].trim();
+    const qs2 = `class=${encodeURIComponent(baseClass)}${subjectName ? `&subject=${encodeURIComponent(subjectName)}` : ''}`;
+    try {
+      const res2 = await fetch(`${BASE_URL}/student_syllabus?${qs2}`);
+      const json2 = await res2.json();
+      if (json2.status && Array.isArray(json2.data)) {
+        return json2.data;
+      }
+    } catch {}
+  }
   return [];
 }
 

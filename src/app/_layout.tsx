@@ -100,6 +100,15 @@ function RootLayoutInner() {
   }, []);
 
   useEffect(() => {
+    try {
+      const ScreenCapture = require('expo-screen-capture');
+      if (ScreenCapture?.preventScreenCaptureAsync) {
+        ScreenCapture.preventScreenCaptureAsync();
+      }
+    } catch {}
+  }, []);
+
+  useEffect(() => {
     checkStatus();
     registerDevice();
     isOnboardingComplete().then(setOnboarded);

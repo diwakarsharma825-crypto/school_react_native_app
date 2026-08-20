@@ -52,9 +52,11 @@ export function InvoiceViewerModal({ visible, onClose, url, fileType }: InvoiceV
         <Pressable onPress={onClose} hitSlop={12} style={styles.closeButton}>
           <Ionicons name="close" size={28} color="#fff" />
         </Pressable>
-        <Pressable onPress={handleDownload} hitSlop={12} style={styles.downloadButton} disabled={downloading}>
-          {downloading ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="download-outline" size={26} color="#fff" />}
-        </Pressable>
+        {fileType === 'pdf' ? (
+          <Pressable onPress={handleDownload} hitSlop={12} style={styles.downloadButton} disabled={downloading}>
+            {downloading ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="download-outline" size={26} color="#fff" />}
+          </Pressable>
+        ) : null}
 
         {fileType === 'pdf' ? (
           <WebView source={{ uri: url }} style={styles.webview} originWhitelist={['*']} />

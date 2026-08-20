@@ -3,7 +3,7 @@ import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { Brand, Radius, Spacing } from '@/constants/theme';
 import { Card } from '@/components/ui/Card';
@@ -13,6 +13,7 @@ import { ThemedText } from '@/components/ui/ThemedText';
 import {
   fetchSubjectsCatalog,
   fetchSyllabusApi,
+  fetchTeacherStudents,
   getSavedSelectedClassId,
   saveHomework,
   saveSelectedClassId,
@@ -53,13 +54,15 @@ export default function TeacherHomeworkAddScreen() {
   const [selectedClassId, setSelectedClassId] = useState<string | null>(paramClassId ?? null);
   const [subject, setSubject] = useState(initialSubject ?? '');
   const [chapter, setChapter] = useState(initialChapter ?? '');
-  const [syllabusChapter, setSyllabusChapter] = useState<string | null>(null);
+  const [isCustomChapter, setIsCustomChapter] = useState(false);
   const [syllabusOptions, setSyllabusOptions] = useState<{ label: string; value: string }[]>([]);
   const [description, setDescription] = useState(initialDescription ?? '');
   const [photos, setPhotos] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [subjectOptions, setSubjectOptions] = useState<{ label: string; value: string }[]>([]);
+  const [hasStudents, setHasStudents] = useState<boolean | null>(null);
+  const [checkingStudents, setCheckingStudents] = useState<boolean>(false);
 
   useEffect(() => {
     if (!selectedClassId) {
@@ -81,12 +84,41 @@ export default function TeacherHomeworkAddScreen() {
   const selectedClassObj = classes.find((c) => String(c.class_id) === selectedClassId);
   const currentSectionId = selectedClassObj?.section_id ? String(selectedClassObj.section_id) : (paramSectionId ?? '');
 
+  useEffect(() => {
+    if (!selectedClassId) {
+      setHasStudents(null);
+      return;
+    }
+    setCheckingStudents(true);
+    fetchTeacherStudents(Number(selectedClassId), currentSectionId ? Number(currentSectionId) : undefined)
+      .then((students) => {
+        const activeList = Array.isArray(students)
+          ? students.filter((s) => s.account_status !== 0 && (s as any).status !== 0)
+          : [];
+        setHasStudents(activeList.length > 0);
+      })
+      .catch(() => {
+        setHasStudents(true);
+      })
+      .finally(() => {
+        setCheckingStudents(false);
+      });
+  }, [selectedClassId, currentSectionId]);
+
   function handleClassChange(val: string | null) {
     setSelectedClassId(val);
     if (val) saveSelectedClassId(val);
     setSubject('');
     setChapter('');
-    setSyllabusChapter(null);
+    setIsCustomChapter(false);
+    setSyllabusOptions([]);
+  }
+
+  function handleSubjectChange(val: string | null) {
+    const newSubject = val ?? '';
+    setSubject(newSubject);
+    setChapter('');
+    setIsCustomChapter(false);
     setSyllabusOptions([]);
   }
 
@@ -103,22 +135,31 @@ export default function TeacherHomeworkAddScreen() {
       setSyllabusOptions([]);
       return;
     }
-    const classNameStr = selectedClassObj.class_name;
+    const classNameStr = `${selectedClassObj.class_name}${selectedClassObj.section_name ? ` - ${selectedClassObj.section_name}` : ''}`;
     fetchSyllabusApi(classNameStr, subject)
       .then((chapters) => {
-        const options = chapters.map((ch) => ({
-          label: `Ch ${ch.chapter_number}: ${ch.chapter_title}`,
-          value: `Ch ${ch.chapter_number}: ${ch.chapter_title}`,
-        }));
-        setSyllabusOptions(options);
+        if (chapters && chapters.length > 0) {
+          const options = [
+            { label: '+ Add Custom Chapter / Unit', value: '__CUSTOM_CHAPTER__' },
+            ...chapters.map((ch) => ({
+              label: `Ch ${ch.chapter_number}: ${ch.chapter_title}`,
+              value: `Ch ${ch.chapter_number}: ${ch.chapter_title}`,
+            })),
+          ];
+          setSyllabusOptions(options);
+        } else {
+          setSyllabusOptions([]);
+        }
       })
       .catch(() => setSyllabusOptions([]));
   }, [selectedClassObj, subject]);
 
-  function handleSyllabusChange(val: string | null) {
-    setSyllabusChapter(val);
-    if (val) {
-      setChapter(val);
+  function handleSyllabusSelect(val: string | null) {
+    if (val === '__CUSTOM_CHAPTER__') {
+      setIsCustomChapter(true);
+      setChapter('');
+    } else {
+      setChapter(val ?? '');
     }
   }
 
@@ -144,9 +185,16 @@ export default function TeacherHomeworkAddScreen() {
       setError('Please select a class.');
       return;
     }
+    if (hasStudents === false) {
+      Alert.alert('Cannot Add Homework', 'No students in this class have a registered device yet.', [
+        { text: 'OK' },
+      ]);
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {
+      let warningMsg: string | undefined;
       if (isEditing) {
         await updateHomework({
           id: Number(homeworkId),
@@ -156,7 +204,7 @@ export default function TeacherHomeworkAddScreen() {
           photoUris: photos.length > 0 ? photos : undefined,
         });
       } else {
-        await saveHomework({
+        const res = await saveHomework({
           classId: Number(selectedClassId),
           sectionId: currentSectionId ? Number(currentSectionId) : undefined,
           subject: subject.trim(),
@@ -165,8 +213,16 @@ export default function TeacherHomeworkAddScreen() {
           description: description.trim(),
           photoUris: photos,
         });
+        warningMsg = res.notificationWarning;
       }
-      router.back();
+
+      if (warningMsg) {
+        Alert.alert('Notice', warningMsg, [
+          { text: 'OK', onPress: () => router.back() },
+        ]);
+      } else {
+        router.back();
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not save homework.');
     } finally {
@@ -192,6 +248,15 @@ export default function TeacherHomeworkAddScreen() {
           />
         ) : null}
 
+        {hasStudents === false ? (
+          <View style={styles.noStudentsCard}>
+            <Ionicons name="alert-circle" size={20} color={Brand.red} style={styles.warningIcon} />
+            <ThemedText type="smallBold" style={styles.noStudentsText}>
+              No students in this class have a registered device yet. Adding homework is not allowed for this class.
+            </ThemedText>
+          </View>
+        ) : null}
+
         {/* Subject Selection Dropdown / Text Field */}
         {subjectOptions.length > 0 ? (
           <SelectField
@@ -199,7 +264,7 @@ export default function TeacherHomeworkAddScreen() {
             placeholder="Select subject"
             value={subject || null}
             options={subjectOptions}
-            onChange={setSubject}
+            onChange={handleSubjectChange}
             searchable
           />
         ) : (
@@ -209,7 +274,7 @@ export default function TeacherHomeworkAddScreen() {
             </ThemedText>
             <TextInput
               value={subject}
-              onChangeText={setSubject}
+              onChangeText={handleSubjectChange}
               placeholder="e.g. Mathematics"
               placeholderTextColor={theme.textSecondary}
               style={[styles.input, { borderColor: theme.border, color: theme.text }]}
@@ -217,27 +282,43 @@ export default function TeacherHomeworkAddScreen() {
           </>
         )}
 
-        {/* Optional Syllabus Chapter Dropdown */}
-        {syllabusOptions.length > 0 ? (
+        {/* Single Combined Chapter / Syllabus Dropdown or Custom Input */}
+        {syllabusOptions.length > 1 && !isCustomChapter ? (
           <SelectField
-            label="Syllabus Chapter (Optional)"
-            placeholder="Select chapter from syllabus"
-            value={syllabusChapter}
+            label="Chapter / Unit (Optional)"
+            placeholder="Select chapter"
+            value={chapter || null}
             options={syllabusOptions}
-            onChange={handleSyllabusChange}
+            onChange={handleSyllabusSelect}
           />
-        ) : null}
-
-        <ThemedText type="smallBold" style={styles.fieldLabel}>
-          Chapter / Unit (Optional)
-        </ThemedText>
-        <TextInput
-          value={chapter}
-          onChangeText={setChapter}
-          placeholder="e.g. Chapter 1: Rational Numbers"
-          placeholderTextColor={theme.textSecondary}
-          style={[styles.input, { borderColor: theme.border, color: theme.text }]}
-        />
+        ) : (
+          <>
+            <View style={styles.chapterHeaderRow}>
+              <ThemedText type="smallBold" style={styles.fieldLabelNoMargin}>
+                Chapter / Unit (Optional)
+              </ThemedText>
+              {syllabusOptions.length > 1 ? (
+                <Pressable
+                  onPress={() => {
+                    setIsCustomChapter(false);
+                    setChapter('');
+                  }}
+                  hitSlop={8}
+                  style={styles.redCloseBtn}
+                >
+                  <Ionicons name="close-circle" size={22} color={Brand.red} />
+                </Pressable>
+              ) : null}
+            </View>
+            <TextInput
+              value={chapter}
+              onChangeText={setChapter}
+              placeholder="e.g. Chapter 1: Rational Numbers"
+              placeholderTextColor={theme.textSecondary}
+              style={[styles.input, { borderColor: theme.border, color: theme.text }]}
+            />
+          </>
+        )}
 
         <ThemedText type="smallBold" style={styles.fieldLabel}>
           Details
@@ -292,11 +373,23 @@ export default function TeacherHomeworkAddScreen() {
 
         <Pressable
           onPress={handleSave}
-          disabled={submitting}
-          style={[styles.button, { backgroundColor: theme.tint, opacity: submitting ? 0.6 : 1 }]}
+          disabled={submitting || hasStudents === false || checkingStudents}
+          style={[
+            styles.button,
+            {
+              backgroundColor: theme.tint,
+              opacity: submitting || hasStudents === false || checkingStudents ? 0.5 : 1,
+            },
+          ]}
         >
           <ThemedText type="smallBold" style={styles.buttonLabel}>
-            {submitting ? 'Saving…' : isEditing ? 'Save Changes' : 'Save Homework'}
+            {submitting
+              ? 'Saving…'
+              : checkingStudents
+              ? 'Checking Class…'
+              : isEditing
+              ? 'Save Changes'
+              : 'Save Homework'}
           </ThemedText>
         </Pressable>
       </Card>
@@ -311,6 +404,39 @@ const styles = StyleSheet.create({
   fieldLabel: {
     marginBottom: Spacing.one,
     marginTop: Spacing.three,
+  },
+  noStudentsCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FCA5A5',
+    borderWidth: 1,
+    borderRadius: Radius.sm,
+    padding: Spacing.two + 2,
+    marginTop: Spacing.two,
+    marginBottom: Spacing.two,
+  },
+  warningIcon: {
+    marginRight: Spacing.two,
+  },
+  noStudentsText: {
+    color: '#991B1B',
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  chapterHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: Spacing.three,
+    marginBottom: Spacing.one,
+  },
+  fieldLabelNoMargin: {
+    marginBottom: 0,
+  },
+  redCloseBtn: {
+    padding: 2,
   },
   existingLabel: {
     marginBottom: Spacing.two,

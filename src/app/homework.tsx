@@ -527,12 +527,12 @@ function HomeworkCalendar({ access, onLogout }: { access: HomeworkAccess; onLogo
                   </View>
 
                   {entry.teacher_name ? (
-                    <ThemedText type="small" themeColor="textSecondary" style={styles.entryTeacher}>
+                    <ThemedText type="small" style={[styles.entryTeacher, { color: theme.dark ? '#CBD5E1' : theme.textSecondary }]}>
                       Assigned by {entry.teacher_name}
                     </ThemedText>
                   ) : null}
                   {entry.description ? (
-                    <ThemedText type="small" themeColor="textSecondary" style={styles.entryDescription} numberOfLines={2}>
+                    <ThemedText type="small" style={[styles.entryDescription, { color: theme.dark ? '#E2E8F0' : theme.textSecondary }]} numberOfLines={2}>
                       {t(entry.description)}
                     </ThemedText>
                   ) : null}
@@ -683,12 +683,12 @@ function HomeworkCalendar({ access, onLogout }: { access: HomeworkAccess; onLogo
                       </View>
 
                       {entry.teacher_name ? (
-                        <ThemedText type="small" themeColor="textSecondary" style={styles.entryTeacher}>
+                        <ThemedText type="small" style={[styles.entryTeacher, { color: theme.dark ? '#CBD5E1' : theme.textSecondary }]}>
                           Assigned by {entry.teacher_name}
                         </ThemedText>
                       ) : null}
                       {entry.description ? (
-                        <ThemedText type="small" themeColor="textSecondary" style={styles.entryDescription} numberOfLines={3}>
+                        <ThemedText type="small" style={[styles.entryDescription, { color: theme.dark ? '#E2E8F0' : theme.textSecondary }]} numberOfLines={3}>
                           {entry.description}
                         </ThemedText>
                       ) : null}

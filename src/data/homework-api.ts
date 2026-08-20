@@ -99,6 +99,18 @@ export async function studentLogin(identifier: string, password: string): Promis
   return json.data?.children || [];
 }
 
+export async function fetchStudentSiblingsApi(phone: string): Promise<StudentChild[]> {
+  if (!phone || !phone.trim()) return [];
+  try {
+    const res = await fetch(`${BASE_URL}/student_siblings?phone=${encodeURIComponent(phone.trim())}`);
+    const json = (await res.json()) as ApiEnvelope<{ children: StudentChild[] }>;
+    if (json.status && Array.isArray(json.data?.children)) {
+      return json.data.children;
+    }
+  } catch {}
+  return [];
+}
+
 /** First-time registration — creates a pending row in `result_students`
  * (account_status = 0). A teacher of the matching class/section has to
  * activate it before studentLogin() will succeed for these credentials.

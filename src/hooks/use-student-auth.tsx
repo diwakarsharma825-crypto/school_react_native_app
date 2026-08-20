@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
-
-import { getHomeworkAccess, getHomeworkChildren, HomeworkAccess, setActiveChildSrn } from '@/lib/homework-access';
+import { fetchStudentSiblingsApi } from '@/data/homework-api';
+import { getHomeworkAccess, getHomeworkChildren, HomeworkAccess, saveHomeworkChildren, setActiveChildSrn } from '@/lib/homework-access';
 
 interface StudentAuthState {
   checking: boolean;
@@ -34,7 +34,33 @@ export function StudentAuthProvider({ children }: { children: React.ReactNode })
   const [allChildren, setAllChildren] = useState<HomeworkAccess[]>([]);
 
   const refresh = useCallback(async () => {
-    const [a, list] = await Promise.all([getHomeworkAccess(), getHomeworkChildren()]);
+    let [a, list] = await Promise.all([getHomeworkAccess(), getHomeworkChildren()]);
+
+    if (a?.phone) {
+      try {
+        const liveSiblings = await fetchStudentSiblingsApi(a.phone);
+        if (liveSiblings && liveSiblings.length > 0) {
+          const formatted: HomeworkAccess[] = liveSiblings.map((s) => ({
+            name: s.name,
+            srn: s.srn,
+            rollNo: s.roll_no || undefined,
+            fatherName: s.father_name || undefined,
+            motherName: s.mother_name || undefined,
+            className: s.class,
+            section: s.section,
+            phone: s.phone || a?.phone || '',
+            gender: s.gender,
+            dob: s.dob,
+            photoUrl: s.photo_url,
+          }));
+          await saveHomeworkChildren(formatted);
+          list = formatted;
+          const updatedActive = formatted.find((c) => c.srn === a?.srn) ?? formatted[0];
+          a = updatedActive;
+        }
+      } catch {}
+    }
+
     setAccessState(a);
     setAllChildren(list);
     setChecking(false);

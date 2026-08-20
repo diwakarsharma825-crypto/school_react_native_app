@@ -21,42 +21,13 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
  * detail modal to open here, swipe left/right between attachments. */
 export function FullScreenGallery({ visible, photoUrls, initialIndex, onClose }: FullScreenGalleryProps) {
   const [index, setIndex] = useState(initialIndex);
-  const [downloading, setDownloading] = useState(false);
   const listRef = useRef<FlatList<string>>(null);
-
-  async function handleDownload() {
-    const uri = photoUrls[index];
-    if (!uri || downloading) return;
-    setDownloading(true);
-    try {
-      const filename = uri.split('/').pop() || `photo-${Date.now()}.png`;
-      const targetUri = `${FileSystem.cacheDirectory}${filename}`;
-      await FileSystem.downloadAsync(uri, targetUri);
-      const canShare = await Sharing.isAvailableAsync();
-      if (canShare) {
-        await Sharing.shareAsync(targetUri, { dialogTitle: 'Save Photo' });
-      } else {
-        Alert.alert('Downloaded', `Saved to ${targetUri}`);
-      }
-    } catch (e) {
-      Alert.alert('Could not download', e instanceof Error ? e.message : 'Please try again.');
-    } finally {
-      setDownloading(false);
-    }
-  }
 
   return (
     <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
       <View style={styles.backdrop}>
         <Pressable onPress={onClose} hitSlop={12} style={styles.closeButton}>
           <Ionicons name="close" size={28} color="#fff" />
-        </Pressable>
-        <Pressable onPress={handleDownload} hitSlop={12} style={styles.downloadButton} disabled={downloading}>
-          {downloading ? (
-            <ActivityIndicator size="small" color="#fff" />
-          ) : (
-            <Ionicons name="download-outline" size={26} color="#fff" />
-          )}
         </Pressable>
         {photoUrls.length > 1 ? (
           <View style={styles.counter}>

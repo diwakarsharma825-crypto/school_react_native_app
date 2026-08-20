@@ -293,17 +293,17 @@ export default function TeacherHomeworkScreen() {
               <View style={styles.entryHeader}>
                 <View style={{ flex: 1, paddingRight: Spacing.two }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                    <ThemedText type="smallBold">{entry.subject}</ThemedText>
+                    <ThemedText type="smallBold" style={{ color: theme.dark ? '#F8FAFC' : theme.text }}>{entry.subject}</ThemedText>
                     {selectedClassObj ? (
-                      <View style={[styles.classBadge, { backgroundColor: theme.dark ? 'rgba(37,99,235,0.2)' : '#EFF6FF' }]}>
-                        <ThemedText type="small" style={{ color: theme.tint, fontSize: 11, fontWeight: '600' }}>
+                      <View style={[styles.classBadge, { backgroundColor: theme.dark ? 'rgba(56,189,248,0.15)' : '#EFF6FF', borderColor: theme.dark ? '#38BDF8' : 'transparent', borderWidth: theme.dark ? 1 : 0 }]}>
+                        <ThemedText type="small" style={{ color: theme.dark ? '#38BDF8' : '#0284C7', fontSize: 11, fontWeight: '700' }}>
                           {selectedClassObj.class_name}{selectedClassObj.section_name ? ` - ${selectedClassObj.section_name}` : ''}
                         </ThemedText>
                       </View>
                     ) : null}
                   </View>
                   {entry.chapter ? (
-                    <ThemedText type="small" themeColor="textSecondary" style={{ marginTop: 2 }}>
+                    <ThemedText type="small" style={{ marginTop: 2, color: theme.dark ? '#CBD5E1' : theme.textSecondary }}>
                       {entry.chapter}
                     </ThemedText>
                   ) : null}
@@ -313,17 +313,17 @@ export default function TeacherHomeworkScreen() {
                 {isCurrentDay ? (
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.three }}>
                     <Pressable onPress={() => handleEdit(entry)} hitSlop={8}>
-                      <Ionicons name="create-outline" size={18} color={theme.tint} />
+                      <Ionicons name="create-outline" size={18} color={theme.dark ? '#38BDF8' : theme.tint} />
                     </Pressable>
                     <Pressable onPress={() => handleDelete(entry)} hitSlop={8}>
-                      <Ionicons name="trash-outline" size={18} color={Brand.red} />
+                      <Ionicons name="trash-outline" size={18} color="#EF4444" />
                     </Pressable>
                   </View>
                 ) : null}
               </View>
 
               {entry.description ? (
-                <ThemedText type="small" themeColor="textSecondary" style={styles.entryDescription} numberOfLines={2}>
+                <ThemedText type="small" style={[styles.entryDescription, { color: theme.dark ? '#E2E8F0' : theme.textSecondary }]} numberOfLines={2}>
                   {entry.description}
                 </ThemedText>
               ) : null}

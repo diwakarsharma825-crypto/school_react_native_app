@@ -10,9 +10,29 @@ import { useLayout } from '@/hooks/use-layout';
 import { useStudentAuth } from '@/hooks/use-student-auth';
 import { useTeacherAuth } from '@/hooks/use-teacher-auth';
 import { useTheme } from '@/hooks/use-theme';
+import { useSections, SectionKey } from '@/hooks/use-sections';
 import { TARGET_ROUTES } from '@/lib/layout';
 import { LoginSheet } from './LoginSheet';
 import { ThemedText } from './ThemedText';
+
+const TARGET_SECTION_MAP: Record<string, SectionKey> = {
+  events: 'events',
+  gallery: 'gallery',
+  notices: 'notices',
+  result: 'result',
+  teachers: 'teachers',
+  top_students: 'top_students',
+  disclosure: 'disclosure',
+  homework: 'homework',
+  attendance: 'attendance',
+  leave: 'leave',
+  fees: 'fees',
+  teacher_subjects: 'teacher_subjects',
+  teacher_promote: 'teacher_promote',
+  syllabus: 'syllabus',
+  teacher_export: 'teacher_export',
+  teacher_storage: 'teacher_storage',
+};
 
 export const BOTTOM_BAR_HEIGHT = 58;
 
@@ -37,6 +57,7 @@ interface MenuItem {
 import { useLanguage } from '@/lib/i18n';
 
 export function DynamicBottomBar() {
+  const sections = useSections();
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const pathname = usePathname();
@@ -63,45 +84,59 @@ export function DynamicBottomBar() {
 
   useEffect(() => {
     if (menuOpen) {
+      Animated.timing(menuAnim, {
+        toValue: 1,
+        duration: 180,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }).start();
+    } else {
       menuAnim.setValue(0);
-      Animated.spring(menuAnim, { toValue: 1, useNativeDriver: true, friction: 8, tension: 80 }).start();
     }
   }, [menuOpen, menuAnim]);
 
   if (bottomTabs.length === 0) return null;
   if (instituteMode && !teacherLoggedIn && !studentLoggedIn) return null;
 
-  const visibleBottomTabs =
-    teacherLoggedIn && profile?.permissions?.gallery === false
-      ? bottomTabs.filter((t) => t.target !== 'gallery')
-      : bottomTabs;
+  const visibleBottomTabs = bottomTabs.filter((t) => {
+    const sKey = TARGET_SECTION_MAP[t.target];
+    if (sKey && sections[sKey] === false) return false;
+    if (teacherLoggedIn && profile?.permissions?.gallery === false && t.target === 'gallery') return false;
+    return true;
+  });
 
   const loggedIn = teacherLoggedIn || studentLoggedIn;
   const menuName = teacherLoggedIn ? profile?.name ?? 'Teacher' : access?.name ?? 'Student';
   const menuIcon: keyof typeof Ionicons.glyphMap = teacherLoggedIn ? 'briefcase' : 'school';
   const studentPhotoUrl = !teacherLoggedIn ? access?.photoUrl : null;
 
-  const rawTeacherMenuItems: (MenuItem & { permKey?: keyof NonNullable<typeof profile>['permissions'] })[] = [
+  const rawTeacherMenuItems: (MenuItem & { permKey?: keyof NonNullable<typeof profile>['permissions']; sectionKey?: SectionKey })[] = [
     { label: 'Teacher Dashboard', icon: 'speedometer-outline', onPress: () => router.push('/teacher-dashboard' as any) },
-    { label: 'Manage Subjects', icon: 'journal-outline', onPress: () => router.push('/teacher-subjects' as any) },
-    { label: 'Batch Promotion', icon: 'arrow-up-circle-outline', onPress: () => router.push('/teacher-promote' as any) },
-    { label: 'Manage Notices', icon: 'megaphone-outline', onPress: () => router.push('/teacher-notices' as any), permKey: 'notices' },
-    { label: 'Manage Events', icon: 'calendar-outline', onPress: () => router.push('/teacher-events' as any), permKey: 'events' },
-    { label: 'Attendance', icon: 'checkmark-done-outline', onPress: () => router.push('/teacher-attendance' as any), permKey: 'attendance' },
-    { label: 'Leaves', icon: 'calendar-clear-outline', onPress: () => router.push('/teacher-leaves' as any), permKey: 'leave' },
-    { label: 'Fees', icon: 'cash-outline', onPress: () => router.push('/teacher-fees' as any), permKey: 'fees' },
-    { label: 'Export Reports', icon: 'download-outline', onPress: () => router.push('/teacher-export' as any) },
+    { label: 'Manage Subjects', icon: 'journal-outline', onPress: () => router.push('/teacher-subjects' as any), sectionKey: 'teacher_subjects' },
+    { label: 'Batch Promotion', icon: 'arrow-up-circle-outline', onPress: () => router.push('/teacher-promote' as any), sectionKey: 'teacher_promote' },
+    { label: 'Manage Notices', icon: 'megaphone-outline', onPress: () => router.push('/teacher-notices' as any), permKey: 'notices', sectionKey: 'notices' },
+    { label: 'Manage Events', icon: 'calendar-outline', onPress: () => router.push('/teacher-events' as any), permKey: 'events', sectionKey: 'events' },
+    { label: 'Attendance', icon: 'checkmark-done-outline', onPress: () => router.push('/teacher-attendance' as any), permKey: 'attendance', sectionKey: 'attendance' },
+    { label: 'Leaves', icon: 'calendar-clear-outline', onPress: () => router.push('/teacher-leaves' as any), permKey: 'leave', sectionKey: 'leave' },
+    { label: 'Fees', icon: 'cash-outline', onPress: () => router.push('/teacher-fees' as any), permKey: 'fees', sectionKey: 'fees' },
+    { label: 'Export Reports', icon: 'download-outline', onPress: () => router.push('/teacher-export' as any), sectionKey: 'teacher_export' },
+  ];
+
+  const rawStudentMenuItems: (MenuItem & { sectionKey?: SectionKey })[] = [
+    { label: 'Student Dashboard', icon: 'speedometer-outline', onPress: () => router.push('/student-dashboard' as any) },
+    { label: 'Homework', icon: 'book-outline', onPress: () => router.push('/homework'), sectionKey: 'homework' },
+    { label: 'My Attendance', icon: 'checkmark-done-outline', onPress: () => router.push('/student-attendance' as any), sectionKey: 'attendance' },
+    { label: 'Apply Leave', icon: 'calendar-clear-outline', onPress: () => router.push('/apply-leave' as any), sectionKey: 'leave' },
+    { label: 'Fees', icon: 'cash-outline', onPress: () => router.push('/fees' as any), sectionKey: 'fees' },
   ];
 
   const menuItems: MenuItem[] = teacherLoggedIn
-    ? rawTeacherMenuItems.filter((item) => !item.permKey || profile?.permissions?.[item.permKey] !== false)
-    : [
-        { label: 'Student Dashboard', icon: 'speedometer-outline', onPress: () => router.push('/student-dashboard' as any) },
-        { label: 'Homework', icon: 'book-outline', onPress: () => router.push('/homework') },
-        { label: 'My Attendance', icon: 'checkmark-done-outline', onPress: () => router.push('/student-attendance' as any) },
-        { label: 'Apply Leave', icon: 'calendar-clear-outline', onPress: () => router.push('/apply-leave' as any) },
-        { label: 'Fees', icon: 'cash-outline', onPress: () => router.push('/fees' as any) },
-      ];
+    ? rawTeacherMenuItems.filter(
+        (item) =>
+          (!item.permKey || profile?.permissions?.[item.permKey] !== false) &&
+          (!item.sectionKey || sections[item.sectionKey] !== false)
+      )
+    : rawStudentMenuItems.filter((item) => !item.sectionKey || sections[item.sectionKey] !== false);
 
   return (
     <>
