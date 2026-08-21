@@ -64,7 +64,8 @@ export default function TeacherPromoteScreen() {
         setStudents(data);
         const initMap: Record<string, boolean> = {};
         data.forEach((s) => {
-          initMap[s.srn] = true;
+          const key = s.srn || String(s.id);
+          initMap[key] = true;
         });
         setSelectedSrnMap(initMap);
       })
@@ -77,10 +78,11 @@ export default function TeacherPromoteScreen() {
   };
 
   const toggleAll = () => {
-    const allSelected = students.every((s) => selectedSrnMap[s.srn]);
+    const allSelected = students.every((s) => selectedSrnMap[s.srn || String(s.id)]);
     const nextMap: Record<string, boolean> = {};
     students.forEach((s) => {
-      nextMap[s.srn] = !allSelected;
+      const key = s.srn || String(s.id);
+      nextMap[key] = !allSelected;
     });
     setSelectedSrnMap(nextMap);
   };
@@ -106,7 +108,7 @@ export default function TeacherPromoteScreen() {
     }, 1200);
   };
 
-  if (!loggedIn) return <TeacherGuard />;
+  if (!loggedIn) return <TeacherGuard><></></TeacherGuard>;
 
   const classOptions = classes.map((c) => ({ label: c.name, value: String(c.id) }));
   const selectedClass = classes.find((c) => c.id === selectedClassId);
@@ -117,105 +119,111 @@ export default function TeacherPromoteScreen() {
   const selectedCount = Object.values(selectedSrnMap).filter(Boolean).length;
 
   return (
-    <Screen>
-      <View style={styles.headerWrap}>
-        <ThemedText type="subtitle">Student Batch Promotion Engine</ThemedText>
-        <ThemedText type="small" themeColor="textSecondary">
-          Promote student batches to the next Academic Session-Year
-        </ThemedText>
-      </View>
-
-      {/* Source Batch Selection */}
-      <Card style={styles.card}>
-        <ThemedText type="smallBold" style={styles.cardTitle}>
-          1. Current Source Batch
-        </ThemedText>
-        <SelectField
-          label="Current Class"
-          options={classOptions}
-          value={selectedClassId ? String(selectedClassId) : null}
-          onChange={(val) => setSelectedClassId(val ? Number(val) : null)}
-        />
-        {sectionOptions.length > 0 ? (
-          <SelectField
-            label="Current Section"
-            options={sectionOptions}
-            value={selectedSectionId ? String(selectedSectionId) : null}
-            onChange={(val) => setSelectedSectionId(val ? Number(val) : undefined)}
-          />
-        ) : null}
-      </Card>
-
-      {/* Target Batch & Session Selection */}
-      <Card style={styles.card}>
-        <ThemedText type="smallBold" style={styles.cardTitle}>
-          2. Promotion Destination & Academic Session
-        </ThemedText>
-        <SelectField
-          label="Target Academic Session"
-          options={SESSION_YEAR_OPTIONS}
-          value={targetSession}
-          onChange={(val) => setTargetSession(val)}
-        />
-        <SelectField
-          label="Promote To Target Class"
-          options={classOptions}
-          value={targetClassId ? String(targetClassId) : null}
-          onChange={(val) => setTargetClassId(val ? Number(val) : null)}
-        />
-      </Card>
-
-      {/* Student Checklist */}
-      <Card style={styles.card}>
-        <View style={styles.listHeader}>
-          <ThemedText type="smallBold">
-            3. Select Students to Promote ({selectedCount}/{students.length})
+    <TeacherGuard>
+      <Screen>
+        <View style={styles.headerWrap}>
+          <ThemedText type="subtitle">Student Batch Promotion Engine</ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            Promote student batches to the next Academic Session-Year
           </ThemedText>
-          <Pressable onPress={toggleAll} hitSlop={8}>
-            <ThemedText type="smallBold" style={{ color: theme.tint, fontSize: 12 }}>
-              {students.every((s) => selectedSrnMap[s.srn]) ? 'Deselect All' : 'Select All'}
-            </ThemedText>
-          </Pressable>
         </View>
 
-        {loadingStudents ? (
-          <Loading label="Loading student roster…" />
-        ) : students.length === 0 ? (
-          <EmptyState message="No students found in this class." />
-        ) : (
-          students.map((student) => {
-            const isSelected = !!selectedSrnMap[student.srn];
-            return (
-              <Pressable
-                key={student.id}
-                onPress={() => toggleStudent(student.srn)}
-                style={[
-                  styles.studentRow,
-                  {
-                    borderColor: isSelected ? theme.tint : theme.border,
-                    backgroundColor: isSelected
-                      ? theme.dark
-                        ? 'rgba(37, 99, 235, 0.15)'
-                        : '#EFF6FF'
-                      : 'transparent',
-                  },
-                ]}
-              >
-                <Ionicons
-                  name={isSelected ? 'checkbox' : 'square-outline'}
-                  size={22}
-                  color={isSelected ? theme.tint : theme.textSecondary}
-                />
-                <View style={styles.studentInfo}>
-                  <ThemedText type="smallBold">{student.name}</ThemedText>
-                  <ThemedText type="small" themeColor="textSecondary">
-                    SRN {student.srn} {student.roll_no ? `· Roll #${student.roll_no}` : ''}
-                  </ThemedText>
-                </View>
-              </Pressable>
-            );
-          })
-        )}
+        {/* Source Batch Selection */}
+        <Card style={styles.card}>
+          <ThemedText type="smallBold" style={styles.cardTitle}>
+            1. Current Source Batch
+          </ThemedText>
+          <SelectField
+            label="Current Class"
+            placeholder="Select class"
+            options={classOptions}
+            value={selectedClassId ? String(selectedClassId) : null}
+            onChange={(val) => setSelectedClassId(val ? Number(val) : null)}
+          />
+          {sectionOptions.length > 0 ? (
+            <SelectField
+              label="Current Section"
+              placeholder="Select section"
+              options={sectionOptions}
+              value={selectedSectionId ? String(selectedSectionId) : null}
+              onChange={(val) => setSelectedSectionId(val ? Number(val) : undefined)}
+            />
+          ) : null}
+        </Card>
+
+        {/* Target Batch & Session Selection */}
+        <Card style={styles.card}>
+          <ThemedText type="smallBold" style={styles.cardTitle}>
+            2. Promotion Destination & Academic Session
+          </ThemedText>
+          <SelectField
+            label="Target Academic Session"
+            placeholder="Select session"
+            options={SESSION_YEAR_OPTIONS}
+            value={targetSession}
+            onChange={(val) => setTargetSession(val)}
+          />
+          <SelectField
+            label="Promote To Target Class"
+            placeholder="Select target class"
+            options={classOptions}
+            value={targetClassId ? String(targetClassId) : null}
+            onChange={(val) => setTargetClassId(val ? Number(val) : null)}
+          />
+        </Card>
+
+        {/* Student Checklist */}
+        <Card style={styles.card}>
+          <View style={styles.listHeader}>
+            <ThemedText type="smallBold">
+              3. Select Students to Promote ({selectedCount}/{students.length})
+            </ThemedText>
+            <Pressable onPress={toggleAll} hitSlop={8}>
+              <ThemedText type="smallBold" style={{ color: theme.tint, fontSize: 12 }}>
+                {students.every((s) => selectedSrnMap[s.srn || String(s.id)]) ? 'Deselect All' : 'Select All'}
+              </ThemedText>
+            </Pressable>
+          </View>
+
+          {loadingStudents ? (
+            <Loading label="Loading student roster…" />
+          ) : students.length === 0 ? (
+            <EmptyState message="No students found in this class." />
+          ) : (
+            students.map((student) => {
+              const key = student.srn || String(student.id);
+              const isSelected = !!selectedSrnMap[key];
+              return (
+                <Pressable
+                  key={student.id}
+                  onPress={() => toggleStudent(key)}
+                  style={[
+                    styles.studentRow,
+                    {
+                      borderColor: isSelected ? theme.tint : theme.border,
+                      backgroundColor: isSelected
+                        ? theme.dark
+                          ? 'rgba(37, 99, 235, 0.15)'
+                          : '#EFF6FF'
+                        : 'transparent',
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name={isSelected ? 'checkbox' : 'square-outline'}
+                    size={22}
+                    color={isSelected ? theme.tint : theme.textSecondary}
+                  />
+                  <View style={styles.studentInfo}>
+                    <ThemedText type="smallBold">{student.name}</ThemedText>
+                    <ThemedText type="small" themeColor="textSecondary">
+                      SRN {student.srn || 'N/A'} {student.roll_no ? `· Roll #${student.roll_no}` : ''}
+                    </ThemedText>
+                  </View>
+                </Pressable>
+              );
+            })
+          )}
 
         <Button
           label={promoting ? 'Promoting Students…' : `Promote ${selectedCount} Students to ${targetSession}`}
@@ -226,6 +234,7 @@ export default function TeacherPromoteScreen() {
         />
       </Card>
     </Screen>
+  </TeacherGuard>
   );
 }
 

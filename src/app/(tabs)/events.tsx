@@ -36,27 +36,6 @@ export default function EventsScreen() {
 
   return (
     <Screen refreshing={loading} onRefresh={refetch}>
-      {data && data.length > 0 ? (
-        <View style={{ alignItems: 'flex-end', marginBottom: Spacing.three }}>
-          <ExportPdfButton
-            variant="compact"
-            onPress={() => {
-              const allImages = data.map((e) => e.image_url || e.cover_media?.url).filter(Boolean) as string[];
-              exportToPdf({
-                title: 'School Events & Activities Report',
-                subtitle: `Total Events: ${data.length}`,
-                columns: [
-                  { header: 'Event Date', key: 'event_from', width: '25%' },
-                  { header: 'Event Title', key: 'title', width: '35%' },
-                  { header: 'Location / Note', key: 'note', width: '40%' },
-                ],
-                rows: data,
-                images: allImages,
-              });
-            }}
-          />
-        </View>
-      ) : null}
 
       {error ? (
         <ErrorState message="Could not load events." onRetry={refetch} />

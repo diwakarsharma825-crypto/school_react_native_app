@@ -26,22 +26,36 @@ export function Loading({ label = 'Loading…' }: { label?: string }) {
 }
 
 export function ErrorState({
-  message = 'Something went wrong.',
+  message = 'Something went wrong. Please try again.',
   onRetry,
 }: {
   message?: React.ReactNode;
   onRetry?: () => void;
 }) {
   const theme = useTheme();
-  let displayMsg: React.ReactNode = 'Something went wrong.';
+  let rawMsg = 'Something went wrong. Please try again.';
   if (message) {
     if (typeof message === 'object' && 'message' in (message as any)) {
-      displayMsg = String((message as any).message);
+      rawMsg = String((message as any).message);
     } else if (typeof message === 'string' || typeof message === 'number') {
-      displayMsg = message;
+      rawMsg = String(message);
     } else {
-      displayMsg = String(message);
+      rawMsg = String(message);
     }
+  }
+
+  // Security Sanitization: Never reveal sensitive server URLs, domain names, or backend endpoints to end users!
+  let displayMsg = rawMsg;
+  if (
+    rawMsg.includes('http://') ||
+    rawMsg.includes('https://') ||
+    rawMsg.includes('Network request failed') ||
+    rawMsg.includes('Failed to fetch') ||
+    rawMsg.includes('NetworkError') ||
+    rawMsg.includes('/api/') ||
+    rawMsg.includes('JSON')
+  ) {
+    displayMsg = 'Unable to connect to the server. Please check your internet connection and try again.';
   }
 
   return (

@@ -1359,6 +1359,42 @@ export async function updateFeeInvoiceStatus(id: number, status: FeeStatus): Pro
   await authedRequest<{ updated: boolean }>('/teacher_update_fee_invoice_status', { method: 'POST', body });
 }
 
+export async function deleteFeeInvoice(id: number): Promise<void> {
+  const body = new FormData();
+  body.append('id', String(id));
+  await authedRequest<{ deleted: boolean }>('/teacher_delete_fee_invoice', { method: 'POST', body });
+}
+
+export async function editFeeInvoice(params: {
+  id: number;
+  feeType: FeeType;
+  title: string;
+  amount: number;
+  dueDate?: string;
+  fileUri?: string;
+  fileMimeType?: string | null;
+  fileName?: string | null;
+}): Promise<void> {
+  const token = await getTeacherToken();
+  const body = new FormData();
+  body.append('id', String(params.id));
+  body.append('fee_type', params.feeType);
+  body.append('title', params.title);
+  body.append('amount', String(params.amount));
+  if (params.dueDate) body.append('due_date', params.dueDate);
+  if (params.fileUri) {
+    const filename = params.fileName || params.fileUri.split('/').pop() || 'invoice.pdf';
+    try {
+      const fileObj = await createFileBlob(params.fileUri, params.fileMimeType, filename);
+      body.append('invoice', fileObj as unknown as Blob, filename);
+    } catch {
+      const type = params.fileMimeType || 'application/pdf';
+      body.append('invoice', { uri: params.fileUri, name: filename, type } as any);
+    }
+  }
+  await postFormData<{ updated: boolean }>('/teacher_edit_fee_invoice', body, token);
+}
+
 export type StorageCategory = 'homework' | 'events' | 'student_photos' | 'syllabus';
 
 export interface StorageCategorySummary {

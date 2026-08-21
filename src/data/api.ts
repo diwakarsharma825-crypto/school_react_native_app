@@ -40,19 +40,19 @@ export async function getJson<T>(path: string): Promise<T> {
   try {
     response = await fetch(url);
   } catch (err) {
-    throw new Error(`Network request failed for ${url}`);
+    throw new Error('Unable to connect to the server. Please check your internet connection and try again.');
   }
   if (!response.ok) {
-    throw new Error(`Request to ${url} failed with status ${response.status}`);
+    throw new Error('Server is temporarily unavailable. Please try again later.');
   }
   let json: ApiEnvelope<T>;
   try {
     json = (await response.json()) as ApiEnvelope<T>;
   } catch (err) {
-    throw new Error(`Invalid JSON response from ${url}`);
+    throw new Error('Unable to process server response. Please try again.');
   }
   if (!json.status) {
-    throw new Error(json.message || `Request to ${url} returned an error`);
+    throw new Error(json.message || 'Request returned an error. Please try again.');
   }
   return json.data;
 }
@@ -65,16 +65,16 @@ async function postJson<T>(path: string, body: Record<string, string>): Promise<
   try {
     response = await fetch(url, { method: 'POST', body: form });
   } catch (err) {
-    throw new Error(`Network request failed for ${url}`);
+    throw new Error('Unable to connect to the server. Please check your internet connection and try again.');
   }
   let json: ApiEnvelope<T>;
   try {
     json = (await response.json()) as ApiEnvelope<T>;
   } catch (err) {
-    throw new Error(`Invalid JSON response from ${url}`);
+    throw new Error('Unable to process server response. Please try again.');
   }
   if (!json.status) {
-    throw new Error(json.message || `Request to ${url} returned an error`);
+    throw new Error(json.message || 'Request returned an error. Please try again.');
   }
   return json.data;
 }

@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Modal, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { KeyboardAwareScrollView, KeyboardAwareScrollViewRef } from 'react-native-keyboard-controller';
 
 import { Brand, Radius, Spacing } from '@/constants/theme';
@@ -15,6 +15,8 @@ import { ThemedText } from '@/components/ui/ThemedText';
 import { TeacherGuard } from '@/components/ui/TeacherGuard';
 import {
   addFeeInvoice,
+  deleteFeeInvoice,
+  editFeeInvoice,
   fetchTeacherStudents,
   FeeStatus,
   FeeType,
@@ -48,12 +50,14 @@ function AddFeeModal({
   onAdded,
   classId,
   sectionId,
+  editingInvoice,
 }: {
   visible: boolean;
   onClose: () => void;
   onAdded: () => void;
   classId: number | null;
   sectionId?: number;
+  editingInvoice?: TeacherFeeInvoice | null;
 }) {
   const theme = useTheme();
   const [students, setStudents] = useState<RosterStudent[] | null>(null);
@@ -79,6 +83,30 @@ function AddFeeModal({
       .catch(() => setStudents([]))
       .finally(() => setLoadingStudents(false));
   }, [visible, classId, sectionId]);
+
+  useEffect(() => {
+    if (editingInvoice) {
+      setStudentSrn(editingInvoice.student_srn || null);
+      setFeeType(editingInvoice.fee_type || null);
+      setTitle(editingInvoice.title || '');
+      setAmount(String(editingInvoice.amount || ''));
+      setDueDate(editingInvoice.due_date || null);
+      setDiscountValue('');
+      setDiscountType('fixed');
+      setDiscountReason('');
+      setFile(null);
+    } else if (visible) {
+      setStudentSrn(null);
+      setFeeType(null);
+      setTitle('');
+      setAmount('');
+      setDiscountValue('');
+      setDiscountType('fixed');
+      setDiscountReason('');
+      setDueDate(null);
+      setFile(null);
+    }
+  }, [editingInvoice, visible]);
 
   const studentOptions = (students ?? [])
     .filter((s) => !!s.srn)
@@ -106,24 +134,37 @@ function AddFeeModal({
   const netPayable = Math.max(0, baseNum - computedDiscountAmount);
 
   async function handleSubmit() {
-    if (!studentSrn || !feeType || !title.trim() || !amount.trim() || isNaN(Number(amount))) {
+    if ((!editingInvoice && !studentSrn) || !feeType || !title.trim() || !amount.trim() || isNaN(Number(amount))) {
       setError('Student, fee type, title and a numeric amount are required.');
       return;
     }
     setSubmitting(true);
     setError(null);
     try {
-      await addFeeInvoice({
-        srn: studentSrn,
-        feeType,
-        title: title.trim(),
-        amount: netPayable,
-        classId: classId || undefined,
-        dueDate: dueDate || undefined,
-        fileUri: file?.uri,
-        fileMimeType: file?.mimeType,
-        fileName: file?.name,
-      });
+      if (editingInvoice) {
+        await editFeeInvoice({
+          id: editingInvoice.id,
+          feeType,
+          title: title.trim(),
+          amount: netPayable,
+          dueDate: dueDate || undefined,
+          fileUri: file?.uri,
+          fileMimeType: file?.mimeType,
+          fileName: file?.name,
+        });
+      } else {
+        await addFeeInvoice({
+          srn: studentSrn!,
+          feeType,
+          title: title.trim(),
+          amount: netPayable,
+          classId: classId || undefined,
+          dueDate: dueDate || undefined,
+          fileUri: file?.uri,
+          fileMimeType: file?.mimeType,
+          fileName: file?.name,
+        });
+      }
       setStudentSrn(null);
       setFeeType(null);
       setTitle('');
@@ -136,7 +177,7 @@ function AddFeeModal({
       onAdded();
       onClose();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not add fee.');
+      setError(e instanceof Error ? e.message : 'Could not save fee invoice.');
     } finally {
       setSubmitting(false);
     }
@@ -147,7 +188,7 @@ function AddFeeModal({
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalBackdrop}>
         <View style={[styles.modalSheet, { backgroundColor: theme.background }]}>
           <View style={styles.modalHeader}>
-            <ThemedText type="subtitle">Add Fee Due</ThemedText>
+            <ThemedText type="subtitle">{editingInvoice ? 'Edit Fee Invoice' : 'Add Fee Due'}</ThemedText>
             <Pressable onPress={onClose} hitSlop={10}>
               <Ionicons name="close" size={22} color={theme.text} />
             </Pressable>
@@ -331,6 +372,7 @@ export default function TeacherFeesScreen() {
   const [addOpen, setAddOpen] = useState(false);
   const [actingId, setActingId] = useState<number | null>(null);
   const [viewerInvoice, setViewerInvoice] = useState<TeacherFeeInvoice | null>(null);
+  const [editingInvoice, setEditingInvoice] = useState<TeacherFeeInvoice | null>(null);
 
   const selected = classes.find((c) => String(c.class_id) === classId);
 
@@ -382,92 +424,176 @@ export default function TeacherFeesScreen() {
     }
   }
 
+  function handleDeleteInvoice(inv: TeacherFeeInvoice) {
+    Alert.alert(
+      'Delete Fee Invoice',
+      `Are you sure you want to delete "${inv.title}" for ${inv.student_name || 'student'}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            setActingId(inv.id);
+            try {
+              await deleteFeeInvoice(inv.id);
+              load();
+            } catch (e) {
+              Alert.alert('Error', e instanceof Error ? e.message : 'Could not delete invoice');
+            } finally {
+              setActingId(null);
+            }
+          },
+        },
+      ]
+    );
+  }
+
+  function handleEditInvoice(inv: TeacherFeeInvoice) {
+    setEditingInvoice(inv);
+    setAddOpen(true);
+  }
+
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredInvoices = (invoices ?? []).filter((inv) => {
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase().trim();
     const nameMatch = inv.student_name?.toLowerCase().includes(q);
+    const titleMatch = inv.title.toLowerCase().includes(q);
     const rollMatch = inv.student_roll_no?.toString().includes(q);
-    const srnMatch = (inv as any).student_srn?.toString().includes(q);
-    const titleMatch = inv.title?.toLowerCase().includes(q);
-    return nameMatch || rollMatch || srnMatch || titleMatch;
+    return nameMatch || titleMatch || rollMatch;
   });
 
-  if (!enabled) return <SectionUnavailable />;
+  if (!enabled) {
+    return <SectionUnavailable />;
+  }
 
   return (
     <TeacherGuard>
       <Screen>
-        {classes.length > 1 ? (
-          <SelectField label="Class" placeholder="Select class" value={classId} options={classOptions} onChange={setClassId} />
+        {/* Class Dropdown Selector */}
+        {classOptions.length > 0 ? (
+          <SelectField
+            label="Class"
+            placeholder="Select Class"
+            value={classId}
+            options={classOptions}
+            onChange={setClassId}
+          />
         ) : null}
 
-        <View style={{ flexDirection: 'row', gap: Spacing.two, marginBottom: Spacing.three }}>
-          <Pressable onPress={() => setAddOpen(true)} style={[styles.addButton, { backgroundColor: theme.dark ? '#2563EB' : theme.tint, flex: 1, marginBottom: 0 }]}>
-            <Ionicons name="add" size={16} color={Brand.white} />
+        <View style={styles.actionHeader}>
+          <Pressable onPress={() => { setEditingInvoice(null); setAddOpen(true); }} style={[styles.addButton, { backgroundColor: theme.tint }]}>
+            <Ionicons name="add" size={18} color={Brand.white} />
             <ThemedText type="smallBold" style={styles.addButtonLabel}>
               Add Fee Due
             </ThemedText>
           </Pressable>
 
           <ExportPdfButton
-            variant="outline"
-            style={{ flex: 1, marginBottom: 0 }}
+            variant="compact"
             onPress={() => {
-              if (!filteredInvoices || filteredInvoices.length === 0) return;
+              if (!filteredInvoices || filteredInvoices.length === 0) {
+                Alert.alert('Export PDF', 'No fee dues available to export.');
+                return;
+              }
+              const titleStr = `Fee Report - ${selected?.class_name ?? ''}${selected?.section_name ? ` (${selected.section_name})` : ''}`;
               exportToPdf({
-                title: `Class Fee Records - ${selected?.class_name ?? ''}${selected?.section_name ? ` (${selected.section_name})` : ''}`,
-                subtitle: `Filter: ${statusFilter.toUpperCase()}${searchQuery ? ` | Search: "${searchQuery}"` : ''} | Total Records: ${filteredInvoices.length}`,
+                title: titleStr,
+                subtitle: `Status: ${statusFilter.toUpperCase()} | Total Invoices: ${filteredInvoices.length}`,
                 columns: [
                   { header: 'Student Name', key: 'student_name', width: '25%' },
-                  { header: 'Invoice Title', key: 'title', width: '25%' },
-                  { header: 'Amount', key: 'amountLabel', width: '15%' },
-                  { header: 'Due Date', key: 'due_date', width: '20%' },
-                  { header: 'Status', key: 'statusLabel', width: '15%' },
+                  { header: 'Roll No', key: 'student_roll_no', width: '15%' },
+                  { header: 'Title / Description', key: 'title', width: '30%' },
+                  { header: 'Amount (₹)', key: 'amount', width: '15%' },
+                  { header: 'Status', key: 'status', width: '15%' },
                 ],
                 rows: filteredInvoices.map((inv) => ({
                   ...inv,
-                  amountLabel: `₹${inv.amount}`,
-                  statusLabel: STATUS_META[inv.status]?.label ?? inv.status,
+                  student_roll_no: inv.student_roll_no || 'N/A',
+                  amount: `₹${inv.amount}`,
+                  status: inv.status.toUpperCase(),
                 })),
               });
             }}
           />
         </View>
 
-        <View style={[styles.filterRow, { borderColor: theme.border, backgroundColor: theme.dark ? '#1E293B' : '#F1F5F9' }]}>
-          {(['due', 'paid', 'all'] as const).map((s) => (
-            <Pressable
-              key={s}
-              onPress={() => setStatusFilter(s)}
-              style={[styles.filterButton, statusFilter === s && { backgroundColor: theme.dark ? '#2563EB' : theme.tint }]}
-            >
-              <ThemedText type="small" style={{ color: statusFilter === s ? '#FFFFFF' : theme.dark ? '#94A3B8' : '#64748B', fontWeight: statusFilter === s ? '700' : '500' }}>
-                {s === 'all' ? 'All' : STATUS_META[s].label}
-              </ThemedText>
-            </Pressable>
-          ))}
+        {/* Filter Pills */}
+        <View style={[styles.filterRow, { borderColor: theme.border }]}>
+          {(['due', 'paid', 'all'] as const).map((f) => {
+            const active = statusFilter === f;
+            return (
+              <Pressable
+                key={f}
+                onPress={() => setStatusFilter(f)}
+                style={[
+                  styles.filterPill,
+                  active && { backgroundColor: theme.tint },
+                ]}
+              >
+                <ThemedText
+                  type="smallBold"
+                  style={[
+                    styles.filterText,
+                    { color: active ? Brand.white : theme.dark ? '#CBD5E1' : theme.textSecondary },
+                  ]}
+                >
+                  {f === 'due' ? 'Due' : f === 'paid' ? 'Paid' : 'All'}
+                </ThemedText>
+              </Pressable>
+            );
+          })}
         </View>
 
+        {/* Student Filter */}
         <SelectField
           label="Filter by Student"
           placeholder="All Students"
           value={studentFilter ?? ''}
           options={studentFilterOptions}
-          onChange={(v) => setStudentFilter(v || null)}
-          searchable
+          onChange={(val) => setStudentFilter(val || null)}
         />
 
-        <View style={styles.row}>
-          <View style={styles.rowItem}>
-            <DatePickerField label="Due From" placeholder="Any" value={dateFromFilter} onChange={setDateFromFilter} minDate="0000-00-00" />
+        {/* Date Range Filter */}
+        <View style={styles.dateFilterRow}>
+          <View style={{ flex: 1 }}>
+            <DatePickerField
+              label="Due From"
+              placeholder="Any"
+              value={dateFromFilter}
+              onChange={setDateFromFilter}
+            />
           </View>
-          <View style={styles.rowItem}>
-            <DatePickerField label="Due To" placeholder="Any" value={dateToFilter} onChange={setDateToFilter} minDate={dateFromFilter ?? '0000-00-00'} />
+          <View style={{ flex: 1 }}>
+            <DatePickerField
+              label="Due To"
+              placeholder="Any"
+              value={dateToFilter}
+              onChange={setDateToFilter}
+            />
           </View>
         </View>
-        {(dateFromFilter || dateToFilter) ? (
+
+        {/* Search Bar */}
+        <View style={[styles.searchContainer, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+          <Ionicons name="search" size={18} color={theme.textSecondary} style={{ marginRight: Spacing.two }} />
+          <TextInput
+            placeholder="Search by student name, title, roll no..."
+            placeholderTextColor={theme.textSecondary}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            style={[styles.searchInput, { color: theme.text }]}
+          />
+          {searchQuery ? (
+            <Pressable onPress={() => setSearchQuery('')}>
+              <Ionicons name="close-circle" size={18} color={theme.textSecondary} />
+            </Pressable>
+          ) : null}
+        </View>
+
+        {dateFromFilter || dateToFilter ? (
           <Pressable
             onPress={() => {
               setDateFromFilter(null);
@@ -494,10 +620,22 @@ export default function TeacherFeesScreen() {
               <Card key={inv.id} style={styles.invoiceCard}>
                 <View style={styles.invoiceTop}>
                   <ThemedText type="smallBold">{inv.title}</ThemedText>
-                  <View style={[styles.pill, { backgroundColor: meta.bg }]}>
-                    <ThemedText type="small" style={{ color: meta.color, fontWeight: '700' }}>
-                      {meta.label}
-                    </ThemedText>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.two }}>
+                    {inv.status === 'due' ? (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginRight: 4 }}>
+                        <Pressable onPress={() => handleEditInvoice(inv)} hitSlop={8}>
+                          <Ionicons name="create-outline" size={18} color={theme.dark ? '#38BDF8' : theme.tint} />
+                        </Pressable>
+                        <Pressable onPress={() => handleDeleteInvoice(inv)} hitSlop={8}>
+                          <Ionicons name="trash-outline" size={18} color="#EF4444" />
+                        </Pressable>
+                      </View>
+                    ) : null}
+                    <View style={[styles.pill, { backgroundColor: meta.bg }]}>
+                      <ThemedText type="small" style={{ color: meta.color, fontWeight: '700' }}>
+                        {meta.label}
+                      </ThemedText>
+                    </View>
                   </View>
                 </View>
                 {inv.student_name ? (
@@ -541,10 +679,14 @@ export default function TeacherFeesScreen() {
 
         <AddFeeModal
           visible={addOpen}
-          onClose={() => setAddOpen(false)}
+          onClose={() => {
+            setAddOpen(false);
+            setEditingInvoice(null);
+          }}
           onAdded={load}
           classId={classId ? Number(classId) : null}
           sectionId={selected?.section_id ?? undefined}
+          editingInvoice={editingInvoice}
         />
 
         <InvoiceViewerModal
@@ -559,15 +701,20 @@ export default function TeacherFeesScreen() {
 }
 
 const styles = StyleSheet.create({
+  actionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.three,
+    gap: Spacing.two,
+  },
   addButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    alignSelf: 'flex-start',
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
     borderRadius: Radius.pill,
-    marginBottom: Spacing.three,
   },
   addButtonLabel: {
     color: Brand.white,
@@ -579,11 +726,34 @@ const styles = StyleSheet.create({
     padding: 3,
     marginBottom: Spacing.three,
     alignSelf: 'flex-start',
+    backgroundColor: 'rgba(0,0,0,0.05)',
   },
-  filterButton: {
+  filterPill: {
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.one + 2,
     borderRadius: Radius.pill,
+  },
+  filterText: {
+    fontSize: 12,
+  },
+  dateFilterRow: {
+    flexDirection: 'row',
+    gap: Spacing.two,
+    marginBottom: Spacing.two,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+    marginBottom: Spacing.three,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    padding: 0,
   },
   invoiceCard: {
     marginBottom: Spacing.three,
@@ -605,24 +775,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.two,
     paddingVertical: 4,
     borderRadius: Radius.pill,
-  },
-  searchWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-    borderWidth: 1,
-    borderRadius: Radius.md,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-    marginBottom: Spacing.three,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 14,
-    padding: 0,
-  },
-  viewLink: {
-    marginTop: Spacing.two,
   },
   markPaidButton: {
     alignSelf: 'flex-start',

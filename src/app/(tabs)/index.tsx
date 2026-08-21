@@ -108,7 +108,7 @@ export default function HomeScreen() {
 
       {eventsEnabled ? (
         <>
-          <SectionHeader title={t('latest_events')} onSeeAll={() => router.push('/(tabs)/events')} />
+          <SectionHeader title={t('latest_events')} onSeeAll={home.data.events.length > 2 ? () => router.push('/(tabs)/events') : undefined} />
           {home.data.events.length > 0 ? (
             <View style={{ marginBottom: Spacing.four }}>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -134,7 +134,7 @@ export default function HomeScreen() {
 
       {topStudentsEnabled && (achievers.data ?? []).length > 0 ? (
         <>
-          <SectionHeader title={t('top_students')} onSeeAll={() => router.push('/top-students')} />
+          <SectionHeader title={t('top_students')} onSeeAll={(achievers.data ?? []).length > 2 ? () => router.push('/top-students') : undefined} />
           <View style={{ marginBottom: Spacing.four }}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               {(achievers.data ?? []).map(toAchiever).map((a, i) => (
