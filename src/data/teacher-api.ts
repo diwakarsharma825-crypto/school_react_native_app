@@ -1285,6 +1285,10 @@ export interface TeacherFeeInvoice {
   fee_type: FeeType;
   title: string;
   amount: string;
+  base_amount?: number;
+  discount_type?: 'fixed' | 'percent';
+  discount_value?: number;
+  discount_reason?: string;
   due_date: string | null;
   status: FeeStatus;
   file_url: string | null;
@@ -1300,6 +1304,10 @@ export async function addFeeInvoice(params: {
   feeType: FeeType;
   title: string;
   amount: number;
+  baseAmount?: number;
+  discountType?: 'fixed' | 'percent';
+  discountValue?: number;
+  discountReason?: string;
   classId?: number;
   dueDate?: string;
   fileUri?: string;
@@ -1312,6 +1320,10 @@ export async function addFeeInvoice(params: {
   body.append('fee_type', params.feeType);
   body.append('title', params.title);
   body.append('amount', String(params.amount));
+  if (params.baseAmount !== undefined) body.append('base_amount', String(params.baseAmount));
+  if (params.discountType) body.append('discount_type', params.discountType);
+  if (params.discountValue !== undefined) body.append('discount_value', String(params.discountValue));
+  if (params.discountReason) body.append('discount_reason', params.discountReason);
   if (params.dueDate) body.append('due_date', params.dueDate);
   if (params.fileUri) {
     const filename = params.fileName || params.fileUri.split('/').pop() || 'invoice.pdf';
@@ -1370,6 +1382,10 @@ export async function editFeeInvoice(params: {
   feeType: FeeType;
   title: string;
   amount: number;
+  baseAmount?: number;
+  discountType?: 'fixed' | 'percent';
+  discountValue?: number;
+  discountReason?: string;
   dueDate?: string;
   fileUri?: string;
   fileMimeType?: string | null;
@@ -1381,6 +1397,10 @@ export async function editFeeInvoice(params: {
   body.append('fee_type', params.feeType);
   body.append('title', params.title);
   body.append('amount', String(params.amount));
+  if (params.baseAmount !== undefined) body.append('base_amount', String(params.baseAmount));
+  if (params.discountType) body.append('discount_type', params.discountType);
+  if (params.discountValue !== undefined) body.append('discount_value', String(params.discountValue));
+  if (params.discountReason) body.append('discount_reason', params.discountReason);
   if (params.dueDate) body.append('due_date', params.dueDate);
   if (params.fileUri) {
     const filename = params.fileName || params.fileUri.split('/').pop() || 'invoice.pdf';

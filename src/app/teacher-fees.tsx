@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import * as DocumentPicker from 'expo-document-picker';
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
@@ -89,11 +90,11 @@ function AddFeeModal({
       setStudentSrn(editingInvoice.student_srn || null);
       setFeeType(editingInvoice.fee_type || null);
       setTitle(editingInvoice.title || '');
-      setAmount(String(editingInvoice.amount || ''));
+      setAmount(editingInvoice.base_amount !== undefined ? String(editingInvoice.base_amount) : String(editingInvoice.amount || ''));
+      setDiscountType(editingInvoice.discount_type || 'fixed');
+      setDiscountValue(editingInvoice.discount_value ? String(editingInvoice.discount_value) : '');
+      setDiscountReason(editingInvoice.discount_reason || '');
       setDueDate(editingInvoice.due_date || null);
-      setDiscountValue('');
-      setDiscountType('fixed');
-      setDiscountReason('');
       setFile(null);
     } else if (visible) {
       setStudentSrn(null);
@@ -147,6 +148,10 @@ function AddFeeModal({
           feeType,
           title: title.trim(),
           amount: netPayable,
+          baseAmount: baseNum,
+          discountType,
+          discountValue: discValNum,
+          discountReason: discountReason.trim() || undefined,
           dueDate: dueDate || undefined,
           fileUri: file?.uri,
           fileMimeType: file?.mimeType,
@@ -158,6 +163,10 @@ function AddFeeModal({
           feeType,
           title: title.trim(),
           amount: netPayable,
+          baseAmount: baseNum,
+          discountType,
+          discountValue: discValNum,
+          discountReason: discountReason.trim() || undefined,
           classId: classId || undefined,
           dueDate: dueDate || undefined,
           fileUri: file?.uri,
@@ -323,9 +332,65 @@ function AddFeeModal({
             </>
           ) : null}
 
-          <Pressable onPress={pickFile} style={[styles.filePicker, { borderColor: theme.border }]}>
-            <ThemedText type="small">{file ? 'Invoice file selected' : 'Attach invoice (image or PDF, optional)'}</ThemedText>
-          </Pressable>
+          {/* Existing Attachment Preview in Edit Mode */}
+          {editingInvoice?.file_url && !file ? (
+            <View style={[styles.attachmentPreviewBox, { borderColor: theme.border, backgroundColor: theme.surface }]}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.two, flex: 1 }}>
+                {editingInvoice.file_type === 'image' || editingInvoice.file_url.match(/\.(jpg|jpeg|png|webp|gif)$/i) ? (
+                  <Image source={{ uri: editingInvoice.file_url }} style={styles.previewThumb} contentFit="cover" />
+                ) : (
+                  <Ionicons name="document-text-outline" size={32} color={theme.tint} />
+                )}
+                <View style={{ flex: 1 }}>
+                  <ThemedText type="smallBold" numberOfLines={1}>
+                    Attached {editingInvoice.file_type === 'pdf' ? 'PDF Document' : 'Invoice Image'}
+                  </ThemedText>
+                  <ThemedText type="small" themeColor="textSecondary" style={{ fontSize: 11 }}>
+                    Tap 'Change' below to replace file
+                  </ThemedText>
+                </View>
+              </View>
+              <Pressable
+                onPress={pickFile}
+                style={[styles.replaceFileBtn, { backgroundColor: theme.dark ? 'rgba(56, 189, 248, 0.15)' : '#EFF6FF' }]}
+              >
+                <ThemedText type="smallBold" style={{ color: theme.dark ? '#38BDF8' : theme.tint, fontSize: 12 }}>
+                  Change File
+                </ThemedText>
+              </Pressable>
+            </View>
+          ) : null}
+
+          {/* Newly Selected File Attachment Preview */}
+          {file ? (
+            <View style={[styles.attachmentPreviewBox, { borderColor: theme.tint, backgroundColor: theme.dark ? 'rgba(37, 99, 235, 0.15)' : '#EFF6FF' }]}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.two, flex: 1 }}>
+                {file.mimeType?.startsWith('image/') || file.uri.match(/\.(jpg|jpeg|png|webp|gif)$/i) ? (
+                  <Image source={{ uri: file.uri }} style={styles.previewThumb} contentFit="cover" />
+                ) : (
+                  <Ionicons name="document-text-outline" size={32} color={theme.tint} />
+                )}
+                <View style={{ flex: 1 }}>
+                  <ThemedText type="smallBold" numberOfLines={1} style={{ color: theme.text }}>
+                    {file.name || 'Selected File'}
+                  </ThemedText>
+                  <ThemedText type="small" style={{ color: theme.dark ? '#4ADE80' : '#15803D', fontSize: 11, fontWeight: '600' }}>
+                    New file selected
+                  </ThemedText>
+                </View>
+              </View>
+              <Pressable onPress={() => setFile(null)} hitSlop={8} style={{ padding: 4 }}>
+                <Ionicons name="close-circle" size={24} color="#EF4444" />
+              </Pressable>
+            </View>
+          ) : !editingInvoice?.file_url ? (
+            <Pressable onPress={pickFile} style={[styles.filePicker, { borderColor: theme.border }]}>
+              <Ionicons name="cloud-upload-outline" size={20} color={theme.textSecondary} style={{ marginBottom: 4 }} />
+              <ThemedText type="small" themeColor="textSecondary">
+                Attach invoice (image or PDF, optional)
+              </ThemedText>
+            </Pressable>
+          ) : null}
 
           {error ? (
             <ThemedText type="small" style={styles.error}>
@@ -869,6 +934,25 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.three,
     alignItems: 'center',
     marginTop: Spacing.three,
+  },
+  attachmentPreviewBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderRadius: Radius.md,
+    padding: Spacing.two,
+    marginTop: Spacing.three,
+  },
+  previewThumb: {
+    width: 44,
+    height: 44,
+    borderRadius: Radius.sm,
+  },
+  replaceFileBtn: {
+    paddingHorizontal: Spacing.two,
+    paddingVertical: 6,
+    borderRadius: Radius.pill,
   },
   error: {
     color: Brand.red,
