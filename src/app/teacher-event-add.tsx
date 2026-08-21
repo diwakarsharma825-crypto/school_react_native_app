@@ -8,6 +8,7 @@ import { Alert, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react
 import { Brand, Radius, Spacing } from '@/constants/theme';
 import { Card } from '@/components/ui/Card';
 import { DatePickerField } from '@/components/ui/DatePickerField';
+import { MediaPickerModal } from '@/components/ui/MediaPickerModal';
 import { Screen } from '@/components/ui/Screen';
 import { SelectField } from '@/components/ui/SelectField';
 import { TeacherGuard } from '@/components/ui/TeacherGuard';
@@ -81,23 +82,23 @@ export default function TeacherEventAddScreen() {
     ]);
   }
 
-  async function addMedia() {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) return;
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images', 'videos'],
-      allowsMultipleSelection: true,
-      quality: 0.7,
-    });
-    if (!result.canceled && result.assets.length > 0) {
-      const picked: TeacherEventMediaItem[] = result.assets.map((a) => ({
-        uri: a.uri,
-        type: a.type === 'video' ? 'video' : 'image',
-        fileName: a.fileName,
-        mimeType: a.mimeType,
-      }));
-      setMedia((prev) => [...prev, ...picked]);
-    }
+  const [mediaPickerVisible, setMediaPickerVisible] = useState(false);
+
+  function addMedia() {
+    setMediaPickerVisible(true);
+  }
+
+  function handleSelectMedia(file: { uri: string; mimeType: string | null; name: string }) {
+    const isVideo = file.mimeType?.startsWith('video/') || file.uri.match(/\.(mp4|mov|m4v|mkv|webm)$/i);
+    setMedia((prev) => [
+      ...prev,
+      {
+        uri: file.uri,
+        type: isVideo ? 'video' : 'image',
+        fileName: file.name,
+        mimeType: file.mimeType || (isVideo ? 'video/mp4' : 'image/jpeg'),
+      },
+    ]);
   }
 
   function removeMedia(uri: string) {
@@ -279,6 +280,14 @@ export default function TeacherEventAddScreen() {
             {submitting ? 'Saving…' : isEditing ? 'Save Changes' : 'Publish Event'}
           </ThemedText>
         </Pressable>
+
+        <MediaPickerModal
+          visible={mediaPickerVisible}
+          onClose={() => setMediaPickerVisible(false)}
+          onSelectMedia={handleSelectMedia}
+          allowDocument={false}
+          title="Select Event Media"
+        />
       </Card>
     </Screen>
     </TeacherGuard>

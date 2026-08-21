@@ -9,6 +9,7 @@ import { Brand, Radius, Spacing } from '@/constants/theme';
 import { Card } from '@/components/ui/Card';
 import { DatePickerField } from '@/components/ui/DatePickerField';
 import { InvoiceViewerModal } from '@/components/ui/InvoiceViewerModal';
+import { MediaPickerModal } from '@/components/ui/MediaPickerModal';
 import { Screen } from '@/components/ui/Screen';
 import { SelectField } from '@/components/ui/SelectField';
 import { EmptyState, ErrorState, Loading } from '@/components/ui/states';
@@ -113,18 +114,10 @@ function AddFeeModal({
     .filter((s) => !!s.srn)
     .map((s) => ({ label: `${s.name}${s.roll_no ? ` (Roll ${s.roll_no})` : ''}`, value: s.srn as string }));
 
-  async function pickFile() {
-    try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: ['image/*', 'application/pdf', '*/*'],
-        copyToCacheDirectory: true,
-      });
-      if (result.canceled || !result.assets?.[0]) return;
-      const asset = result.assets[0];
-      setFile({ uri: asset.uri, mimeType: asset.mimeType, name: asset.name });
-    } catch (e) {
-      Alert.alert('File Error', e instanceof Error ? e.message : 'Could not select file.');
-    }
+  const [mediaPickerVisible, setMediaPickerVisible] = useState(false);
+
+  function pickFile() {
+    setMediaPickerVisible(true);
   }
 
   const baseNum = Number(amount) || 0;
@@ -410,6 +403,12 @@ function AddFeeModal({
           </KeyboardAwareScrollView>
         </View>
       </KeyboardAvoidingView>
+
+      <MediaPickerModal
+        visible={mediaPickerVisible}
+        onClose={() => setMediaPickerVisible(false)}
+        onSelectMedia={(f) => setFile(f)}
+      />
     </Modal>
   );
 }

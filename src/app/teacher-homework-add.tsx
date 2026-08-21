@@ -7,6 +7,7 @@ import { Alert, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react
 
 import { Brand, Radius, Spacing } from '@/constants/theme';
 import { Card } from '@/components/ui/Card';
+import { MediaPickerModal } from '@/components/ui/MediaPickerModal';
 import { Screen } from '@/components/ui/Screen';
 import { SelectField } from '@/components/ui/SelectField';
 import { ThemedText } from '@/components/ui/ThemedText';
@@ -163,13 +164,14 @@ export default function TeacherHomeworkAddScreen() {
     }
   }
 
-  async function addPhoto() {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) return;
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.7 });
-    if (!result.canceled && result.assets[0]) {
-      setPhotos((prev) => [...prev, result.assets[0].uri]);
-    }
+  const [mediaPickerVisible, setMediaPickerVisible] = useState(false);
+
+  function addPhoto() {
+    setMediaPickerVisible(true);
+  }
+
+  function handleSelectMedia(file: { uri: string }) {
+    setPhotos((prev) => [...prev, file.uri]);
   }
 
   function removePhoto(uri: string) {
@@ -392,6 +394,12 @@ export default function TeacherHomeworkAddScreen() {
               : 'Save Homework'}
           </ThemedText>
         </Pressable>
+
+        <MediaPickerModal
+          visible={mediaPickerVisible}
+          onClose={() => setMediaPickerVisible(false)}
+          onSelectMedia={handleSelectMedia}
+        />
       </Card>
     </Screen>
   );

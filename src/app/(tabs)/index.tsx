@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { router, useFocusEffect } from 'expo-router';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 
 import { Card } from '@/components/ui/Card';
@@ -76,6 +77,24 @@ export default function HomeScreen() {
   const achievers = useFetch(fetchTopAchievers);
   const eventsEnabled = useSectionEnabled('events');
   const topStudentsEnabled = useSectionEnabled('top_students');
+
+  useEffect(() => {
+    if (home.data?.sliders) {
+      home.data.sliders.forEach((s) => {
+        if (s.image_url) {
+          Image.prefetch(s.image_url).catch(() => {});
+        }
+      });
+    }
+    if (home.data?.events) {
+      home.data.events.forEach((e) => {
+        const url = e.image_url || e.cover_media?.url;
+        if (url) {
+          Image.prefetch(url).catch(() => {});
+        }
+      });
+    }
+  }, [home.data]);
 
   if (instituteMode) {
     if (studentLoggedIn) return <StudentDashboardScreen />;

@@ -55,7 +55,14 @@ export function Carousel({ sliders }: CarouselProps) {
       >
         {sliders.map((slide) => (
           <View key={slide.id} style={[styles.slide, { width: SLIDE_WIDTH }]}>
-            <Image source={{ uri: slide.image_url }} style={styles.image} contentFit="cover" />
+            <Image
+              source={{ uri: slide.image_url }}
+              style={styles.image}
+              contentFit="cover"
+              cachePolicy="memory-disk"
+              priority="high"
+              transition={250}
+            />
             {slide.title || slide.subtitle ? (
               <LinearGradient colors={['transparent', 'rgba(0,0,0,0.8)']} style={styles.overlay}>
                 {slide.title ? (

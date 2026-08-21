@@ -103,7 +103,14 @@ export function EventMediaCarousel({
     return fallbackUrl ? (
       <>
         <Pressable style={[style, styles.clip]} onPress={() => openImageGallery(fallbackUrl)}>
-          <Image source={{ uri: fallbackUrl }} style={StyleSheet.absoluteFill} contentFit="cover" />
+          <Image
+            source={{ uri: fallbackUrl }}
+            style={StyleSheet.absoluteFill}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            priority="high"
+            transition={200}
+          />
         </Pressable>
         {galleryOpen ? (
           <FullScreenGallery
@@ -134,7 +141,14 @@ export function EventMediaCarousel({
                 <VideoSlide key={i} uri={slide.url} width={width} onEnd={() => goTo(index + 1)} />
               ) : (
                 <Pressable key={i} onPress={() => openImageGallery(slide.url)} style={{ width, height: '100%' }}>
-                  <Image source={{ uri: slide.url }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+                  <Image
+                    source={{ uri: slide.url }}
+                    style={{ width: '100%', height: '100%' }}
+                    contentFit="cover"
+                    cachePolicy="memory-disk"
+                    priority="high"
+                    transition={200}
+                  />
                 </Pressable>
               )
             )}

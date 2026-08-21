@@ -7,6 +7,7 @@ import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { Brand, Radius, Spacing } from '@/constants/theme';
 import { Card } from '@/components/ui/Card';
+import { MediaPickerModal } from '@/components/ui/MediaPickerModal';
 import { DatePickerField } from '@/components/ui/DatePickerField';
 import { PasswordInput } from '@/components/ui/PasswordInput';
 import { Screen } from '@/components/ui/Screen';
@@ -95,13 +96,10 @@ export default function TeacherStudentReviewScreen() {
     };
   }, [params.id, params.phone]);
 
-  async function pickPhoto() {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) return;
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.7 });
-    if (!result.canceled && result.assets[0]) {
-      setPhotoUri(result.assets[0].uri);
-    }
+  const [mediaPickerVisible, setMediaPickerVisible] = useState(false);
+
+  function pickPhoto() {
+    setMediaPickerVisible(true);
   }
 
   async function handleSubmit() {
@@ -336,6 +334,14 @@ export default function TeacherStudentReviewScreen() {
             {submitting ? 'Saving…' : 'Submit'}
           </ThemedText>
         </Pressable>
+
+        <MediaPickerModal
+          visible={mediaPickerVisible}
+          onClose={() => setMediaPickerVisible(false)}
+          onSelectMedia={(file) => setPhotoUri(file.uri)}
+          allowDocument={false}
+          title="Student Photo Source"
+        />
       </Card>
     </Screen>
   );

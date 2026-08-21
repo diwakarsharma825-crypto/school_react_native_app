@@ -44,7 +44,14 @@ export function AchieverCard({ achiever, paletteIndex, width }: AchieverCardProp
     >
       <Card style={[styles.card, width ? { width, marginRight: Spacing.three } : undefined]}>
         {achiever.photoUrl ? (
-          <Image source={{ uri: achiever.photoUrl }} style={styles.photo} contentFit="cover" />
+          <Image
+            source={{ uri: achiever.photoUrl }}
+            style={styles.photo}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            priority="high"
+            transition={200}
+          />
         ) : (
           <View style={[styles.photo, { backgroundColor: AvatarPalette[paletteIndex % AvatarPalette.length] }]}>
             <Ionicons name="person" size={34} color={AvatarFgPalette[paletteIndex % AvatarFgPalette.length]} />
