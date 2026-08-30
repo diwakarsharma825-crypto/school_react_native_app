@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Brand, Radius, Spacing } from '@/constants/theme';
 import { Card } from '@/components/ui/Card';
@@ -15,14 +15,18 @@ import {
   deleteHomework,
   fetchHomeworkDates,
   fetchHomeworkForDate,
+  fetchHomeworkSubmissions,
   getSavedSelectedClassId,
   HomeworkEntry,
   saveSelectedClassId,
 } from '@/data/teacher-api';
+import { SectionUnavailable } from '@/components/ui/SectionUnavailable';
+import { useSectionEnabled } from '@/hooks/use-sections';
 import { useTeacherAuth } from '@/hooks/use-teacher-auth';
 import { useTheme } from '@/hooks/use-theme';
 import { ExportPdfButton } from '@/components/ui/ExportPdfButton';
-import { exportToPdf } from '@/lib/pdf-export';
+import { exportHomeworkToPdf, exportToPdf } from '@/lib/pdf-export';
+import { TeacherReviewModal } from '@/components/ui/TeacherReviewModal';
 
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -43,6 +47,11 @@ export default function TeacherHomeworkScreen() {
   const theme = useTheme();
   const router = useRouter();
   const { profile } = useTeacherAuth();
+  const enabled = useSectionEnabled('homework');
+  const canReview = useSectionEnabled('homework_submission');
+
+  if (!enabled) return <SectionUnavailable />;
+
   const classes = profile?.classes ?? [];
 
   const { classId: paramClassId, sectionId: paramSectionId } = useLocalSearchParams<{ classId?: string; sectionId?: string }>();
@@ -87,6 +96,23 @@ export default function TeacherHomeworkScreen() {
 
   // Selected Detail Modal State
   const [detailEntry, setDetailEntry] = useState<HomeworkEntry | null>(null);
+  const [reviewSubmissionItem, setReviewSubmissionItem] = useState<any | null>(null);
+  const [activeHomeworkSubmissions, setActiveHomeworkSubmissions] = useState<{ homeworkId: number; items: any[] } | null>(null);
+  const [failedAvatarIds, setFailedAvatarIds] = useState<Record<number, boolean>>({});
+  const [loadingSubmissions, setLoadingSubmissions] = useState(false);
+  const [previewPhotoUrl, setPreviewPhotoUrl] = useState<string | null>(null);
+
+  async function handleOpenSubmissions(homeworkId: number) {
+    setLoadingSubmissions(true);
+    try {
+      const subs = await fetchHomeworkSubmissions(homeworkId, profile?.token || undefined);
+      setActiveHomeworkSubmissions({ homeworkId, items: subs });
+    } catch (e) {
+      Alert.alert('Error', e instanceof Error ? e.message : 'Could not fetch submissions.');
+    } finally {
+      setLoadingSubmissions(false);
+    }
+  }
 
   // Edit/Delete restricted to current day only!
   const isCurrentDay = selectedDate === currentTodayDateStr;
@@ -335,6 +361,59 @@ export default function TeacherHomeworkScreen() {
                   ))}
                 </View>
               ) : null}
+
+              {/* Action Buttons: View Details AND Student Submissions & Reviews */}
+              <View style={{ marginTop: Spacing.two, paddingTop: Spacing.two, borderTopWidth: 1, borderTopColor: theme.border, flexDirection: 'row', gap: Spacing.two, alignItems: 'center' }}>
+                <Pressable
+                  style={{
+                    flex: 1,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 4,
+                    paddingVertical: 8,
+                    paddingHorizontal: 8,
+                    borderRadius: Radius.pill,
+                    borderWidth: 1,
+                    borderColor: theme.border,
+                    backgroundColor: theme.surface,
+                  }}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    setDetailEntry(entry);
+                  }}
+                >
+                  <Ionicons name="eye-outline" size={15} color={theme.text} />
+                  <ThemedText style={{ fontSize: 11, fontWeight: '700', color: theme.text }} numberOfLines={1}>
+                    View Details
+                  </ThemedText>
+                </Pressable>
+
+                {canReview ? (
+                  <Pressable
+                    style={{
+                      flex: 1.2,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 4,
+                      paddingVertical: 8,
+                      paddingHorizontal: 8,
+                      borderRadius: Radius.pill,
+                      backgroundColor: theme.dark ? '#334155' : '#E2E8F0',
+                    }}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      handleOpenSubmissions(entry.id);
+                    }}
+                  >
+                    <Ionicons name="people-outline" size={15} color={theme.text} />
+                    <ThemedText style={{ fontSize: 11, fontWeight: '700', color: theme.text }} numberOfLines={1}>
+                      Submissions &amp; Reviews
+                    </ThemedText>
+                  </Pressable>
+                ) : null}
+              </View>
             </Card>
           </Pressable>
         ))
@@ -348,9 +427,228 @@ export default function TeacherHomeworkScreen() {
           subject={detailEntry.subject}
           chapter={detailEntry.chapter ?? undefined}
           date={selectedDate}
-          description={detailEntry.description ?? ''}
+          description={detailEntry.description}
           photoUrls={detailEntry.attachments.map((a) => a.photo_url)}
-          teacherName={profile?.name}
+          teacherName={profile?.name ?? undefined}
+        />
+      ) : null}
+
+      {/* Submissions List Modal */}
+      {activeHomeworkSubmissions && !reviewSubmissionItem ? (
+        <Modal
+          visible={!!activeHomeworkSubmissions && !reviewSubmissionItem}
+          animationType="fade"
+          transparent
+          onRequestClose={() => setActiveHomeworkSubmissions(null)}
+        >
+          <View
+            style={{
+              flex: 1,
+              backgroundColor: 'rgba(15, 23, 42, 0.85)',
+              justifyContent: 'center',
+              alignItems: 'center',
+              padding: Spacing.md,
+              ...(Platform.OS === 'web'
+                ? ({
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    zIndex: 99999,
+                    width: '100vw',
+                    height: '100vh',
+                  } as any)
+                : {}),
+            }}
+          >
+            <View
+              style={{
+                width: '100%',
+                maxWidth: 520,
+                maxHeight: '88%',
+                backgroundColor: theme.surface,
+                borderRadius: Radius.lg,
+                borderWidth: 1,
+                borderColor: theme.border,
+                overflow: 'hidden',
+                elevation: 24,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 8 },
+                shadowOpacity: 0.35,
+                shadowRadius: 16,
+              }}
+            >
+              {/* Modal Header Banner */}
+              <View
+                style={{
+                  backgroundColor: theme.tint,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  paddingHorizontal: 16,
+                  paddingVertical: 14,
+                }}
+              >
+                <View style={{ flex: 1, paddingRight: 10 }}>
+                  <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '700', lineHeight: 20 }}>
+                    Student Submissions ({activeHomeworkSubmissions.items.length})
+                  </Text>
+                  <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 12, marginTop: 3, lineHeight: 16 }}>
+                    Review and grade completed student homework
+                  </Text>
+                </View>
+                <Pressable
+                  onPress={() => setActiveHomeworkSubmissions(null)}
+                  hitSlop={8}
+                  style={({ pressed }) => [{ padding: 4 }, pressed && { opacity: 0.7 }]}
+                >
+                  <Ionicons name="close-circle" size={26} color="#FFFFFF" />
+                </Pressable>
+              </View>
+
+              <View style={{ padding: Spacing.md, flex: 1 }}>
+                {activeHomeworkSubmissions.items.length === 0 ? (
+                  <EmptyState message="No student submissions received for this homework yet." icon="document-text-outline" />
+                ) : (
+                  <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingBottom: 8 }}>
+                    {activeHomeworkSubmissions.items.map((sub: any) => {
+                      const rawPhoto = sub.student_photo;
+                      const hasPhotoFailed = failedAvatarIds[sub.id];
+                      const photoUrl = (rawPhoto && !hasPhotoFailed && rawPhoto !== 'null' && rawPhoto !== 'undefined')
+                        ? (rawPhoto.startsWith('http') ? rawPhoto : `https://testing.saarthakgimsss12a.org/${rawPhoto.replace(/^\//, '')}`)
+                        : null;
+
+                      const initials = (sub.student_name || 'Student')
+                        .split(' ')
+                        .filter(Boolean)
+                        .map((n: string) => n[0])
+                        .join('')
+                        .toUpperCase()
+                        .slice(0, 2) || 'ST';
+
+                      return (
+                        <Card key={sub.id} style={{ padding: Spacing.md, backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border }}>
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                              {photoUrl ? (
+                                <Image
+                                  source={{ uri: photoUrl }}
+                                  onError={() => setFailedAvatarIds((prev) => ({ ...prev, [sub.id]: true }))}
+                                  style={{ width: 44, height: 44, borderRadius: 22, borderWidth: 1, borderColor: theme.border }}
+                                  contentFit="cover"
+                                />
+                              ) : (
+                                <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: theme.tint, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: theme.border }}>
+                                  <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 14 }}>
+                                    {initials}
+                                  </Text>
+                                </View>
+                              )}
+
+                            <View>
+                              <ThemedText type="smallBold" style={{ fontSize: 14 }}>
+                                {sub.student_name || `Student SRN: ${sub.student_srn}`}
+                              </ThemedText>
+                              <ThemedText type="small" themeColor="textSecondary" style={{ fontSize: 11 }}>
+                                SRN: {sub.student_srn}
+                              </ThemedText>
+                            </View>
+                          </View>
+
+                          <View
+                            style={{
+                              backgroundColor: sub.status === 'reviewed' ? '#C6F6D5' : '#FEFCBF',
+                              paddingHorizontal: 10,
+                              paddingVertical: 4,
+                              borderRadius: 12,
+                            }}
+                          >
+                            <ThemedText style={{ color: sub.status === 'reviewed' ? '#22543D' : '#744210', fontSize: 10, fontWeight: '700' }}>
+                              {sub.status === 'reviewed' ? `✓ ${sub.rating || 'Reviewed'}` : '⏳ Pending Review'}
+                            </ThemedText>
+                          </View>
+                        </View>
+
+                        {sub.description ? (
+                          <View style={{ marginTop: 8, padding: 10, borderRadius: Radius.sm, backgroundColor: theme.dark ? '#1E293B' : '#F8FAFC', borderWidth: 1, borderColor: theme.border }}>
+                            <ThemedText type="small" style={{ fontSize: 12, color: theme.text }}>
+                              <ThemedText style={{ fontWeight: '700' }}>Student Note: </ThemedText>
+                              {sub.description}
+                            </ThemedText>
+                          </View>
+                        ) : null}
+
+                        {sub.photos && sub.photos.length > 0 ? (
+                          <View style={{ marginTop: 8 }}>
+                            <ThemedText type="small" themeColor="textSecondary" style={{ fontSize: 11, marginBottom: 4, fontWeight: '600' }}>
+                              Attached Homework Photos ({sub.photos.length}) — Tap photo to expand:
+                            </ThemedText>
+                            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                              {sub.photos.map((p: string, idx: number) => (
+                                <Pressable key={idx} onPress={() => setPreviewPhotoUrl(p)}>
+                                  <Image source={{ uri: p }} style={{ width: 75, height: 75, borderRadius: Radius.sm, borderWidth: 1, borderColor: theme.border }} contentFit="cover" />
+                                </Pressable>
+                              ))}
+                            </ScrollView>
+                          </View>
+                        ) : null}
+
+                        {/* Prominent Grade & Review Button */}
+                        <Pressable
+                          style={{
+                            marginTop: 12,
+                            backgroundColor: theme.tint,
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: 6,
+                            paddingVertical: 10,
+                            paddingHorizontal: 16,
+                            borderRadius: Radius.pill,
+                          }}
+                          onPress={() => setReviewSubmissionItem(sub)}
+                        >
+                          <Ionicons name={sub.status === 'reviewed' ? 'create-outline' : 'star-outline'} size={16} color="#FFFFFF" />
+                          <ThemedText style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '700' }}>
+                            {sub.status === 'reviewed' ? 'Edit Review / Grade' : '⭐ Grade & Add Rating'}
+                          </ThemedText>
+                        </Pressable>
+                      </Card>
+                    );
+                  })}
+                </ScrollView>
+              )}
+              </View>
+            </View>
+          </View>
+        </Modal>
+      ) : null}
+
+      {/* Full-Screen Image Preview Modal for Submissions */}
+      {previewPhotoUrl ? (
+        <Modal visible={!!previewPhotoUrl} transparent animationType="fade" onRequestClose={() => setPreviewPhotoUrl(null)}>
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.92)', justifyContent: 'center', alignItems: 'center', padding: 16 }}>
+            <Pressable style={{ position: 'absolute', top: 40, right: 20, zIndex: 10 }} onPress={() => setPreviewPhotoUrl(null)}>
+              <Ionicons name="close-circle" size={36} color="#FFFFFF" />
+            </Pressable>
+            <Image source={{ uri: previewPhotoUrl }} style={{ width: '100%', height: '80%' }} contentFit="contain" />
+          </View>
+        </Modal>
+      ) : null}
+
+      {/* Review Submission Modal */}
+      {reviewSubmissionItem ? (
+        <TeacherReviewModal
+          visible={!!reviewSubmissionItem}
+          onClose={() => setReviewSubmissionItem(null)}
+          submission={reviewSubmissionItem}
+          teacherToken={profile?.token || ''}
+          onSuccess={() => {
+            if (activeHomeworkSubmissions?.homeworkId) {
+              handleOpenSubmissions(activeHomeworkSubmissions.homeworkId);
+            }
+          }}
         />
       ) : null}
     </Screen>

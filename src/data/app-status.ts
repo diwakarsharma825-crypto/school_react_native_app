@@ -13,6 +13,7 @@ export type SectionKey =
   | 'top_students'
   | 'disclosure'
   | 'homework'
+  | 'homework_submission'
   | 'attendance'
   | 'leave'
   | 'fees'
@@ -35,6 +36,7 @@ export const ALL_SECTIONS_ENABLED: EnabledSections = {
   top_students: true,
   disclosure: true,
   homework: true,
+  homework_submission: true,
   attendance: true,
   leave: true,
   fees: true,

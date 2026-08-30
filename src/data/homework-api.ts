@@ -9,6 +9,20 @@ interface ApiEnvelope<T> {
   data: T;
 }
 
+export interface HomeworkSubmission {
+  id: number;
+  homework_id: number;
+  student_srn: string;
+  student_name: string | null;
+  description: string | null;
+  status: 'pending' | 'reviewed';
+  rating: string | null; // 'Good' | 'V.Good' | 'Star' | '2 Star' | '3 Star'
+  teacher_remarks: string | null;
+  signature_url: string | null;
+  photos: string[];
+  created_at: string;
+}
+
 export interface HomeworkEntry {
   id: number;
   subject: string;
@@ -17,6 +31,7 @@ export interface HomeworkEntry {
   description: string | null;
   attachments: { photo_url: string }[];
   teacher_name: string | null;
+  submission?: HomeworkSubmission | null;
 }
 
 async function getJson<T>(path: string): Promise<T> {
@@ -39,10 +54,21 @@ export async function fetchHomeworkDates(
 export async function fetchHomeworkForDate(
   className: string,
   section: string | undefined,
-  date: string
+  date: string,
+  srn?: string
 ): Promise<HomeworkEntry[]> {
-  const qs = `class=${encodeURIComponent(className)}${section ? `&section=${encodeURIComponent(section)}` : ''}&date=${date}`;
+  const qs = `class=${encodeURIComponent(className)}${section ? `&section=${encodeURIComponent(section)}` : ''}&date=${date}${srn ? `&srn=${encodeURIComponent(srn)}` : ''}`;
   return getJson<HomeworkEntry[]>(`/student_homework?${qs}`);
+}
+
+export async function submitStudentHomework(formData: FormData): Promise<{ submission_id: number; message: string }> {
+  const response = await fetch(`${BASE_URL}/student_submit_homework`, {
+    method: 'POST',
+    body: formData,
+  });
+  const json = await response.json();
+  if (!json.status) throw new Error(json.message || 'Submission failed');
+  return json.data;
 }
 
 export interface StudentChild {

@@ -24,6 +24,14 @@ interface ChildSwitcherCardProps {
 export function ChildSwitcherCard({ siblings, activeSrn, onSwitch, sessionLabel }: ChildSwitcherCardProps) {
   const theme = useTheme();
 
+  React.useEffect(() => {
+    siblings.forEach((c) => {
+      if (c.photoUrl) {
+        Image.prefetch(c.photoUrl).catch(() => {});
+      }
+    });
+  }, [siblings]);
+
   const activeIndex = Math.max(0, siblings.findIndex((c) => c.srn === activeSrn));
   const active = siblings[activeIndex] ?? siblings[0];
   const hasSiblings = siblings.length > 1;
@@ -47,7 +55,14 @@ export function ChildSwitcherCard({ siblings, activeSrn, onSwitch, sessionLabel 
   return (
     <View style={[styles.bar, { backgroundColor: theme.surface, borderColor: theme.border }]}>
       {active.photoUrl ? (
-        <Image source={{ uri: active.photoUrl }} style={styles.avatarPhoto} contentFit="cover" />
+        <Image
+          source={{ uri: active.photoUrl }}
+          style={styles.avatarPhoto}
+          contentFit="cover"
+          cachePolicy="memory-disk"
+          priority="high"
+          transition={200}
+        />
       ) : (
         <View style={[styles.avatar, { backgroundColor: iconBg }]}>
           <Ionicons name="school" size={20} color={iconColor} />

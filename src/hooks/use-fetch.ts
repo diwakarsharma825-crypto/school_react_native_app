@@ -33,16 +33,31 @@ export function useFetch<T>(
     let cancelled = false;
     setLoading(true);
     setError(undefined);
-    fetcher()
-      .then((result) => {
-        if (!cancelled) setData(result);
-      })
-      .catch((err) => {
-        if (!cancelled) setError(err instanceof Error ? err : new Error(String(err)));
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+
+    const executeFetch = (attempt = 0) => {
+      fetcher()
+        .then((result) => {
+          if (!cancelled) {
+            setData(result);
+            setLoading(false);
+          }
+        })
+        .catch((err) => {
+          if (!cancelled) {
+            if (attempt < 1) {
+              setTimeout(() => {
+                if (!cancelled) executeFetch(attempt + 1);
+              }, 1200);
+            } else {
+              setError(err instanceof Error ? err : new Error(String(err)));
+              setLoading(false);
+            }
+          }
+        });
+    };
+
+    executeFetch(0);
+
     return () => {
       cancelled = true;
     };

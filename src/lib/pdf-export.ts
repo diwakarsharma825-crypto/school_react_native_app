@@ -1,5 +1,6 @@
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import { Platform } from 'react-native';
 
 export interface PdfColumn {
   header: string;
@@ -98,55 +99,54 @@ export async function exportToPdf(options: ExportPdfOptions): Promise<void> {
             padding-bottom: 12px;
             margin-bottom: 20px;
           }
-          .header-logo {
-            max-height: 48px;
-            max-width: 120px;
-            object-fit: contain;
-          }
           .title {
-            font-size: 22px;
-            font-weight: bold;
+            font-size: 20px;
+            font-weight: 700;
             color: #2B6CB0;
-            margin: 0 0 4px 0;
           }
           .subtitle {
             font-size: 13px;
             color: #4A5568;
-            margin: 0;
+            margin-top: 2px;
           }
           .meta {
             font-size: 11px;
             color: #718096;
-            margin-top: 6px;
+            margin-top: 4px;
+          }
+          .header-logo {
+            max-height: 48px;
+            max-width: 140px;
+            object-fit: contain;
           }
           table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 15px;
+            margin-top: 16px;
             font-size: 12px;
           }
-          th {
-            background-color: #2B6CB0;
-            color: #FFFFFF;
-            font-weight: 600;
+          th, td {
+            padding: 8px 10px;
             text-align: left;
-            padding: 8px 10px;
-            border: 1px solid #2B6CB0;
+            border-bottom: 1px solid #E2E8F0;
           }
-          td {
-            padding: 8px 10px;
-            border: 1px solid #E2E8F0;
-            vertical-align: top;
+          th {
+            background-color: #EDF2F7;
+            color: #2D3748;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.5px;
           }
           tr.even {
-            background-color: #F7FAFC;
+            background-color: #FFFFFF;
           }
           tr.odd {
-            background-color: #FFFFFF;
+            background-color: #F7FAFC;
           }
           .badge {
             display: inline-block;
-            padding: 2px 6px;
+            padding: 2px 8px;
             border-radius: 4px;
             font-size: 11px;
             font-weight: 600;
@@ -212,9 +212,92 @@ export async function exportToPdf(options: ExportPdfOptions): Promise<void> {
     </html>
   `;
 
-  const { uri } = await Print.printToFileAsync({ html: fullHtml });
-  const canShare = await Sharing.isAvailableAsync();
-  if (canShare) {
-    await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: `Export ${title}` });
+  if (Platform.OS === 'web') {
+    await Print.printAsync({ html: fullHtml });
+    return;
   }
+
+  const result = await Print.printToFileAsync({ html: fullHtml });
+  if (result && result.uri) {
+    const canShare = await Sharing.isAvailableAsync();
+    if (canShare) {
+      await Sharing.shareAsync(result.uri, { mimeType: 'application/pdf', dialogTitle: `Export ${title}` });
+    }
+  }
+}
+
+export interface HomeworkPdfData {
+  title: string;
+  subject: string;
+  date: string;
+  description: string;
+  teacherName?: string | null;
+  attachments?: string[];
+  submission?: {
+    studentName?: string | null;
+    studentSrn?: string | null;
+    submittedAt?: string | null;
+    description?: string | null;
+    photos?: string[];
+    status?: string;
+    rating?: string | null;
+    teacherRemarks?: string | null;
+    signatureUrl?: string | null;
+  } | null;
+}
+
+export async function exportHomeworkToPdf(data: HomeworkPdfData): Promise<void> {
+  const allImages = [
+    ...(data.attachments || []),
+    ...(data.submission?.photos || []),
+  ].filter(Boolean);
+
+  let htmlBody = `
+    <div style="background-color: #F7FAFC; padding: 16px; border-radius: 8px; border: 1px solid #E2E8F0; margin-bottom: 16px;">
+      <h2 style="margin:0 0 8px 0; color: #2D3748;">Subject: ${data.subject}</h2>
+      <p style="margin: 4px 0; color: #4A5568;"><strong>Date:</strong> ${data.date}</p>
+      ${data.teacherName ? `<p style="margin: 4px 0; color: #4A5568;"><strong>Assigned By:</strong> ${data.teacherName}</p>` : ''}
+      <div style="margin-top: 12px; padding: 12px; background-color: #FFFFFF; border-radius: 6px; border-left: 4px solid #3182CE;">
+        <strong>Homework Instructions:</strong>
+        <p style="margin-top: 4px; white-space: pre-wrap; color: #2D3748;">${data.description || 'No description provided.'}</p>
+      </div>
+    </div>
+  `;
+
+  if (data.submission) {
+    const sub = data.submission;
+    const ratingDisplay = sub.rating
+      ? `<span style="display:inline-block; padding: 4px 10px; border-radius: 20px; background-color: #FEFCBF; color: #744210; font-weight: bold; font-size: 13px;">Grade: ${sub.rating}</span>`
+      : '';
+
+    const signatureDisplay = sub.signatureUrl
+      ? `<div style="margin-top: 16px; text-align: right; border-top: 1px dashed #CBD5E0; padding-top: 12px;">
+          <p style="font-size: 11px; color: #718096; margin-bottom: 4px;">Verified &amp; Signed By Teacher</p>
+          <img src="${sub.signatureUrl}" alt="Teacher Signature" style="max-height: 50px; max-width: 150px; object-fit: contain;" />
+        </div>`
+      : '';
+
+    htmlBody += `
+      <div style="background-color: #EDF2F7; padding: 16px; border-radius: 8px; border: 1px solid #CBD5E0; margin-bottom: 16px;">
+        <div style="display:flex; justify-content: space-between; align-items: center;">
+          <h3 style="margin:0; color: #2D3748;">Student Homework Submission</h3>
+          ${ratingDisplay}
+        </div>
+        ${sub.studentName ? `<p style="margin: 6px 0; color: #4A5568;"><strong>Student:</strong> ${sub.studentName} (${sub.studentSrn || ''})</p>` : ''}
+        ${sub.submittedAt ? `<p style="margin: 4px 0; color: #718096; font-size: 12px;">Submitted: ${sub.submittedAt}</p>` : ''}
+        
+        ${sub.description ? `<div style="margin-top: 8px; padding: 10px; background-color: #FFFFFF; border-radius: 6px;"><strong>Student Notes:</strong><p style="margin-top:2px;">${sub.description}</p></div>` : ''}
+        ${sub.teacherRemarks ? `<div style="margin-top: 8px; padding: 10px; background-color: #EBF8FF; border-left: 3px solid #3182CE; border-radius: 4px;"><strong>Teacher Feedback:</strong><p style="margin-top:2px; color: #2B6CB0;">${sub.teacherRemarks}</p></div>` : ''}
+        
+        ${signatureDisplay}
+      </div>
+    `;
+  }
+
+  await exportToPdf({
+    title: `Homework - ${data.subject}`,
+    subtitle: `Date: ${data.date}`,
+    htmlBody,
+    images: allImages,
+  });
 }

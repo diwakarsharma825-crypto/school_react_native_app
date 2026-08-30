@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { fetchStudentSiblingsApi } from '@/data/homework-api';
 import { getHomeworkAccess, getHomeworkChildren, HomeworkAccess, saveHomeworkChildren, setActiveChildSrn } from '@/lib/homework-access';
@@ -60,6 +61,13 @@ export function StudentAuthProvider({ children }: { children: React.ReactNode })
         }
       } catch {}
     }
+
+    // Prefetch all profile photos for instant display & switching
+    list.forEach((c) => {
+      if (c.photoUrl) {
+        Image.prefetch(c.photoUrl).catch(() => {});
+      }
+    });
 
     setAccessState(a);
     setAllChildren(list);

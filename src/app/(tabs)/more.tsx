@@ -225,7 +225,14 @@ export default function MoreScreen() {
         <Card style={[styles.userCard, { borderColor: theme.border }]}>
           <Pressable onPress={() => router.push('/profile')} style={styles.userCardInner}>
             {userPhoto ? (
-              <Image source={{ uri: userPhoto }} style={styles.userAvatarPhoto} contentFit="cover" />
+              <Image
+                source={{ uri: userPhoto }}
+                style={styles.userAvatarPhoto}
+                contentFit="cover"
+                cachePolicy="memory-disk"
+                priority="high"
+                transition={200}
+              />
             ) : (
               <View style={[styles.userAvatarFallback, { backgroundColor: theme.tint }]}>
                 <Ionicons name={userRole === 'TEACHER' ? 'briefcase' : 'school'} size={26} color={Brand.white} />

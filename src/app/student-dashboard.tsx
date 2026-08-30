@@ -108,7 +108,14 @@ export default function StudentDashboardScreen() {
         <Pressable onPress={() => router.push('/profile')}>
           <Card style={[styles.headerCard, { flexDirection: 'row', alignItems: 'center' }]}>
             {access.photoUrl ? (
-              <Image source={{ uri: access.photoUrl }} style={{ width: 44, height: 44, borderRadius: 22, marginRight: 12 }} contentFit="cover" />
+              <Image
+                source={{ uri: access.photoUrl }}
+                style={{ width: 44, height: 44, borderRadius: 22, marginRight: 12 }}
+                contentFit="cover"
+                cachePolicy="memory-disk"
+                priority="high"
+                transition={200}
+              />
             ) : (
               <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: theme.dark ? theme.tint : theme.backgroundSelected, alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
                 <Ionicons name="school" size={20} color={theme.dark ? '#FFFFFF' : theme.tint} />

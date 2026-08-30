@@ -61,7 +61,10 @@ const FAIL_OPEN_STATUS: AppStatus = {
   trial: { startDate: '', totalDays: 7, remainingDays: 7, ended: false, features: [] },
 };
 
+import { useAppPermissions } from '@/hooks/use-permissions';
+
 function RootLayoutInner() {
+  useAppPermissions();
   const theme = useTheme();
   const [status, setStatus] = useState<AppStatus | null>(null);
   const [checking, setChecking] = useState(true);

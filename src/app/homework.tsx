@@ -7,6 +7,7 @@ import { Animated, Pressable, ScrollView, StyleSheet, TextInput, View } from 're
 import { Brand, Radius, Spacing } from '@/constants/theme';
 import { Card } from '@/components/ui/Card';
 import { HomeworkDetailModal } from '@/components/ui/HomeworkDetailModal';
+import { StudentSubmissionModal } from '@/components/ui/StudentSubmissionModal';
 import { PasswordInput } from '@/components/ui/PasswordInput';
 import { ProfileHeaderBar } from '@/components/ui/ProfileHeaderBar';
 import { ChildSwitcherCard } from '@/components/ui/ChildSwitcherCard';
@@ -28,7 +29,8 @@ import { useSectionEnabled } from '@/hooks/use-sections';
 import { useLanguage } from '@/lib/i18n';
 import { SectionUnavailable } from '@/components/ui/SectionUnavailable';
 import { ExportPdfButton } from '@/components/ui/ExportPdfButton';
-import { exportToPdf } from '@/lib/pdf-export';
+import { exportHomeworkToPdf, exportToPdf } from '@/lib/pdf-export';
+import { StudentHomeworkSubmitModal } from '@/components/ui/StudentHomeworkSubmitModal';
 
 const defaultLogo = require('../../assets/images/icon.png');
 
@@ -96,6 +98,11 @@ function AccessForm({ onDone }: { onDone: () => void }) {
         dob: result.dob || result.date_of_birth || undefined,
         photoUrl: result.photo_url || result.photoUrl || result.image_url || undefined,
       }));
+      children.forEach((c) => {
+        if (c.photoUrl) {
+          Image.prefetch(c.photoUrl).catch(() => {});
+        }
+      });
       await teacherLogout().catch(() => {});
       setTeacherLoggedIn(false);
       await saveHomeworkChildren(children);
@@ -207,6 +214,7 @@ function HomeworkCalendar({ access, onLogout }: { access: HomeworkAccess; onLogo
   const theme = useTheme();
   const { allChildren, switchChild } = useStudentAuth();
   const { t } = useLanguage();
+  const canSubmit = useSectionEnabled('homework_submission');
   const today = new Date();
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar');
   const [searchQuery, setSearchQuery] = useState('');
@@ -223,6 +231,8 @@ function HomeworkCalendar({ access, onLogout }: { access: HomeworkAccess; onLogo
   const [loadingEntries, setLoadingEntries] = useState(true);
   const [error, setError] = useState(false);
   const [detailEntry, setDetailEntry] = useState<HomeworkEntry | null>(null);
+  const [submitTargetHomework, setSubmitTargetHomework] = useState<HomeworkEntry | null>(null);
+  const [viewSubmissionTarget, setViewSubmissionTarget] = useState<HomeworkEntry | null>(null);
   const [sessionLabel, setSessionLabel] = useState<string | undefined>(undefined);
 
   useEffect(() => {
@@ -240,7 +250,7 @@ function HomeworkCalendar({ access, onLogout }: { access: HomeworkAccess; onLogo
   function loadEntries(date: string) {
     setLoadingEntries(true);
     setError(false);
-    fetchHomeworkForDate(access.className, access.section || undefined, date)
+    fetchHomeworkForDate(access.className, access.section || undefined, date, access.srn)
       .then(setEntries)
       .catch(() => setError(true))
       .finally(() => setLoadingEntries(false));
@@ -249,7 +259,7 @@ function HomeworkCalendar({ access, onLogout }: { access: HomeworkAccess; onLogo
   function loadAllEntries() {
     setLoadingEntries(true);
     setError(false);
-    fetchHomeworkForDate(access.className, access.section || undefined, 'all')
+    fetchHomeworkForDate(access.className, access.section || undefined, 'all', access.srn)
       .then(setAllEntries)
       .catch(() => setError(true))
       .finally(() => setLoadingEntries(false));
@@ -262,7 +272,7 @@ function HomeworkCalendar({ access, onLogout }: { access: HomeworkAccess; onLogo
       loadAllEntries();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedDate, viewMode]);
+  }, [selectedDate, viewMode, access.className, access.section, access.srn]);
 
   const availableSubjects = useMemo(() => {
     const set = new Set<string>();
@@ -332,6 +342,229 @@ function HomeworkCalendar({ access, onLogout }: { access: HomeworkAccess; onLogo
     if (m < 1) { m = 12; y--; }
     setViewMonth(m);
     setViewYear(y);
+  }
+
+  function renderHomeworkCard(entry: HomeworkEntry) {
+    return (
+      <Card key={entry.id} style={styles.entryCard}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, flexWrap: 'wrap', marginRight: 8 }}>
+            <View style={[styles.subjectBadge, { backgroundColor: theme.tint }]}>
+              <ThemedText type="smallBold" style={{ color: Brand.white, fontSize: 12 }}>
+                {t(entry.subject)}
+              </ThemedText>
+            </View>
+            {entry.chapter ? (
+              <View style={[styles.chapterBadge, { backgroundColor: theme.accent + '22', borderColor: theme.accent, borderWidth: 1 }]}>
+                <ThemedText type="smallBold" style={{ color: theme.accent, fontSize: 12 }}>
+                  {t(entry.chapter)}
+                </ThemedText>
+              </View>
+            ) : null}
+          </View>
+          <Pressable
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 4,
+              paddingVertical: 4,
+              paddingHorizontal: 10,
+              borderRadius: Radius.pill,
+              borderWidth: 1,
+              borderColor: theme.border,
+              backgroundColor: theme.surface,
+            }}
+            onPress={(e) => {
+              e.stopPropagation();
+              exportHomeworkToPdf({
+                title: entry.subject,
+                subject: entry.subject,
+                date: entry.homework_date,
+                description: entry.description || '',
+                teacherName: entry.teacher_name,
+                attachments: entry.attachments.map((a) => a.photo_url),
+                submission: entry.submission
+                  ? {
+                      studentName: access.name,
+                      studentSrn: access.srn,
+                      submittedAt: entry.submission.created_at,
+                      description: entry.submission.description,
+                      photos: entry.submission.photos,
+                      status: entry.submission.status,
+                      rating: entry.submission.rating,
+                      teacherRemarks: entry.submission.teacher_remarks,
+                      signatureUrl: entry.submission.signature_url,
+                    }
+                  : null,
+              });
+            }}
+          >
+            <Ionicons name="document-text-outline" size={14} color={theme.tint} />
+            <ThemedText style={{ fontSize: 11, fontWeight: '700', color: theme.text }}>PDF Export</ThemedText>
+          </Pressable>
+        </View>
+
+        {entry.teacher_name ? (
+          <ThemedText type="small" style={[styles.entryTeacher, { color: theme.dark ? '#CBD5E1' : theme.textSecondary }]}>
+            Assigned by {entry.teacher_name}
+          </ThemedText>
+        ) : null}
+        {entry.description ? (
+          <ThemedText type="small" style={[styles.entryDescription, { color: theme.dark ? '#E2E8F0' : theme.textSecondary }]} numberOfLines={2}>
+            {t(entry.description)}
+          </ThemedText>
+        ) : null}
+        {entry.attachments.length > 0 ? (
+          <View style={styles.attachmentRow}>
+            {entry.attachments.map((att, i) => (
+              <Image key={i} source={{ uri: att.photo_url }} style={styles.attachmentThumb} contentFit="cover" />
+            ))}
+          </View>
+        ) : null}
+
+        {/* Submission & Review Badge */}
+        {canSubmit && entry.submission ? (
+          <View
+            style={{
+              marginTop: Spacing.two,
+              padding: 12,
+              borderRadius: Radius.md,
+              backgroundColor: entry.submission.status === 'reviewed' ? (theme.dark ? '#064E3B' : '#ECFDF5') : (theme.dark ? '#451A03' : '#FEF3C7'),
+              borderWidth: 1,
+              borderColor: entry.submission.status === 'reviewed' ? (theme.dark ? '#059669' : '#A7F3D0') : (theme.dark ? '#D97706' : '#FDE68A'),
+              borderLeftWidth: 4,
+              borderLeftColor: entry.submission.status === 'reviewed' ? '#10B981' : '#F59E0B',
+            }}
+          >
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Ionicons
+                  name={entry.submission.status === 'reviewed' ? 'checkmark-circle' : 'time'}
+                  size={18}
+                  color={entry.submission.status === 'reviewed' ? '#10B981' : '#F59E0B'}
+                />
+                <ThemedText
+                  style={{
+                    color: entry.submission.status === 'reviewed' ? (theme.dark ? '#A7F3D0' : '#065F46') : (theme.dark ? '#FDE68A' : '#92400E'),
+                    fontWeight: '700',
+                    fontSize: 13,
+                  }}
+                >
+                  {entry.submission.status === 'reviewed' ? '✓ Teacher Review & Grade' : '⏳ Submitted (Pending Review)'}
+                </ThemedText>
+              </View>
+
+              {entry.submission.rating ? (
+                <View
+                  style={{
+                    backgroundColor: '#FEFCBF',
+                    borderColor: '#D69E2E',
+                    borderWidth: 1,
+                    paddingHorizontal: 8,
+                    paddingVertical: 2,
+                    borderRadius: 12,
+                  }}
+                >
+                  <ThemedText style={{ color: '#744210', fontWeight: '700', fontSize: 11 }}>
+                    🌟 Grade: {entry.submission.rating}
+                  </ThemedText>
+                </View>
+              ) : null}
+            </View>
+
+            {entry.submission.teacher_remarks ? (
+              <View
+                style={{
+                  marginTop: 8,
+                  padding: 8,
+                  borderRadius: Radius.sm,
+                  backgroundColor: theme.dark ? '#022C22' : '#FFFFFF',
+                  borderWidth: 1,
+                  borderColor: theme.dark ? '#047857' : '#D1FAE5',
+                }}
+              >
+                <ThemedText style={{ fontSize: 12, color: theme.dark ? '#ECFDF5' : '#166534', fontWeight: '600' }}>
+                  💬 Teacher Feedback: {entry.submission.teacher_remarks}
+                </ThemedText>
+              </View>
+            ) : null}
+          </View>
+        ) : null}
+
+        {/* Card Action Buttons */}
+        <View style={{ flexDirection: 'row', gap: Spacing.two, marginTop: Spacing.two }}>
+          {/* View Details Button */}
+          <Pressable
+            style={{
+              flex: 1,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 4,
+              paddingVertical: 8,
+              paddingHorizontal: 10,
+              borderRadius: Radius.pill,
+              borderWidth: 1,
+              borderColor: theme.border,
+              backgroundColor: theme.surface,
+            }}
+            onPress={() => setDetailEntry(entry)}
+          >
+            <Ionicons name="eye-outline" size={16} color={theme.text} />
+            <ThemedText style={{ fontSize: 12, fontWeight: '700', color: theme.text }}>View Details</ThemedText>
+          </Pressable>
+
+          {/* View My Submission Button (ONLY shows AFTER teacher has reviewed) */}
+          {entry.submission && entry.submission.status === 'reviewed' ? (
+            <Pressable
+              style={{
+                flex: 1,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 4,
+                paddingVertical: 8,
+                paddingHorizontal: 10,
+                borderRadius: Radius.pill,
+                borderWidth: 1,
+                borderColor: theme.tint,
+                backgroundColor: theme.dark ? '#1E293B' : '#EFF6FF',
+              }}
+              onPress={() => setViewSubmissionTarget(entry)}
+            >
+              <Ionicons name="document-text-outline" size={16} color={theme.tint} />
+              <ThemedText style={{ fontSize: 12, fontWeight: '700', color: theme.tint }}>View Submission</ThemedText>
+            </Pressable>
+          ) : null}
+
+          {/* Submit / Re-Submit Button (ONLY show if NOT reviewed by teacher yet) */}
+          {canSubmit && entry.submission?.status !== 'reviewed' ? (
+            <Pressable
+              style={{
+                flex: 1,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 4,
+                paddingVertical: 8,
+                paddingHorizontal: 10,
+                borderRadius: Radius.pill,
+                backgroundColor: entry.submission ? (theme.dark ? '#334155' : '#E2E8F0') : theme.tint,
+              }}
+              onPress={(e) => {
+                e.stopPropagation();
+                setSubmitTargetHomework(entry);
+              }}
+            >
+              <Ionicons name={entry.submission ? 'cloud-upload-outline' : 'send-outline'} size={14} color={entry.submission ? theme.text : '#FFFFFF'} />
+              <ThemedText style={{ fontSize: 12, fontWeight: '700', color: entry.submission ? theme.text : '#FFFFFF' }}>
+                {entry.submission ? 'Re-Submit' : 'Submit Homework'}
+              </ThemedText>
+            </Pressable>
+          ) : null}
+        </View>
+      </Card>
+    );
   }
 
   return (
@@ -444,11 +677,11 @@ function HomeworkCalendar({ access, onLogout }: { access: HomeworkAccess; onLogo
                 { header: 'Subject', key: 'subject', width: '20%' },
                 { header: 'Chapter / Title', key: 'chapter', width: '20%' },
                 { header: 'Description', key: 'description', width: '30%' },
-                { header: 'Attachment Link', key: 'attachmentLink', width: '15%' },
+                { header: 'Status', key: 'statusText', width: '15%' },
               ],
               rows: list.map((e) => ({
                 ...e,
-                attachmentLink: e.attachments && e.attachments.length > 0 ? e.attachments[0].photo_url : 'No attachment',
+                statusText: e.submission ? (e.submission.status === 'reviewed' ? `Reviewed (${e.submission.rating || ''})` : 'Submitted (Pending)') : 'Not Submitted',
               })),
               images,
             });
@@ -456,7 +689,9 @@ function HomeworkCalendar({ access, onLogout }: { access: HomeworkAccess; onLogo
         />
       </View>
 
+      {/* Main Content Area */}
       {viewMode === 'calendar' ? (
+        /* Calendar View */
         <>
           <Card style={styles.calendarCard}>
             <View style={styles.calendarHeader}>
@@ -470,6 +705,7 @@ function HomeworkCalendar({ access, onLogout }: { access: HomeworkAccess; onLogo
                 <Ionicons name="chevron-forward" size={20} color={theme.tint} />
               </Pressable>
             </View>
+
             <View style={styles.weekdayRow}>
               {WEEKDAY_LABELS.map((w, i) => (
                 <ThemedText key={i} type="small" themeColor="textSecondary" style={styles.weekdayLabel}>
@@ -477,6 +713,7 @@ function HomeworkCalendar({ access, onLogout }: { access: HomeworkAccess; onLogo
                 </ThemedText>
               ))}
             </View>
+
             <View style={styles.grid}>
               {days.map((day, i) => {
                 if (day === null) return <View key={i} style={styles.dayCell} />;
@@ -508,44 +745,7 @@ function HomeworkCalendar({ access, onLogout }: { access: HomeworkAccess; onLogo
           ) : entries.length === 0 ? (
             <EmptyState message="No homework for this date." icon="book-outline" />
           ) : (
-            entries.map((entry) => (
-              <Pressable key={entry.id} onPress={() => setDetailEntry(entry)}>
-                <Card style={styles.entryCard}>
-                  <View style={styles.entryHeaderRow}>
-                    <View style={[styles.subjectBadge, { backgroundColor: theme.tint }]}>
-                      <ThemedText type="smallBold" style={{ color: Brand.white, fontSize: 12 }}>
-                        {t(entry.subject)}
-                      </ThemedText>
-                    </View>
-                    {entry.chapter ? (
-                      <View style={[styles.chapterBadge, { backgroundColor: theme.accent + '22', borderColor: theme.accent, borderWidth: 1 }]}>
-                        <ThemedText type="smallBold" style={{ color: theme.accent, fontSize: 12 }}>
-                          {t(entry.chapter)}
-                        </ThemedText>
-                      </View>
-                    ) : null}
-                  </View>
-
-                  {entry.teacher_name ? (
-                    <ThemedText type="small" style={[styles.entryTeacher, { color: theme.dark ? '#CBD5E1' : theme.textSecondary }]}>
-                      Assigned by {entry.teacher_name}
-                    </ThemedText>
-                  ) : null}
-                  {entry.description ? (
-                    <ThemedText type="small" style={[styles.entryDescription, { color: theme.dark ? '#E2E8F0' : theme.textSecondary }]} numberOfLines={2}>
-                      {t(entry.description)}
-                    </ThemedText>
-                  ) : null}
-                  {entry.attachments.length > 0 ? (
-                    <View style={styles.attachmentRow}>
-                      {entry.attachments.map((att, i) => (
-                        <Image key={i} source={{ uri: att.photo_url }} style={styles.attachmentThumb} contentFit="cover" />
-                      ))}
-                    </View>
-                  ) : null}
-                </Card>
-              </Pressable>
-            ))
+            entries.map((entry) => renderHomeworkCard(entry))
           )}
         </>
       ) : (
@@ -664,44 +864,7 @@ function HomeworkCalendar({ access, onLogout }: { access: HomeworkAccess; onLogo
                   </ThemedText>
                 </View>
 
-                {group.items.map((entry) => (
-                  <Pressable key={entry.id} onPress={() => setDetailEntry(entry)}>
-                    <Card style={styles.entryCard}>
-                      <View style={styles.entryHeaderRow}>
-                        <View style={[styles.subjectBadge, { backgroundColor: theme.tint }]}>
-                          <ThemedText type="smallBold" style={{ color: Brand.white, fontSize: 12 }}>
-                            {entry.subject}
-                          </ThemedText>
-                        </View>
-                        {entry.chapter ? (
-                          <View style={[styles.chapterBadge, { backgroundColor: theme.accent + '22', borderColor: theme.accent, borderWidth: 1 }]}>
-                            <ThemedText type="smallBold" style={{ color: theme.accent, fontSize: 12 }}>
-                              {entry.chapter}
-                            </ThemedText>
-                          </View>
-                        ) : null}
-                      </View>
-
-                      {entry.teacher_name ? (
-                        <ThemedText type="small" style={[styles.entryTeacher, { color: theme.dark ? '#CBD5E1' : theme.textSecondary }]}>
-                          Assigned by {entry.teacher_name}
-                        </ThemedText>
-                      ) : null}
-                      {entry.description ? (
-                        <ThemedText type="small" style={[styles.entryDescription, { color: theme.dark ? '#E2E8F0' : theme.textSecondary }]} numberOfLines={3}>
-                          {entry.description}
-                        </ThemedText>
-                      ) : null}
-                      {entry.attachments.length > 0 ? (
-                        <View style={styles.attachmentRow}>
-                          {entry.attachments.map((att, i) => (
-                            <Image key={i} source={{ uri: att.photo_url }} style={styles.attachmentThumb} contentFit="cover" />
-                          ))}
-                        </View>
-                      ) : null}
-                    </Card>
-                  </Pressable>
-                ))}
+                {group.items.map((entry) => renderHomeworkCard(entry))}
               </View>
             ))
           )}
@@ -718,6 +881,48 @@ function HomeworkCalendar({ access, onLogout }: { access: HomeworkAccess; onLogo
           description={detailEntry.description}
           photoUrls={detailEntry.attachments.map((a) => a.photo_url)}
           teacherName={detailEntry.teacher_name}
+        />
+      ) : null}
+
+      {submitTargetHomework ? (
+        <StudentHomeworkSubmitModal
+          visible
+          onClose={() => setSubmitTargetHomework(null)}
+          homeworkId={submitTargetHomework.id}
+          subject={submitTargetHomework.subject}
+          studentSrn={access.srn}
+          studentName={access.name}
+          className={access.className}
+          section={access.section || undefined}
+          initialDescription={submitTargetHomework.submission?.description}
+          initialPhotos={submitTargetHomework.submission?.photos}
+          onSuccess={() => {
+            if (viewMode === 'calendar') loadEntries(selectedDate);
+            else loadAllEntries();
+          }}
+        />
+      ) : null}
+
+      {viewSubmissionTarget ? (
+        <StudentSubmissionModal
+          visible={!!viewSubmissionTarget}
+          onClose={() => setViewSubmissionTarget(null)}
+          subject={viewSubmissionTarget.subject}
+          submission={
+            viewSubmissionTarget.submission
+              ? {
+                  studentName: access.name,
+                  studentSrn: access.srn,
+                  submittedAt: viewSubmissionTarget.submission.created_at,
+                  description: viewSubmissionTarget.submission.description,
+                  photos: viewSubmissionTarget.submission.photos,
+                  status: viewSubmissionTarget.submission.status,
+                  rating: viewSubmissionTarget.submission.rating,
+                  teacherRemarks: viewSubmissionTarget.submission.teacher_remarks,
+                  signatureUrl: viewSubmissionTarget.submission.signature_url,
+                }
+              : null
+          }
         />
       ) : null}
     </>

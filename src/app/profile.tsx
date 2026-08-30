@@ -120,7 +120,14 @@ export default function ProfileScreen() {
       <Screen>
         <Card style={styles.headerCard}>
           {activeStudent.photoUrl ? (
-            <Image source={{ uri: activeStudent.photoUrl }} style={styles.avatarPhoto} contentFit="cover" />
+            <Image
+              source={{ uri: activeStudent.photoUrl }}
+              style={styles.avatarPhoto}
+              contentFit="cover"
+              cachePolicy="memory-disk"
+              priority="high"
+              transition={200}
+            />
           ) : (
             <View style={[styles.avatar, { backgroundColor: theme.dark ? theme.tint : theme.backgroundSelected }]}>
               <Ionicons name="school" size={32} color={theme.dark ? '#FFFFFF' : theme.tint} />

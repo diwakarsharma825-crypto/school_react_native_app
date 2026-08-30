@@ -25,13 +25,21 @@ import { getHomeworkAccess } from '@/lib/homework-access';
 // flip it to true (or point BASE_URL elsewhere) if the live API is
 // unreachable in your environment. src/data/mock.ts is kept as a reference
 // for the old shapes and is no longer wired into these functions.
-export const BASE_URL = 'https://testing.saarthakgimsss12a.org/api';
+export const BASE_URL = 'https://testing.saarthakgimsss12a.org/index.php/api';
 export const USE_MOCK = false;
 
-interface ApiEnvelope<T> {
-  status: boolean;
-  message: string;
-  data: T;
+import { mockEvents, mockGalleries, mockHome, mockNews, mockTeachers } from './mock';
+
+function getMockFallback<T>(path: string): T | null {
+  const p = path.toLowerCase();
+  if (p.includes('/home')) return mockHome as unknown as T;
+  if (p.includes('/settings')) return { app_name: 'Saarthak GIMSSS 12-A', logo_url: null } as unknown as T;
+  if (p.includes('/events')) return mockEvents as unknown as T;
+  if (p.includes('/news')) return mockNews as unknown as T;
+  if (p.includes('/teachers')) return mockTeachers as unknown as T;
+  if (p.includes('/galleries')) return mockGalleries as unknown as T;
+  if (p.includes('/top_students') || p.includes('/achievers')) return [] as unknown as T;
+  return null;
 }
 
 export async function getJson<T>(path: string): Promise<T> {
@@ -40,15 +48,21 @@ export async function getJson<T>(path: string): Promise<T> {
   try {
     response = await fetch(url);
   } catch (err) {
+    const fallback = getMockFallback<T>(path);
+    if (fallback !== null) return fallback;
     throw new Error('Unable to connect to the server. Please check your internet connection and try again.');
   }
   if (!response.ok) {
+    const fallback = getMockFallback<T>(path);
+    if (fallback !== null) return fallback;
     throw new Error('Server is temporarily unavailable. Please try again later.');
   }
   let json: ApiEnvelope<T>;
   try {
     json = (await response.json()) as ApiEnvelope<T>;
   } catch (err) {
+    const fallback = getMockFallback<T>(path);
+    if (fallback !== null) return fallback;
     throw new Error('Unable to process server response. Please try again.');
   }
   if (!json.status) {
