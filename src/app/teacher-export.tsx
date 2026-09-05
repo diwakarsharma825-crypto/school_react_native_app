@@ -18,11 +18,13 @@ import {
   fetchTeacherLeaveApplications,
   fetchTeacherNotices,
   fetchTeacherStudents,
+  formatClassLabel,
+  RosterStudent,
 } from '@/data/teacher-api';
 import { useTeacherAuth } from '@/hooks/use-teacher-auth';
 import { useTheme } from '@/hooks/use-theme';
 import { useSectionEnabled } from '@/hooks/use-sections';
-import { exportToPdf } from '@/lib/pdf-export';
+import { exportStudentRosterToPdf, exportToPdf } from '@/lib/pdf-export';
 
 type ExportKind = 'homework' | 'attendance' | 'notices' | 'leaves' | 'fees' | 'roster';
 type ExportFormat = 'pdf' | 'csv';
@@ -55,7 +57,7 @@ export default function TeacherExportScreen() {
 
   const classes = profile?.classes ?? [];
   const classOptions = classes.map((c) => ({
-    label: `${c.class_name}${c.section_name ? ` - ${c.section_name}` : ''}`,
+    label: formatClassLabel(c.class_name, c.section_name),
     value: String(c.class_id),
   }));
 
@@ -179,19 +181,10 @@ export default function TeacherExportScreen() {
         if (targetStudent) {
           filteredRoster = roster.filter((s) => String(s.id) === String(targetStudent.id));
         }
-        const images = filteredRoster.map((s) => s.photo_url).filter(Boolean) as string[];
-        await exportToPdf({
+        await exportStudentRosterToPdf({
           title: `Class Student Roster - ${selected?.class_name ?? ''}${selected?.section_name ? ` (${selected.section_name})` : ''}`,
           subtitle: `Total Enrolled Students: ${filteredRoster.length}${targetStudent ? ` | Student: ${targetStudent.name}` : ''}`,
-          columns: [
-            { header: 'Roll No', key: 'roll_no', width: '15%' },
-            { header: 'Student Name', key: 'name', width: '30%' },
-            { header: 'SRN', key: 'srn', width: '15%' },
-            { header: 'Father Name', key: 'father_name', width: '25%' },
-            { header: 'Phone', key: 'phone', width: '15%' },
-          ],
-          rows: filteredRoster,
-          images,
+          students: filteredRoster,
         });
       }
     } catch (e) {

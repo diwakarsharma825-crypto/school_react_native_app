@@ -28,7 +28,7 @@ export default function TeacherPromoteScreen() {
   const enabled = useSectionEnabled('teacher_promote');
 
   if (!enabled) return <SectionUnavailable />;
-  const [classes, setClasses] = useState<{ id: number; name: string; sections: { id: number; name: string }[] }[]>([]);
+  const [classes, setClasses] = useState<{ id: number; name: string; sections?: { id: number; name: string }[] }[]>([]);
   const [loadingClasses, setLoadingClasses] = useState(true);
 
   // Source Batch
@@ -112,7 +112,7 @@ export default function TeacherPromoteScreen() {
 
   const classOptions = classes.map((c) => ({ label: c.name, value: String(c.id) }));
   const selectedClass = classes.find((c) => c.id === selectedClassId);
-  const sectionOptions = selectedClass
+  const sectionOptions = selectedClass?.sections
     ? selectedClass.sections.map((s) => ({ label: `Section ${s.name}`, value: String(s.id) }))
     : [];
 
@@ -225,13 +225,14 @@ export default function TeacherPromoteScreen() {
             })
           )}
 
-        <Button
-          label={promoting ? 'Promoting Students…' : `Promote ${selectedCount} Students to ${targetSession}`}
-          onPress={handlePromote}
-          loading={promoting}
-          disabled={promoting || selectedCount === 0}
-          style={{ marginTop: Spacing.three }}
-        />
+        <View style={{ marginTop: Spacing.three }}>
+          <Button
+            label={promoting ? 'Promoting Students…' : `Promote ${selectedCount} Students to ${targetSession}`}
+            onPress={handlePromote}
+            loading={promoting}
+            disabled={promoting || selectedCount === 0}
+          />
+        </View>
       </Card>
     </Screen>
   </TeacherGuard>
@@ -260,7 +261,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.two,
     padding: Spacing.two,
-    borderRadius: Radius.medium,
+    borderRadius: Radius.md,
     borderWidth: 1,
     marginBottom: Spacing.one + 2,
   },

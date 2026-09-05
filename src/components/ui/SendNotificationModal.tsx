@@ -66,8 +66,8 @@ export function SendNotificationModal({ visible, onClose, classId, sectionId, ta
       <Pressable style={styles.backdrop} onPress={handleClose}>
         <Pressable style={[styles.sheet, { backgroundColor: theme.surface }]} onPress={(e) => e.stopPropagation()}>
           <View style={styles.header}>
-            <View style={[styles.iconWrap, { backgroundColor: theme.backgroundSelected }]}>
-              <Ionicons name="notifications" size={18} color={theme.tint} />
+            <View style={[styles.iconWrap, { backgroundColor: theme.dark ? 'rgba(59, 130, 246, 0.22)' : theme.backgroundSelected }]}>
+              <Ionicons name="notifications" size={18} color={theme.dark ? '#60A5FA' : theme.tint} />
             </View>
             <View style={styles.headerText}>
               <ThemedText type="smallBold">Send Alert</ThemedText>

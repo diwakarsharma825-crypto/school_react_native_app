@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { Brand, Radius, Spacing } from '@/constants/theme';
 import { Card } from '@/components/ui/Card';
@@ -19,6 +19,7 @@ import {
   getSavedSelectedClassId,
   HomeworkEntry,
   saveSelectedClassId,
+  formatClassLabel,
 } from '@/data/teacher-api';
 import { SectionUnavailable } from '@/components/ui/SectionUnavailable';
 import { useSectionEnabled } from '@/hooks/use-sections';
@@ -49,6 +50,7 @@ export default function TeacherHomeworkScreen() {
   const { profile } = useTeacherAuth();
   const enabled = useSectionEnabled('homework');
   const canReview = useSectionEnabled('homework_submission');
+  const { height: windowHeight } = useWindowDimensions();
 
   if (!enabled) return <SectionUnavailable />;
 
@@ -70,7 +72,7 @@ export default function TeacherHomeworkScreen() {
   }, [classes, selectedClassId]);
 
   const classOptions = classes.map((c) => ({
-    label: `${c.class_name}${c.section_name ? ` - ${c.section_name}` : ''}`,
+    label: formatClassLabel(c.class_name, c.section_name),
     value: String(c.class_id),
   }));
 
@@ -444,10 +446,12 @@ export default function TeacherHomeworkScreen() {
           <View
             style={{
               flex: 1,
+              width: '100%',
+              height: '100%',
               backgroundColor: 'rgba(15, 23, 42, 0.85)',
               justifyContent: 'center',
               alignItems: 'center',
-              padding: Spacing.md,
+              padding: Spacing.three,
               ...(Platform.OS === 'web'
                 ? ({
                     position: 'fixed',
@@ -464,9 +468,10 @@ export default function TeacherHomeworkScreen() {
           >
             <View
               style={{
-                width: '100%',
+                width: '92%',
                 maxWidth: 520,
                 maxHeight: '88%',
+                height: Math.min(640, Math.max(350, windowHeight * 0.82)),
                 backgroundColor: theme.surface,
                 borderRadius: Radius.lg,
                 borderWidth: 1,
@@ -507,11 +512,11 @@ export default function TeacherHomeworkScreen() {
                 </Pressable>
               </View>
 
-              <View style={{ padding: Spacing.md, flex: 1 }}>
+              <View style={{ paddingHorizontal: 16, paddingVertical: 14, flex: 1 }}>
                 {activeHomeworkSubmissions.items.length === 0 ? (
                   <EmptyState message="No student submissions received for this homework yet." icon="document-text-outline" />
                 ) : (
-                  <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingBottom: 8 }}>
+                  <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingBottom: 8 }}>
                     {activeHomeworkSubmissions.items.map((sub: any) => {
                       const rawPhoto = sub.student_photo;
                       const hasPhotoFailed = failedAvatarIds[sub.id];
@@ -528,7 +533,7 @@ export default function TeacherHomeworkScreen() {
                         .slice(0, 2) || 'ST';
 
                       return (
-                        <Card key={sub.id} style={{ padding: Spacing.md, backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border }}>
+                        <Card key={sub.id} style={{ padding: Spacing.three, backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border }}>
                           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                               {photoUrl ? (
@@ -628,11 +633,11 @@ export default function TeacherHomeworkScreen() {
       {/* Full-Screen Image Preview Modal for Submissions */}
       {previewPhotoUrl ? (
         <Modal visible={!!previewPhotoUrl} transparent animationType="fade" onRequestClose={() => setPreviewPhotoUrl(null)}>
-          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.92)', justifyContent: 'center', alignItems: 'center', padding: 16 }}>
+          <View style={{ flex: 1, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.92)', justifyContent: 'center', alignItems: 'center', padding: 16 }}>
             <Pressable style={{ position: 'absolute', top: 40, right: 20, zIndex: 10 }} onPress={() => setPreviewPhotoUrl(null)}>
               <Ionicons name="close-circle" size={36} color="#FFFFFF" />
             </Pressable>
-            <Image source={{ uri: previewPhotoUrl }} style={{ width: '100%', height: '80%' }} contentFit="contain" />
+            <Image source={{ uri: previewPhotoUrl }} style={{ width: '100%', height: Math.min(600, windowHeight * 0.8) }} contentFit="contain" />
           </View>
         </Modal>
       ) : null}

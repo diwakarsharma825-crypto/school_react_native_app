@@ -11,7 +11,7 @@ import { Screen } from '@/components/ui/Screen';
 import { SelectField } from '@/components/ui/SelectField';
 import { EmptyState, ErrorState, Loading } from '@/components/ui/states';
 import { ThemedText } from '@/components/ui/ThemedText';
-import { AttendanceStatus, AttendanceStudent, fetchAttendance, getSavedSelectedClassId, saveAttendance, saveSelectedClassId } from '@/data/teacher-api';
+import { AttendanceStatus, AttendanceStudent, fetchAttendance, getSavedSelectedClassId, saveAttendance, saveSelectedClassId, formatClassLabel } from '@/data/teacher-api';
 import { TeacherGuard } from '@/components/ui/TeacherGuard';
 import { useTeacherAuth } from '@/hooks/use-teacher-auth';
 import { useTheme } from '@/hooks/use-theme';
@@ -49,7 +49,7 @@ export default function TeacherAttendanceScreen() {
 
   const classes = profile?.classes ?? [];
   const classOptions = classes.map((c) => ({
-    label: `${c.class_name}${c.section_name ? ` - ${c.section_name}` : ''}`,
+    label: formatClassLabel(c.class_name, c.section_name),
     value: String(c.class_id),
   }));
 

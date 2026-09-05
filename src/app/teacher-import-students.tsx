@@ -10,7 +10,7 @@ import { SelectField } from '@/components/ui/SelectField';
 import { TeacherGuard } from '@/components/ui/TeacherGuard';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { Brand, Radius, Spacing } from '@/constants/theme';
-import { downloadStudentTemplate, importTeacherStudents } from '@/data/teacher-api';
+import { downloadStudentTemplate, importTeacherStudents, formatClassLabel } from '@/data/teacher-api';
 import { useTeacherAuth } from '@/hooks/use-teacher-auth';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -22,7 +22,7 @@ export default function TeacherImportStudentsScreen() {
 
   const classes = profile?.classes ?? [];
   const classOptions = classes.map((c) => ({
-    label: `${c.class_name}${c.section_name ? ` - ${c.section_name}` : ''}`,
+    label: formatClassLabel(c.class_name, c.section_name),
     value: String(c.class_id),
   }));
 
@@ -80,7 +80,7 @@ export default function TeacherImportStudentsScreen() {
     setSuccessMessage(null);
     try {
       const cId = selectedClass ? selectedClass.class_id : undefined;
-      const sId = selectedClass ? selectedClass.section_id : undefined;
+      const sId = selectedClass ? (selectedClass.section_id ?? undefined) : undefined;
       const { message } = await importTeacherStudents(file, cId, sId);
       setSuccessMessage(message);
       setFile(null);
@@ -105,6 +105,7 @@ export default function TeacherImportStudentsScreen() {
                 Target Class &amp; Section
               </ThemedText>
               <SelectField
+                label="Target Class & Section"
                 value={classId}
                 onChange={setClassId}
                 options={classOptions}

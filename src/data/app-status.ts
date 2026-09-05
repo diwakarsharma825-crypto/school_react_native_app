@@ -21,7 +21,8 @@ export type SectionKey =
   | 'teacher_promote'
   | 'syllabus'
   | 'teacher_export'
-  | 'teacher_storage';
+  | 'teacher_storage'
+  | 'classmates';
 
 /** Admin-controlled section visibility. Defaults to all-true so nothing
  * flickers hidden while the first app_status check is still in flight. */
@@ -45,6 +46,7 @@ export const ALL_SECTIONS_ENABLED: EnabledSections = {
   syllabus: true,
   teacher_export: true,
   teacher_storage: true,
+  classmates: true,
 };
 
 export interface AppStatus {
@@ -186,7 +188,7 @@ export async function fetchAppStatus(): Promise<AppStatus> {
     throw new Error(json.message || 'app_status returned an error');
   }
 
-  return {
+  const resStatus: AppStatus = {
     enabled: json.data.enabled,
     reason: json.data.reason,
     title: json.data.title,
@@ -199,7 +201,7 @@ export async function fetchAppStatus(): Promise<AppStatus> {
     minVersion: json.data.min_version ?? null,
     storeUrl: json.data.store_url ?? null,
     appLogoUrl: json.data.app_logo_url ?? null,
-    appTitle: json.data.app_title ?? null,
+    appTitle: (json.data as any).app_title ?? null,
     primaryColor: json.data.primary_color ?? null,
     accentColor: json.data.accent_color ?? null,
     splashColor: json.data.splash_color ?? null,
@@ -207,7 +209,7 @@ export async function fetchAppStatus(): Promise<AppStatus> {
     homeTiles: parseLayoutItems(json.data.home_tiles, DEFAULT_HOME_TILES),
     bottomTabs: parseLayoutItems(json.data.bottom_tabs, DEFAULT_BOTTOM_TABS),
     achieversDisplay: json.data.achievers_display === 'grade' ? 'grade' : 'marks',
-    instituteMode: json.data.institute_mode === true || json.data.institute_mode === 1,
+    instituteMode: (json.data as any).institute_mode === true || (json.data as any).institute_mode === 1,
     trial: json.data.trial
       ? {
           startDate: json.data.trial.start_date,
@@ -218,6 +220,15 @@ export async function fetchAppStatus(): Promise<AppStatus> {
         }
       : FAIL_OPEN_TRIAL,
   };
+
+  cachedAppStatus = resStatus;
+  return resStatus;
+}
+
+let cachedAppStatus: AppStatus | null = null;
+
+export function getCachedAppStatus(): AppStatus | null {
+  return cachedAppStatus;
 }
 
 export interface DeviceProfile {

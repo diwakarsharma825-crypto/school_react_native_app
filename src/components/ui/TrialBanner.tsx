@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Modal, Pressable, StyleSheet, View } from 'react-native';
 
@@ -95,9 +96,15 @@ export function TrialBanner({ trial }: { trial: TrialStatus }) {
             </View>
           ) : null}
 
-          <Pressable onPress={dismiss} style={[styles.ctaButton, { backgroundColor: theme.accent }]}>
+          <Pressable
+            onPress={() => {
+              dismiss();
+              router.push('/payment' as any);
+            }}
+            style={[styles.ctaButton, { backgroundColor: theme.accent }]}
+          >
             <ThemedText type="smallBold" style={styles.ctaLabel}>
-              Continue Exploring
+              {trial.ended ? 'Upgrade & Activate App' : 'Explore Activation Options'}
             </ThemedText>
           </Pressable>
         </Animated.View>

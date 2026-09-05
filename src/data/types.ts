@@ -67,6 +67,7 @@ export interface NewsItem {
   title: string;
   /** Rich-text (often HTML) body — the only content field the API returns. */
   news?: string;
+  description?: string;
   date: string;
   image?: string;
   image_url: string;
@@ -82,6 +83,7 @@ export interface EventItem {
   title: string;
   /** Rich-text (often HTML) body. */
   note?: string;
+  description?: string;
   event_from: string;
   event_to?: string;
   event_place?: string | null;
@@ -105,7 +107,9 @@ export interface Notice {
   title: string;
   /** Rich-text (often HTML) body. */
   notice?: string;
+  description?: string;
   date: string;
+  image_url?: string;
 }
 
 export interface Holiday {

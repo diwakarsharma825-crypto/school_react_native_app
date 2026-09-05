@@ -77,17 +77,7 @@ export default function TeacherLoginScreen() {
       const res = await teacherLogin(email.trim(), password);
       await clearHomeworkAccess();
       setStudentAccess(null);
-      setLoggedIn({
-        name: res.name,
-        phone: res.phone,
-        email: res.email,
-        photoUrl: res.photo_url,
-        subject: res.subject,
-        classId: res.class_id,
-        sectionId: res.section_id,
-        className: res.class_name,
-        section: res.section,
-      });
+      setLoggedIn(true);
       getFcmPushToken().then((pushToken) => {
         if (pushToken) requestTeacherPermissions(res.email, res.name);
       }).catch(() => {});
@@ -155,6 +145,9 @@ export default function TeacherLoginScreen() {
 }
 
 const styles = StyleSheet.create({
+  loginCard: {
+    marginBottom: Spacing.four,
+  },
   brandHeader: {
     flexDirection: 'row',
     alignItems: 'center',

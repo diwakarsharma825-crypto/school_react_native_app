@@ -16,6 +16,7 @@ import {
   View,
 } from 'react-native';
 
+import { MediaPickerModal, SelectedMediaFile } from '@/components/ui/MediaPickerModal';
 import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/states';
 import { Screen } from '@/components/ui/Screen';
@@ -119,6 +120,7 @@ export default function SubjectSyllabusScreen() {
   const [formAttachmentName, setFormAttachmentName] = useState<string>('');
   const [formAttachmentFile, setFormAttachmentFile] = useState<any>(null);
   const [formCompleted, setFormCompleted] = useState<boolean>(false);
+  const [mediaPickerVisible, setMediaPickerVisible] = useState<boolean>(false);
 
   // 1. Fetch Teacher's Assigned Classes Catalog
   useEffect(() => {
@@ -244,35 +246,20 @@ export default function SubjectSyllabusScreen() {
     }
   };
 
-  const handlePickImage = async () => {
-    try {
-      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!permission.granted) {
-        Alert.alert('Permission Required', 'Gallery access permission is required to upload images.');
-        return;
-      }
-      const res = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        quality: 0.8,
-      });
-      if (!res.canceled && res.assets && res.assets.length > 0) {
-        const asset = res.assets[0];
-        setFormAttachmentType('image');
-        setFormAttachmentUri(asset.uri);
-        setFormAttachmentName(asset.fileName || 'Syllabus_Diagram.jpg');
-        if (asset.file) {
-          setFormAttachmentFile(asset.file);
-        } else {
-          setFormAttachmentFile({
-            uri: asset.uri,
-            name: asset.fileName || 'image.jpg',
-            type: 'image/jpeg',
-          });
-        }
-      }
-    } catch (err) {
-      Alert.alert('Error', 'Could not select image');
-    }
+  const handleSelectMedia = (file: SelectedMediaFile) => {
+    const isImage = file.mimeType?.startsWith('image/') || file.name.match(/\.(jpg|jpeg|png|webp|gif)$/i);
+    setFormAttachmentType(isImage ? 'image' : 'pdf');
+    setFormAttachmentUri(file.uri);
+    setFormAttachmentName(file.name);
+    setFormAttachmentFile({
+      uri: file.uri,
+      name: file.name,
+      type: file.mimeType || (isImage ? 'image/jpeg' : 'application/pdf'),
+    });
+  };
+
+  const handlePickImage = () => {
+    setMediaPickerVisible(true);
   };
 
   // Open Add Chapter Modal
@@ -999,6 +986,15 @@ export default function SubjectSyllabusScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      <MediaPickerModal
+        visible={mediaPickerVisible}
+        onClose={() => setMediaPickerVisible(false)}
+        onSelectMedia={handleSelectMedia}
+        allowDocument
+        allowVideo={false}
+        title="Select Attachment"
+      />
     </Screen>
   );
 }

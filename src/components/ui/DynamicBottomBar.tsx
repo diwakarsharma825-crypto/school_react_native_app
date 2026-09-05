@@ -108,7 +108,7 @@ export function DynamicBottomBar() {
   const loggedIn = teacherLoggedIn || studentLoggedIn;
   const menuName = teacherLoggedIn ? profile?.name ?? 'Teacher' : access?.name ?? 'Student';
   const menuIcon: keyof typeof Ionicons.glyphMap = teacherLoggedIn ? 'briefcase' : 'school';
-  const studentPhotoUrl = !teacherLoggedIn ? access?.photoUrl : null;
+  const userPhotoUrl = teacherLoggedIn ? (profile as any)?.photo_url : studentLoggedIn ? access?.photoUrl : null;
 
   const rawTeacherMenuItems: (MenuItem & { permKey?: keyof NonNullable<typeof profile>['permissions']; sectionKey?: SectionKey })[] = [
     { label: 'Teacher Dashboard', icon: 'speedometer-outline', onPress: () => router.push('/teacher-dashboard' as any) },
@@ -229,8 +229,8 @@ export function DynamicBottomBar() {
               }}
               style={[styles.menuHeader, { borderBottomColor: theme.border }]}
             >
-              {studentPhotoUrl ? (
-                <Image source={{ uri: studentPhotoUrl }} style={styles.menuAvatarPhoto} contentFit="cover" />
+              {userPhotoUrl ? (
+                <Image source={{ uri: userPhotoUrl }} style={styles.menuAvatarPhoto} contentFit="cover" />
               ) : (
                 <View style={[styles.menuAvatar, { backgroundColor: theme.dark ? theme.tint : theme.backgroundSelected }]}>
                   <Ionicons name={menuIcon} size={18} color={theme.dark ? '#FFFFFF' : theme.tint} />

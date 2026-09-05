@@ -6,6 +6,7 @@ import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { Card } from '@/components/ui/Card';
 import { ExportPdfButton } from '@/components/ui/ExportPdfButton';
+import { FullImageViewerModal } from '@/components/ui/FullImageViewerModal';
 import { Screen } from '@/components/ui/Screen';
 import { SelectField } from '@/components/ui/SelectField';
 import { SendNotificationModal } from '@/components/ui/SendNotificationModal';
@@ -20,10 +21,11 @@ import {
   PendingRegistration,
   RosterStudent,
   saveSelectedClassId,
+  formatClassLabel,
 } from '@/data/teacher-api';
 import { useTeacherAuth } from '@/hooks/use-teacher-auth';
 import { useTheme } from '@/hooks/use-theme';
-import { exportToPdf } from '@/lib/pdf-export';
+import { exportStudentRosterToPdf, exportToPdf } from '@/lib/pdf-export';
 
 function PendingRegistrationsSection({ classId, sectionId }: { classId: number; sectionId?: number }) {
   const theme = useTheme();
@@ -102,7 +104,7 @@ export default function TeacherStudentsScreen() {
 
   const classes = profile?.classes ?? [];
   const classOptions = classes.map((c) => ({
-    label: `${c.class_name}${c.section_name ? ` - ${c.section_name}` : ''}`,
+    label: formatClassLabel(c.class_name, c.section_name),
     value: String(c.class_id),
   }));
 
@@ -142,12 +144,13 @@ export default function TeacherStudentsScreen() {
   const [query, setQuery] = useState('');
   const [notifyTarget, setNotifyTarget] = useState<{ ref: string; name: string } | null | undefined>(undefined);
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+  const [viewingPhoto, setViewingPhoto] = useState<{ url: string; title?: string } | null>(null);
 
   function load() {
     if (!classIdNum) return;
     setLoading(true);
     setError(false);
-    fetchTeacherStudents(classIdNum, sectionIdNum)
+    fetchTeacherStudents(classIdNum, sectionIdNum ?? undefined)
       .then(setStudents)
       .catch(() => setError(true))
       .finally(() => setLoading(false));
@@ -202,7 +205,7 @@ export default function TeacherStudentsScreen() {
           <SelectField label="Class" placeholder="Select class" value={classId} options={classOptions} onChange={handleClassChange} />
         ) : null}
 
-        <PendingRegistrationsSection classId={classIdNum} sectionId={sectionIdNum} />
+        <PendingRegistrationsSection classId={classIdNum} sectionId={sectionIdNum ?? undefined} />
 
         <View style={styles.toolbarGrid}>
           <Pressable
@@ -240,19 +243,10 @@ export default function TeacherStudentsScreen() {
             style={styles.actionBtn}
             onPress={() => {
               if (!filteredStudents || filteredStudents.length === 0) return;
-              const images = filteredStudents.map((s) => s.photo_url).filter(Boolean) as string[];
-              exportToPdf({
+              exportStudentRosterToPdf({
                 title: `Class Roster Report - ${classLabel}${sectionLabel ? ` (${sectionLabel})` : ''}`,
                 subtitle: `Total Students: ${filteredStudents.length}${query ? ` | Filter: "${query}"` : ''}`,
-                columns: [
-                  { header: 'Roll No', key: 'roll_no', width: '15%' },
-                  { header: 'Student Name', key: 'name', width: '30%' },
-                  { header: 'SRN', key: 'srn', width: '15%' },
-                  { header: 'Father Name', key: 'father_name', width: '25%' },
-                  { header: 'Mobile Phone', key: 'phone', width: '15%' },
-                ],
-                rows: filteredStudents,
-                images,
+                students: filteredStudents,
               });
             }}
           />
@@ -286,7 +280,7 @@ export default function TeacherStudentsScreen() {
           visible={notifyTarget !== undefined}
           onClose={() => setNotifyTarget(undefined)}
           classId={classIdNum}
-          sectionId={sectionIdNum}
+          sectionId={sectionIdNum ?? undefined}
           target={notifyTarget ?? null}
         />
 
@@ -365,7 +359,14 @@ export default function TeacherStudentsScreen() {
                       style={styles.gridCard}
                     >
                       {s.photo_url ? (
-                        <Image source={{ uri: s.photo_url }} style={styles.gridPhoto} contentFit="cover" />
+                        <Pressable
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            if (s.photo_url) setViewingPhoto({ url: s.photo_url, title: s.name });
+                          }}
+                        >
+                          <Image source={{ uri: s.photo_url }} style={styles.gridPhoto} contentFit="cover" />
+                        </Pressable>
                       ) : (
                         <View style={[styles.gridPhoto, styles.studentPhotoFallback, { backgroundColor: theme.backgroundSelected }]}>
                           <Ionicons name="person" size={26} color={theme.textSecondary} />
@@ -407,7 +408,14 @@ export default function TeacherStudentsScreen() {
                   >
                     <Card style={styles.studentRow}>
                       {s.photo_url ? (
-                        <Image source={{ uri: s.photo_url }} style={styles.studentPhoto} contentFit="cover" />
+                        <Pressable
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            if (s.photo_url) setViewingPhoto({ url: s.photo_url, title: s.name });
+                          }}
+                        >
+                          <Image source={{ uri: s.photo_url }} style={styles.studentPhoto} contentFit="cover" />
+                        </Pressable>
                       ) : (
                         <View style={[styles.studentPhoto, styles.studentPhotoFallback, { backgroundColor: theme.backgroundSelected }]}>
                           <Ionicons name="person" size={18} color={theme.textSecondary} />
@@ -454,6 +462,12 @@ export default function TeacherStudentsScreen() {
             )}
           </>
         )}
+        <FullImageViewerModal
+          visible={!!viewingPhoto}
+          photoUrl={viewingPhoto?.url}
+          title={viewingPhoto?.title}
+          onClose={() => setViewingPhoto(null)}
+        />
       </Screen>
     </TeacherGuard>
   );

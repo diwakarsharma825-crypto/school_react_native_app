@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import React, { useState } from 'react';
-import { Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, useWindowDimensions, View } from 'react-native';
 
 import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -41,6 +41,7 @@ export function TeacherReviewModal({
   onSuccess,
 }: TeacherReviewModalProps) {
   const theme = useTheme();
+  const { height: windowHeight } = useWindowDimensions();
   const [rating, setRating] = useState<string>(submission?.rating || 'Good');
   const [remarks, setRemarks] = useState<string>(submission?.teacher_remarks || '');
   const [attachSignature, setAttachSignature] = useState<boolean>(true);
@@ -64,10 +65,12 @@ export function TeacherReviewModal({
 
   if (!submission) return null;
 
+  const cardHeight = Math.min(640, Math.max(350, windowHeight * 0.82));
+
   return (
     <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
       <View style={styles.overlay}>
-        <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+        <View style={[styles.card, { height: cardHeight, backgroundColor: theme.surface, borderColor: theme.border }]}>
           {/* Header Banner */}
           <View style={[styles.headerBanner, { backgroundColor: theme.tint }]}>
             <View style={{ flex: 1, paddingRight: 10 }}>
@@ -92,7 +95,7 @@ export function TeacherReviewModal({
               {/* Student Note */}
               {submission.description ? (
                 <View>
-                  <ThemedText type="caption" style={styles.label}>
+                  <ThemedText type="smallBold" style={styles.label}>
                     STUDENT SUBMISSION NOTE:
                   </ThemedText>
                   <View style={[styles.sectionBox, { backgroundColor: theme.dark ? '#1E242D' : '#F8FAFC', borderColor: theme.border }]}>
@@ -106,7 +109,7 @@ export function TeacherReviewModal({
               {/* Submitted Photos */}
               {submission.photos && submission.photos.length > 0 ? (
                 <View>
-                  <ThemedText type="caption" style={styles.label}>
+                  <ThemedText type="smallBold" style={styles.label}>
                     SUBMITTED PHOTOS ({submission.photos.length}) — TAP TO EXPAND:
                   </ThemedText>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingTop: 6, paddingBottom: 4 }}>
@@ -121,7 +124,7 @@ export function TeacherReviewModal({
 
               {/* Select Grade / Rating */}
               <View>
-                <ThemedText type="caption" style={styles.label}>
+                <ThemedText type="smallBold" style={styles.label}>
                   SELECT GRADE / RATING:
                 </ThemedText>
                 <View style={[styles.ratingGrid, { marginTop: 4 }]}>
@@ -156,7 +159,7 @@ export function TeacherReviewModal({
 
               {/* Teacher Feedback Remarks */}
               <View>
-                <ThemedText type="caption" style={styles.label}>
+                <ThemedText type="smallBold" style={styles.label}>
                   TEACHER FEEDBACK REMARKS:
                 </ThemedText>
                 <TextInput
@@ -177,7 +180,7 @@ export function TeacherReviewModal({
               <View style={[styles.switchRow, { borderTopColor: theme.border, paddingTop: 12, marginTop: 4 }]}>
                 <View style={{ flex: 1, marginRight: 8 }}>
                   <ThemedText style={{ fontWeight: '600', fontSize: 13, color: theme.text }}>Attach My Digital Signature</ThemedText>
-                  <ThemedText type="caption" themeColor="textSecondary" style={{ fontSize: 11, marginTop: 2 }}>
+                  <ThemedText type="small" themeColor="textSecondary" style={{ fontSize: 11, marginTop: 2 }}>
                     Appends your official saved signature image to this review.
                   </ThemedText>
                 </View>
@@ -217,11 +220,11 @@ export function TeacherReviewModal({
         {/* Full-Screen Image Preview Modal */}
         {previewPhoto ? (
           <Modal visible={!!previewPhoto} transparent animationType="fade" onRequestClose={() => setPreviewPhoto(null)}>
-            <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.92)', justifyContent: 'center', alignItems: 'center', padding: 16 }}>
+            <View style={{ flex: 1, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.92)', justifyContent: 'center', alignItems: 'center', padding: 16 }}>
               <Pressable style={{ position: 'absolute', top: 40, right: 20, zIndex: 10 }} onPress={() => setPreviewPhoto(null)}>
                 <Ionicons name="close-circle" size={36} color="#FFFFFF" />
               </Pressable>
-              <Image source={{ uri: previewPhoto }} style={{ width: '100%', height: '80%' }} contentFit="contain" />
+              <Image source={{ uri: previewPhoto }} style={{ width: '100%', height: Math.min(600, windowHeight * 0.8) }} contentFit="contain" />
             </View>
           </Modal>
         ) : null}
@@ -233,10 +236,12 @@ export function TeacherReviewModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
+    width: '100%',
+    height: '100%',
     backgroundColor: 'rgba(15, 23, 42, 0.85)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: Spacing.md,
+    padding: Spacing.three,
     ...(Platform.OS === 'web'
       ? ({
           position: 'fixed',
@@ -251,9 +256,9 @@ const styles = StyleSheet.create({
       : {}),
   },
   card: {
-    width: '100%',
+    width: '92%',
     maxWidth: 520,
-    maxHeight: '90%',
+    maxHeight: '88%',
     borderRadius: Radius.lg,
     borderWidth: 1,
     overflow: 'hidden',
@@ -271,7 +276,8 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   body: {
-    marginVertical: Spacing.xs,
+    flex: 1,
+    marginVertical: Spacing.one,
   },
   sectionBox: {
     padding: 12,
@@ -308,7 +314,7 @@ const styles = StyleSheet.create({
   input: {
     borderWidth: 1,
     borderRadius: Radius.md,
-    padding: Spacing.sm,
+    padding: Spacing.two,
     minHeight: 75,
     textAlignVertical: 'top',
     fontSize: 13,
@@ -316,21 +322,21 @@ const styles = StyleSheet.create({
   switchRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: Spacing.md,
-    paddingTop: Spacing.sm,
+    marginTop: Spacing.three,
+    paddingTop: Spacing.two,
     borderTopWidth: 1,
   },
   footer: {
     flexDirection: 'row',
     gap: 10,
-    marginTop: Spacing.sm,
-    paddingTop: Spacing.sm,
+    marginTop: Spacing.two,
+    paddingTop: Spacing.two,
     borderTopWidth: 1,
   },
   btnCancel: {
     flex: 1,
     paddingVertical: 12,
-    paddingHorizontal: Spacing.md,
+    paddingHorizontal: Spacing.three,
     borderRadius: Radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
@@ -338,7 +344,7 @@ const styles = StyleSheet.create({
   btnSubmit: {
     flex: 1.5,
     paddingVertical: 12,
-    paddingHorizontal: Spacing.md,
+    paddingHorizontal: Spacing.three,
     borderRadius: Radius.pill,
     alignItems: 'center',
     justifyContent: 'center',

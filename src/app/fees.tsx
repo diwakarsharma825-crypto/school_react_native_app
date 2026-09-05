@@ -121,7 +121,7 @@ export default function FeesScreen() {
             if (!visibleInvoices || visibleInvoices.length === 0) return;
             exportToPdf({
               title: `Fee Invoices Report - ${access?.name ?? ''}`,
-              subtitle: `Class: ${access?.className ?? ''} | Filter: ${statusFilter.toUpperCase()} | Total Due: ₹${dueTotal}`,
+              subtitle: `Class: ${access?.className ?? ''} | Filter: ${statusFilter.toUpperCase()} | Total Due: ₹${totalDue.toFixed(2)}`,
               columns: [
                 { header: 'Invoice No / Title', key: 'title', width: '30%' },
                 { header: 'Fee Type', key: 'typeLabel', width: '25%' },

@@ -961,6 +961,9 @@ export default function HomeworkScreen() {
 }
 
 const styles = StyleSheet.create({
+  loginCard: {
+    marginBottom: Spacing.four,
+  },
   formHeroRow: {
     alignItems: 'center',
     marginBottom: Spacing.three,

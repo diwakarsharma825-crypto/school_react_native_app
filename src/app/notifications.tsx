@@ -76,7 +76,7 @@ export default function NotificationsScreen() {
           id: `notice-${n.id}`,
           category: 'Notice',
           title: n.title,
-          body: stripHtml(n.description),
+          body: stripHtml(n.notice || n.description || ''),
           date: n.date || new Date().toISOString(),
           imageUrl: n.image_url,
         });
@@ -88,7 +88,7 @@ export default function NotificationsScreen() {
           id: `event-${e.id}`,
           category: 'Event',
           title: e.title,
-          body: stripHtml(e.description || e.event_place ? `Venue: ${e.event_place}` : ''),
+          body: stripHtml(e.note || e.description || (e.event_place ? `Venue: ${e.event_place}` : '')),
           date: e.event_from || new Date().toISOString(),
           imageUrl: e.image_url,
         });
@@ -100,7 +100,7 @@ export default function NotificationsScreen() {
           id: `news-${nw.id}`,
           category: 'News',
           title: nw.title,
-          body: stripHtml(nw.description),
+          body: stripHtml(nw.news || nw.description || ''),
           date: nw.date || new Date().toISOString(),
           imageUrl: nw.image_url,
         });

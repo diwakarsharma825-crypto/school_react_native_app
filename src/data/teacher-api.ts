@@ -125,6 +125,14 @@ export interface TeacherLoginResult {
   token: string;
   name: string;
   email: string;
+  phone?: string | null;
+  photo_url?: string | null;
+  subject?: string | null;
+  class_id?: number | null;
+  section_id?: number | null;
+  class_name?: string | null;
+  section?: string | null;
+  permissions?: Record<string, boolean>;
 }
 
 export async function teacherLogin(email: string, password: string): Promise<TeacherLoginResult> {
@@ -207,15 +215,16 @@ export type TeacherPermissionKey =
   | 'teacher_storage';
 
 export interface TeacherProfile {
+  token?: string | null;
   name: string | null;
   email: string | null;
+  phone?: string | null;
+  gender?: string | null;
+  photo_url?: string | null;
   signature_url: string | null;
   completed: boolean;
   classes: TeacherProfileClass[];
   can_edit_classes: boolean;
-  /** Which app sections this teacher is allowed to see — admin/principal
-   * grants these individually per teacher. Defaults to everything true
-   * until an admin explicitly restricts something. */
   permissions: Record<TeacherPermissionKey, boolean>;
 }
 
@@ -227,6 +236,8 @@ export async function fetchTeacherProfile(): Promise<TeacherProfile> {
       return {
         name: 'Teacher',
         email: 'teacher@school.org',
+        phone: '9876543210',
+        photo_url: null,
         signature_url: null,
         completed: true,
         classes: [],
@@ -290,7 +301,11 @@ export async function saveTeacherProfile(
   classes: ProfileClassSelection[],
   previousSignatureUrl: string | null,
   name?: string,
-  canEditClasses?: boolean
+  canEditClasses?: boolean,
+  phone?: string,
+  photoUri?: string | null,
+  previousPhotoUrl?: string | null,
+  gender?: string
 ): Promise<{ completed: boolean }> {
   const token = await getTeacherToken();
   const body = new FormData();
@@ -299,8 +314,15 @@ export async function saveTeacherProfile(
     JSON.stringify(classes.map((c) => ({ class_id: c.classId, section_id: c.sectionId, stream: c.stream })))
   );
   body.append('signature_url_prev', previousSignatureUrl ?? '');
+  body.append('photo_url_prev', previousPhotoUrl ?? '');
   if (name && name.trim()) {
     body.append('name', name.trim());
+  }
+  if (phone && phone.trim()) {
+    body.append('phone', phone.trim());
+  }
+  if (gender && gender.trim()) {
+    body.append('gender', gender.trim());
   }
   // Inform backend to bypass classes lock when the teacher is allowed to edit
   if (canEditClasses) {
@@ -309,6 +331,10 @@ export async function saveTeacherProfile(
   if (signatureUri) {
     const filePart = await createFileBlob(signatureUri, 'image/png', 'signature.png');
     body.append('signature', filePart);
+  }
+  if (photoUri) {
+    const filePart = await createFileBlob(photoUri, 'image/jpeg', 'teacher_photo.jpg');
+    body.append('photo', filePart);
   }
   const json = await postFormData<ApiEnvelope<{ completed: boolean }>>(
     '/teacher_save_profile',
@@ -945,6 +971,7 @@ export interface AttendanceStudent {
   photo_url: string | null;
   status: AttendanceStatus | null;
   remarks: string | null;
+  enrollment_status?: number;
 }
 
 export async function fetchAttendance(classId: number, sectionId: number | undefined, date: string): Promise<AttendanceStudent[]> {
@@ -1517,6 +1544,29 @@ export async function deleteTeacherSubject(id: string | number): Promise<void> {
   await authedRequest<{ deleted: boolean }>('/teacher_delete_subject', { method: 'POST', body });
 }
 
+export function formatClassLabel(className?: string | null, sectionName?: string | null): string {
+  if (!className) return '';
+  const name = className.trim();
+  if (!sectionName || !sectionName.trim()) return name;
+  const sec = sectionName.trim();
+
+  const normalizedName = name.toLowerCase();
+  const normalizedSec = sec.toLowerCase();
+
+  if (
+    normalizedName.endsWith(`- ${normalizedSec}`) ||
+    normalizedName.endsWith(`-${normalizedSec}`) ||
+    normalizedName.endsWith(`(${normalizedSec})`) ||
+    normalizedName.endsWith(` ${normalizedSec}`) ||
+    normalizedName.includes(` - ${normalizedSec}`) ||
+    normalizedName.includes(`(${normalizedSec})`)
+  ) {
+    return name;
+  }
+
+  return `${name} - ${sec}`;
+}
+
 export interface ClassPickerItem {
   id: number;
   name: string;
@@ -1532,7 +1582,7 @@ export async function fetchTeacherClassesCatalog(): Promise<ClassPickerItem[]> {
   if (profile && profile.classes && profile.classes.length > 0) {
     return profile.classes.map((c, idx) => ({
       id: c.class_id || idx + 1,
-      name: c.class_name + (c.section_name ? ` - ${c.section_name}` : ''),
+      name: formatClassLabel(c.class_name, c.section_name),
       section: c.section_name || undefined,
     }));
   }

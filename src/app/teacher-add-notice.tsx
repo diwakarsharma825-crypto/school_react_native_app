@@ -7,7 +7,7 @@ import { Card } from '@/components/ui/Card';
 import { Screen } from '@/components/ui/Screen';
 import { SelectField } from '@/components/ui/SelectField';
 import { ThemedText } from '@/components/ui/ThemedText';
-import { addTeacherNotice, updateTeacherNotice } from '@/data/teacher-api';
+import { addTeacherNotice, updateTeacherNotice, formatClassLabel } from '@/data/teacher-api';
 import { TeacherGuard } from '@/components/ui/TeacherGuard';
 import { useTeacherAuth } from '@/hooks/use-teacher-auth';
 import { useTheme } from '@/hooks/use-theme';
@@ -21,7 +21,7 @@ export default function TeacherAddNoticeScreen() {
 
   const classes = profile?.classes ?? [];
   const classOptions = classes.map((c) => ({
-    label: `${c.class_name}${c.section_name ? ` - ${c.section_name}` : ''}`,
+    label: formatClassLabel(c.class_name, c.section_name),
     value: String(c.class_id),
   }));
 

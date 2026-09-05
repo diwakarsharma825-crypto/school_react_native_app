@@ -284,3 +284,27 @@ export async function fetchStudentDetails(identifier: string): Promise<StudentCh
   const qs = new URLSearchParams({ srn: identifier }).toString();
   return getJson<StudentChild>(`/student_details?${qs}`);
 }
+
+export interface ClassmateItem {
+  id: string | number;
+  name: string;
+  roll_no?: string | null;
+  photo_url?: string | null;
+}
+
+export async function fetchStudentClassmatesApi(
+  className: string,
+  section?: string,
+  srn?: string
+): Promise<ClassmateItem[]> {
+  const qs = new URLSearchParams({
+    class: className,
+    ...(section ? { section } : {}),
+    ...(srn ? { srn } : {}),
+  }).toString();
+  try {
+    return await getJson<ClassmateItem[]>(`/student_classmates?${qs}`);
+  } catch {
+    return [];
+  }
+}

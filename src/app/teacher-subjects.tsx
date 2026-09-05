@@ -18,6 +18,7 @@ import {
   editTeacherSubject,
   fetchTeacherClassesCatalog,
   fetchTeacherSubjects,
+  formatClassLabel,
 } from '@/data/teacher-api';
 import { useTeacherAuth } from '@/hooks/use-teacher-auth';
 import { useTheme } from '@/hooks/use-theme';
@@ -90,13 +91,13 @@ export default function TeacherSubjectsScreen() {
     }
   }, [selectedClassId]);
 
-  if (!loggedIn) return <TeacherGuard />;
+  if (!loggedIn) return <TeacherGuard>{null}</TeacherGuard>;
 
   const selectedClass = classes.find((c) => c.id === selectedClassId);
   const className = selectedClass?.name || 'Class';
 
   const classOptions = classes.map((c) => ({
-    label: c.section ? `${c.name} (${c.section})` : c.name,
+    label: formatClassLabel(c.name, c.section),
     value: String(c.id),
   }));
 

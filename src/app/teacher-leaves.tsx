@@ -9,7 +9,7 @@ import { SelectField } from '@/components/ui/SelectField';
 import { EmptyState, ErrorState, Loading } from '@/components/ui/states';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { TeacherGuard } from '@/components/ui/TeacherGuard';
-import { fetchTeacherLeaveApplications, LeaveStatus, reviewLeaveApplication, TeacherLeaveApplication } from '@/data/teacher-api';
+import { fetchTeacherLeaveApplications, LeaveStatus, reviewLeaveApplication, TeacherLeaveApplication, formatClassLabel } from '@/data/teacher-api';
 import { useTeacherAuth } from '@/hooks/use-teacher-auth';
 import { useTheme } from '@/hooks/use-theme';
 import { useSectionEnabled } from '@/hooks/use-sections';
@@ -53,7 +53,7 @@ export default function TeacherLeavesScreen() {
 
   const classes = profile?.classes ?? [];
   const classOptions = classes.map((c) => ({
-    label: `${c.class_name}${c.section_name ? ` - ${c.section_name}` : ''}`,
+    label: formatClassLabel(c.class_name, c.section_name),
     value: String(c.class_id),
   }));
 

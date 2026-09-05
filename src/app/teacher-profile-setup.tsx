@@ -3,10 +3,12 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { Brand, Radius, Spacing } from '@/constants/theme';
 import { Card } from '@/components/ui/Card';
+import { FullImageViewerModal } from '@/components/ui/FullImageViewerModal';
+import { MediaPickerModal } from '@/components/ui/MediaPickerModal';
 import { Screen } from '@/components/ui/Screen';
 import { SelectField } from '@/components/ui/SelectField';
 import { SignaturePadModal } from '@/components/ui/SignaturePadModal';
@@ -36,8 +38,6 @@ interface Assignment {
 
 const STREAM_ELIGIBLE_KEYWORDS = ['11', '12'];
 
-import { TextInput } from 'react-native';
-
 export default function TeacherProfileSetupScreen() {
   const theme = useTheme();
   const router = useRouter();
@@ -45,6 +45,13 @@ export default function TeacherProfileSetupScreen() {
 
   const [isEditing, setIsEditing] = useState<boolean>(!profile?.completed);
   const [teacherName, setTeacherName] = useState<string>(profile?.name ?? '');
+  const [teacherPhone, setTeacherPhone] = useState<string>(profile?.phone ?? '');
+  const [teacherGender, setTeacherGender] = useState<string | null>(profile?.gender ?? null);
+  const [photoUri, setPhotoUri] = useState<string | null>(profile?.photo_url ?? null);
+  const [mediaPickerVisible, setMediaPickerVisible] = useState(false);
+  const [fullViewerVisible, setFullViewerVisible] = useState(false);
+  const [fullViewerUri, setFullViewerUri] = useState<string | null>(null);
+
   const [catalog, setCatalog] = useState<ClassPickerItem[]>([]);
   const [loadingCatalog, setLoadingCatalog] = useState(true);
   const [assignments, setAssignments] = useState<Assignment[]>([{ classId: null, sectionId: null, stream: null }]);
@@ -63,6 +70,9 @@ export default function TeacherProfileSetupScreen() {
   useEffect(() => {
     if (profile) {
       if (profile.name) setTeacherName(profile.name);
+      if (profile.phone) setTeacherPhone(profile.phone);
+      if (profile.gender) setTeacherGender(profile.gender);
+      if (profile.photo_url) setPhotoUri(profile.photo_url);
       if (profile.classes.length > 0) {
         setAssignments(
           profile.classes.map((c) => ({
@@ -99,6 +109,12 @@ export default function TeacherProfileSetupScreen() {
     setAssignments((prev) => prev.filter((_, i) => i !== index));
   }
 
+  function openFullPhoto(uri: string | null) {
+    if (!uri) return;
+    setFullViewerUri(uri);
+    setFullViewerVisible(true);
+  }
+
   async function handleSignatureCaptured(dataUrl: string) {
     setSignaturePadVisible(false);
     if (!dataUrl) return;
@@ -128,6 +144,10 @@ export default function TeacherProfileSetupScreen() {
       setError('Please choose at least one class.');
       return;
     }
+    if (teacherPhone.trim() && !/^\d{10}$/.test(teacherPhone.trim())) {
+      setError('Phone number must be exactly 10 digits.');
+      return;
+    }
 
     setSubmitting(true);
     setError(null);
@@ -142,7 +162,11 @@ export default function TeacherProfileSetupScreen() {
         payload,
         profile?.signature_url ?? null,
         teacherName.trim() || undefined,
-        true // teacher is in edit mode — always allow class updates
+        true, // teacher is in edit mode — always allow class updates
+        teacherPhone.trim() || undefined,
+        photoUri,
+        profile?.photo_url ?? null,
+        teacherGender ?? undefined
       );
       await refresh();
       setIsEditing(false);
@@ -154,7 +178,6 @@ export default function TeacherProfileSetupScreen() {
     }
   }
 
-
   if (loadingCatalog) {
     return (
       <Screen scroll={false}>
@@ -163,12 +186,46 @@ export default function TeacherProfileSetupScreen() {
     );
   }
 
+  const activePhoto = photoUri || profile?.photo_url;
+
   return (
     <Screen>
-      {/* Top Profile Header & Edit Mode Toggle */}
+      {/* Top Profile Header Card */}
       <Card style={styles.card}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.two }}>
-          <View style={{ flex: 1 }}>
+        <View style={styles.headerRow}>
+          {/* Avatar Photo Circle */}
+          <Pressable
+            onPress={() => {
+              if (activePhoto) {
+                openFullPhoto(activePhoto);
+              } else if (isEditing) {
+                setMediaPickerVisible(true);
+              }
+            }}
+            style={styles.avatarWrap}
+          >
+            {activePhoto ? (
+              <Image source={{ uri: activePhoto }} style={styles.avatarImage} contentFit="cover" />
+            ) : (
+              <View style={[styles.avatarFallback, { backgroundColor: theme.accent + '22' }]}>
+                <Ionicons name="person" size={36} color={theme.accent} />
+              </View>
+            )}
+            {isEditing ? (
+              <Pressable
+                onPress={(e) => {
+                  e.stopPropagation();
+                  setMediaPickerVisible(true);
+                }}
+                style={[styles.cameraBadge, { backgroundColor: theme.tint }]}
+                hitSlop={8}
+              >
+                <Ionicons name="camera" size={14} color="#FFF" />
+              </Pressable>
+            ) : null}
+          </Pressable>
+
+          <View style={{ flex: 1, marginLeft: Spacing.three }}>
             <ThemedText type="subtitle" style={{ fontSize: 18 }}>
               {profile?.name || teacherName || 'Teacher Profile'}
             </ThemedText>
@@ -176,6 +233,12 @@ export default function TeacherProfileSetupScreen() {
             {profile?.email ? (
               <ThemedText type="small" themeColor="textSecondary">
                 {profile.email}
+              </ThemedText>
+            ) : null}
+
+            {teacherPhone || profile?.phone ? (
+              <ThemedText type="small" themeColor="textSecondary" style={{ marginTop: 2 }}>
+                📞 {teacherPhone || profile?.phone}
               </ThemedText>
             ) : null}
           </View>
@@ -229,7 +292,11 @@ export default function TeacherProfileSetupScreen() {
             </View>
             <View style={styles.infoRow}>
               <ThemedText type="small" themeColor="textSecondary">Phone Number</ThemedText>
-              <ThemedText type="smallBold">{(profile as any)?.phone || '—'}</ThemedText>
+              <ThemedText type="smallBold">{teacherPhone || profile?.phone || '—'}</ThemedText>
+            </View>
+            <View style={styles.infoRow}>
+              <ThemedText type="small" themeColor="textSecondary">Gender</ThemedText>
+              <ThemedText type="smallBold">{teacherGender || profile?.gender || '—'}</ThemedText>
             </View>
           </Card>
 
@@ -258,8 +325,8 @@ export default function TeacherProfileSetupScreen() {
               </ThemedText>
             ) : (
               <View style={styles.chipRow}>
-                {profile.classes.map((c, i) => (
-                  <View key={i} style={[styles.chip, { backgroundColor: theme.dark ? '#1E293B' : '#F1F5F9', borderColor: theme.border, borderWidth: 1 }]}>
+                {profile.classes.map((c, idx) => (
+                  <View key={c.class_id ? `${c.class_id}-${c.section_id || idx}` : idx} style={[styles.chip, { backgroundColor: theme.dark ? '#1E293B' : '#F1F5F9', borderColor: theme.border }]}>
                     <ThemedText type="smallBold">
                       {c.class_name}
                       {c.section_name ? ` - ${c.section_name}` : ''}
@@ -275,6 +342,10 @@ export default function TeacherProfileSetupScreen() {
         /* EDITABLE FORM MODE */
         <View style={{ gap: Spacing.three }}>
           <Card style={styles.card}>
+            <ThemedText type="smallBold" style={styles.sectionTitle}>
+              TEACHER INFORMATION
+            </ThemedText>
+
             <ThemedText type="smallBold" style={styles.fieldLabel}>
               Full Name
             </ThemedText>
@@ -282,16 +353,60 @@ export default function TeacherProfileSetupScreen() {
               value={teacherName}
               onChangeText={setTeacherName}
               placeholder="Enter your full name"
-              placeholderTextColor={theme.dark ? '#64748B' : '#94A3B8'}
+              placeholderTextColor={theme.textSecondary}
               style={[
                 styles.input,
                 {
-                  backgroundColor: theme.dark ? '#0F172A' : '#F8FAFC',
                   borderColor: theme.dark ? '#334155' : '#CBD5E1',
                   color: theme.dark ? '#FFFFFF' : '#0F172A',
                 },
               ]}
             />
+
+            <ThemedText type="smallBold" style={[styles.fieldLabel, { marginTop: Spacing.three }]}>
+              Phone Number
+            </ThemedText>
+            <TextInput
+              value={teacherPhone}
+              onChangeText={(val) => setTeacherPhone(val.replace(/[^0-9]/g, '').slice(0, 10))}
+              placeholder="Enter 10-digit mobile number"
+              placeholderTextColor={theme.textSecondary}
+              keyboardType="phone-pad"
+              maxLength={10}
+              style={[
+                styles.input,
+                {
+                  borderColor: theme.dark ? '#334155' : '#CBD5E1',
+                  color: theme.dark ? '#FFFFFF' : '#0F172A',
+                },
+              ]}
+            />
+
+            <ThemedText type="smallBold" style={[styles.fieldLabel, { marginTop: Spacing.three }]}>
+              Gender
+            </ThemedText>
+            <View style={styles.genderRow}>
+              {['Male', 'Female', 'Other'].map((g) => (
+                <Pressable
+                  key={g}
+                  onPress={() => setTeacherGender(g)}
+                  style={[
+                    styles.genderPill,
+                    {
+                      borderColor: teacherGender === g ? theme.tint : theme.border,
+                      backgroundColor: teacherGender === g ? (theme.dark ? 'rgba(59,130,246,0.2)' : '#EFF6FF') : theme.surface,
+                    },
+                  ]}
+                >
+                  <ThemedText
+                    type="smallBold"
+                    style={{ color: teacherGender === g ? (theme.dark ? '#60A5FA' : theme.tint) : theme.text }}
+                  >
+                    {g}
+                  </ThemedText>
+                </Pressable>
+              ))}
+            </View>
 
             <ThemedText type="smallBold" style={[styles.fieldLabel, { marginTop: Spacing.three }]}>
               Digital Signature
@@ -383,109 +498,99 @@ export default function TeacherProfileSetupScreen() {
           <Pressable
             onPress={handleSave}
             disabled={submitting}
-            style={[styles.button, { backgroundColor: theme.dark ? '#2563EB' : theme.tint, opacity: submitting ? 0.6 : 1 }]}
+            style={[styles.saveBtn, { backgroundColor: theme.tint, opacity: submitting ? 0.7 : 1 }]}
           >
-            <ThemedText type="smallBold" style={styles.buttonLabel}>
-              {submitting ? 'Saving…' : 'Save Profile Changes'}
+            <ThemedText type="smallBold" style={styles.saveBtnLabel}>
+              {submitting ? 'Saving Profile…' : 'Save Teacher Profile'}
             </ThemedText>
           </Pressable>
         </View>
       )}
+
+      {/* Media Picker Modal for Photo Selection */}
+      <MediaPickerModal
+        visible={mediaPickerVisible}
+        onClose={() => setMediaPickerVisible(false)}
+        onSelectMedia={(file) => setPhotoUri(file.uri)}
+        allowDocument={false}
+        allowVideo={false}
+        title="Teacher Photo Source"
+      />
+
+      {/* Full-Screen Image Viewer Modal */}
+      <FullImageViewerModal
+        visible={fullViewerVisible}
+        imageUri={fullViewerUri}
+        title={profile?.name || teacherName || 'Teacher Photo'}
+        onClose={() => setFullViewerVisible(false)}
+      />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  intro: {
-    marginBottom: Spacing.four,
-    lineHeight: 20,
-  },
   card: {
     marginBottom: Spacing.three,
   },
-  fieldLabel: {
-    marginBottom: Spacing.two,
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  signatureBox: {
-    height: 100,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderRadius: Radius.sm,
-    overflow: 'hidden',
+  avatarWrap: {
+    position: 'relative',
+    width: 64,
+    height: 64,
+    borderRadius: 32,
   },
-  // Signature ink is exported as a transparent PNG with dark strokes — a
-  // fixed white background (regardless of app theme) is what keeps it
-  // visible in dark mode, same as ink on real paper.
-  signatureBoxWithImage: {
-    backgroundColor: '#FFFFFF',
-    borderStyle: 'solid',
+  avatarImage: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
   },
-  signatureImage: {
-    width: '100%',
-    height: '100%',
-  },
-  signaturePlaceholder: {
-    flex: 1,
+  avatarFallback: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
   },
-  redrawRow: {
-    marginTop: Spacing.two,
-    alignSelf: 'flex-start',
-  },
-  sectionTitle: {
-    marginBottom: Spacing.two,
-    letterSpacing: 0.5,
-  },
-  rowEnd: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginBottom: Spacing.two,
-  },
-  addRow: {
-    flexDirection: 'row',
+  cameraBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     alignItems: 'center',
-    gap: Spacing.two,
-    marginBottom: Spacing.four,
-  },
-  error: {
-    color: Brand.red,
-    marginBottom: Spacing.two,
-  },
-  button: {
-    alignItems: 'center',
-    paddingVertical: Spacing.three,
-    borderRadius: Radius.pill,
-    marginBottom: Spacing.five,
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#FFF',
   },
   editToggleBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: Spacing.two + 2,
-    paddingVertical: 6,
-    borderRadius: Radius.pill,
-    borderWidth: 1,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: Spacing.two,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(148, 163, 184, 0.15)',
-  },
-  chipRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.two,
-    marginTop: Spacing.one,
-  },
-  chip: {
+    gap: 5,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.one + 2,
     borderRadius: Radius.pill,
+    borderWidth: 1,
+  },
+  sectionTitle: {
+    letterSpacing: 0.5,
+    marginBottom: Spacing.two,
+    fontSize: 12,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: Spacing.two,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(150, 150, 150, 0.1)',
+  },
+  fieldLabel: {
+    fontSize: 13,
+    marginBottom: Spacing.one,
   },
   input: {
     borderWidth: 1,
@@ -494,7 +599,95 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.two + 2,
     fontSize: 15,
   },
-  buttonLabel: {
-    color: Brand.white,
+  genderRow: {
+    flexDirection: 'row',
+    gap: Spacing.two,
+    marginTop: Spacing.one,
+  },
+  genderPill: {
+    flex: 1,
+    paddingVertical: Spacing.two + 2,
+    borderWidth: 1,
+    borderRadius: Radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoUploadBox: {
+    borderWidth: 1,
+    borderRadius: Radius.md,
+    padding: Spacing.two,
+  },
+  photoPlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.two,
+    gap: Spacing.one,
+  },
+  photoPreviewRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
+  photoThumb: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+  },
+  signatureBox: {
+    borderWidth: 1,
+    borderRadius: Radius.md,
+    height: 90,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  signatureBoxWithImage: {
+    padding: Spacing.one,
+  },
+  signaturePlaceholder: {
+    alignItems: 'center',
+    gap: Spacing.one,
+  },
+  signatureImage: {
+    width: '100%',
+    height: '100%',
+  },
+  redrawRow: {
+    marginTop: Spacing.one,
+    alignSelf: 'flex-end',
+  },
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.two,
+  },
+  chip: {
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+    borderRadius: Radius.pill,
+    borderWidth: 1,
+  },
+  rowEnd: {
+    alignItems: 'flex-end',
+    marginBottom: Spacing.two,
+  },
+  addRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.one,
+    paddingVertical: Spacing.two,
+  },
+  error: {
+    color: Brand.red,
+    marginTop: Spacing.two,
+  },
+  saveBtn: {
+    paddingVertical: Spacing.three,
+    borderRadius: Radius.pill,
+    alignItems: 'center',
+    marginTop: Spacing.two,
+  },
+  saveBtnLabel: {
+    color: '#FFF',
+    fontSize: 15,
   },
 });

@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import React, { useState } from 'react';
-import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -31,16 +31,18 @@ export function StudentSubmissionModal({
   submission,
 }: StudentSubmissionModalProps) {
   const theme = useTheme();
+  const { height: windowHeight } = useWindowDimensions();
   const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
 
   if (!submission) return null;
 
   const isReviewed = submission.status === 'reviewed';
+  const cardHeight = Math.min(640, Math.max(350, windowHeight * 0.82));
 
   return (
     <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
       <View style={styles.overlay}>
-        <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+        <View style={[styles.card, { height: cardHeight, backgroundColor: theme.surface, borderColor: theme.border }]}>
           {/* Header Banner */}
           <View style={[styles.headerBanner, { backgroundColor: theme.tint }]}>
             <View style={{ flex: 1, paddingRight: 10 }}>
@@ -61,7 +63,7 @@ export function StudentSubmissionModal({
           </View>
 
           <View style={{ paddingHorizontal: 16, paddingVertical: 14, flex: 1 }}>
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 16, paddingBottom: 12 }}>
+            <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 16, paddingBottom: 12 }}>
               {/* Status Badge */}
               <View
                 style={{
@@ -112,7 +114,7 @@ export function StudentSubmissionModal({
 
               {/* Student Note */}
               <View>
-                <ThemedText type="caption" style={[styles.label, { color: theme.tint }]}>
+                <ThemedText type="smallBold" style={[styles.label, { color: theme.tint }]}>
                   MY SUBMISSION NOTE:
                 </ThemedText>
                 <View
@@ -130,7 +132,7 @@ export function StudentSubmissionModal({
               {/* Submitted Photos */}
               {submission.photos && submission.photos.length > 0 ? (
                 <View>
-                  <ThemedText type="caption" style={[styles.label, { color: theme.tint }]}>
+                  <ThemedText type="smallBold" style={[styles.label, { color: theme.tint }]}>
                     MY ATTACHED PHOTOS ({submission.photos.length}) — TAP TO EXPAND:
                   </ThemedText>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingTop: 6, paddingBottom: 4 }}>
@@ -146,7 +148,7 @@ export function StudentSubmissionModal({
               {/* Teacher Remarks & Digital Signature */}
               {isReviewed || submission.teacherRemarks || submission.signatureUrl ? (
                 <View>
-                  <ThemedText type="caption" style={[styles.label, { color: theme.tint }]}>
+                  <ThemedText type="smallBold" style={[styles.label, { color: theme.tint }]}>
                     TEACHER FEEDBACK &amp; REMARKS:
                   </ThemedText>
                   <View
@@ -203,11 +205,11 @@ export function StudentSubmissionModal({
         {/* Full-Screen Image Preview Modal */}
         {previewPhoto ? (
           <Modal visible={!!previewPhoto} transparent animationType="fade" onRequestClose={() => setPreviewPhoto(null)}>
-            <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.92)', justifyContent: 'center', alignItems: 'center', padding: 16 }}>
+            <View style={{ flex: 1, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.92)', justifyContent: 'center', alignItems: 'center', padding: 16 }}>
               <Pressable style={{ position: 'absolute', top: 40, right: 20, zIndex: 10 }} onPress={() => setPreviewPhoto(null)}>
                 <Ionicons name="close-circle" size={36} color="#FFFFFF" />
               </Pressable>
-              <Image source={{ uri: previewPhoto }} style={{ width: '100%', height: '80%' }} contentFit="contain" />
+              <Image source={{ uri: previewPhoto }} style={{ width: '100%', height: Math.min(600, windowHeight * 0.8) }} contentFit="contain" />
             </View>
           </Modal>
         ) : null}
@@ -219,10 +221,12 @@ export function StudentSubmissionModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
+    width: '100%',
+    height: '100%',
     backgroundColor: 'rgba(15, 23, 42, 0.85)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: Spacing.md,
+    padding: Spacing.three,
     ...(Platform.OS === 'web'
       ? ({
           position: 'fixed',
@@ -237,7 +241,7 @@ const styles = StyleSheet.create({
       : {}),
   },
   card: {
-    width: '100%',
+    width: '92%',
     maxWidth: 500,
     maxHeight: '88%',
     borderRadius: Radius.lg,
@@ -275,7 +279,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   footer: {
-    paddingTop: Spacing.sm,
+    paddingTop: Spacing.two,
     borderTopWidth: 1,
   },
   btnClose: {

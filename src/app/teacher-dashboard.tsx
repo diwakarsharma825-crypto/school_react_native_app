@@ -15,7 +15,7 @@ import { ThemedText } from '@/components/ui/ThemedText';
 import { Brand, Radius, Spacing } from '@/constants/theme';
 import { fetchCurrentAcademicYear } from '@/data/api';
 import { ExportPdfButton } from '@/components/ui/ExportPdfButton';
-import { exportToPdf } from '@/lib/pdf-export';
+import { exportStudentRosterToPdf, exportToPdf } from '@/lib/pdf-export';
 import {
   deleteHomework,
   fetchHomeworkDates,
@@ -29,6 +29,7 @@ import {
   RosterStudent,
   saveSelectedClassId,
   TeacherProfile,
+  formatClassLabel,
 } from '@/data/teacher-api';
 import { useTeacherAuth } from '@/hooks/use-teacher-auth';
 import { useTheme } from '@/hooks/use-theme';
@@ -247,20 +248,11 @@ function StudentsTab({
           variant="outline"
           style={{ borderRadius: Radius.md, paddingVertical: 8, paddingHorizontal: 14 }}
           onPress={() => {
-            if (!filteredStudents || filteredStudents.length === 0) return;
-            const images = filteredStudents.map((s) => s.photo_url).filter(Boolean) as string[];
-            exportToPdf({
+            if (!filtered || filtered.length === 0) return;
+            exportStudentRosterToPdf({
               title: `Class Roster Report - ${classLabel}${sectionLabel ? ` (${sectionLabel})` : ''}`,
-              subtitle: `Total Students: ${filteredStudents.length}${query ? ` | Filter: "${query}"` : ''}`,
-              columns: [
-                { header: 'Roll No', key: 'roll_no', width: '15%' },
-                { header: 'Student Name', key: 'name', width: '30%' },
-                { header: 'SRN', key: 'srn', width: '15%' },
-                { header: 'Father Name', key: 'father_name', width: '25%' },
-                { header: 'Mobile Phone', key: 'phone', width: '15%' },
-              ],
-              rows: filteredStudents,
-              images,
+              subtitle: `Total Students: ${filtered.length}${query ? ` | Filter: "${query}"` : ''}`,
+              students: filtered,
             });
           }}
         />
@@ -712,7 +704,7 @@ function HomeworkTab({ classId, sectionId }: { classId: number; sectionId?: numb
         <Pressable
           onPress={() => setViewMode('calendar')}
           style={[
-            styles.viewToggleButton,
+            styles.hwViewToggleButton,
             viewMode === 'calendar' && { backgroundColor: theme.surface },
           ]}
         >
@@ -728,7 +720,7 @@ function HomeworkTab({ classId, sectionId }: { classId: number; sectionId?: numb
         <Pressable
           onPress={() => setViewMode('list')}
           style={[
-            styles.viewToggleButton,
+            styles.hwViewToggleButton,
             viewMode === 'list' && { backgroundColor: theme.surface },
           ]}
         >
@@ -897,7 +889,7 @@ function HomeworkTab({ classId, sectionId }: { classId: number; sectionId?: numb
                 onChangeText={setSearchQuery}
                 placeholder="Search by subject or chapter..."
                 placeholderTextColor={theme.textSecondary}
-                style={[styles.searchInput, { color: theme.text, outlineStyle: 'none' } as any]}
+                style={[styles.hwSearchInput, { color: theme.text, outlineStyle: 'none' } as any]}
               />
               {searchQuery ? (
                 <Pressable onPress={() => setSearchQuery('')}>
@@ -1279,7 +1271,7 @@ export default function TeacherDashboardScreen() {
   }
 
   const classOptions = classes.map((c) => ({
-    label: `${c.class_name}${c.section_name ? ` - ${c.section_name}` : ''}`,
+    label: formatClassLabel(c.class_name, c.section_name),
     value: String(c.class_id),
   }));
 
@@ -1290,6 +1282,7 @@ export default function TeacherDashboardScreen() {
       <ProfileHeaderBar
         icon="briefcase"
         name={profile?.name ?? 'Teacher'}
+        photoUrl={(profile as any)?.photo_url}
         contact={profile?.email ?? null}
         subtitle={currentLabel}
         sessionLabel={sessionLabel}
@@ -1569,7 +1562,7 @@ const styles = StyleSheet.create({
     padding: 3,
     marginBottom: Spacing.three,
   },
-  viewToggleButton: {
+  hwViewToggleButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
@@ -1591,7 +1584,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.two,
     marginBottom: Spacing.four,
   },
-  searchInput: {
+  hwSearchInput: {
     flex: 1,
     fontSize: 15,
     padding: 0,

@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as ImagePicker from 'expo-image-picker';
 import React from 'react';
 import { Alert, Modal, Pressable, StyleSheet, View } from 'react-native';
@@ -20,7 +21,10 @@ interface MediaPickerModalProps {
   onSelectMedia: (file: SelectedMediaFile) => void;
   title?: string;
   allowDocument?: boolean;
+  allowVideo?: boolean;
 }
+
+const MAX_VIDEO_SIZE_BYTES = 20 * 1024 * 1024; // 20 MB limit
 
 export function MediaPickerModal({
   visible,
@@ -28,6 +32,7 @@ export function MediaPickerModal({
   onSelectMedia,
   title = 'Select Media Source',
   allowDocument = true,
+  allowVideo = false,
 }: MediaPickerModalProps) {
   const theme = useTheme();
 
@@ -66,6 +71,25 @@ export function MediaPickerModal({
       });
       if (result.canceled || !result.assets?.[0]) return;
       const asset = result.assets[0];
+
+      let size = asset.fileSize;
+      if (!size) {
+        try {
+          const info = await FileSystem.getInfoAsync(asset.uri);
+          if (info.exists && info.size) {
+            size = info.size;
+          }
+        } catch {}
+      }
+
+      if (size && size > MAX_VIDEO_SIZE_BYTES) {
+        Alert.alert(
+          'Video Size Limit Exceeded',
+          'The recorded video exceeds the 20 MB size limit. Please record a shorter video.'
+        );
+        return;
+      }
+
       const filename = asset.fileName || asset.uri.split('/').pop() || 'video.mp4';
       onSelectMedia({ uri: asset.uri, mimeType: asset.mimeType || 'video/mp4', name: filename });
       onClose();
@@ -77,14 +101,36 @@ export function MediaPickerModal({
   async function handleGallery() {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images', 'videos'],
+        mediaTypes: allowVideo ? ['images', 'videos'] : ['images'],
         quality: 0.7,
         allowsEditing: false,
       });
       if (result.canceled || !result.assets?.[0]) return;
       const asset = result.assets[0];
-      const filename = asset.fileName || asset.uri.split('/').pop() || 'media.jpg';
-      onSelectMedia({ uri: asset.uri, mimeType: asset.mimeType || 'image/jpeg', name: filename });
+
+      const isVideo = asset.type === 'video' || (asset.mimeType && asset.mimeType.startsWith('video/'));
+      if (isVideo) {
+        let size = asset.fileSize;
+        if (!size) {
+          try {
+            const info = await FileSystem.getInfoAsync(asset.uri);
+            if (info.exists && info.size) {
+              size = info.size;
+            }
+          } catch {}
+        }
+        if (size && size > MAX_VIDEO_SIZE_BYTES) {
+          Alert.alert(
+            'Video Size Limit Exceeded',
+            'Selected video exceeds the 20 MB size limit. Please select a smaller video.'
+          );
+          return;
+        }
+      }
+
+      const filename = asset.fileName || asset.uri.split('/').pop() || (isVideo ? 'video.mp4' : 'media.jpg');
+      const defaultMime = isVideo ? 'video/mp4' : 'image/jpeg';
+      onSelectMedia({ uri: asset.uri, mimeType: asset.mimeType || defaultMime, name: filename });
       onClose();
     } catch (e) {
       Alert.alert('Gallery Error', e instanceof Error ? e.message : 'Could not select media.');
@@ -133,20 +179,22 @@ export function MediaPickerModal({
               </ThemedText>
             </Pressable>
 
-            <Pressable
-              onPress={handleCameraVideo}
-              style={[styles.optionCard, { backgroundColor: theme.dark ? 'rgba(168, 85, 247, 0.12)' : '#F3E8FF', borderColor: theme.border }]}
-            >
-              <View style={[styles.iconCircle, { backgroundColor: '#9333EA' }]}>
-                <Ionicons name="videocam" size={24} color="#FFF" />
-              </View>
-              <ThemedText type="smallBold" style={styles.optionTitle}>
-                Record Video
-              </ThemedText>
-              <ThemedText type="small" themeColor="textSecondary" style={styles.optionDesc}>
-                Open Camera
-              </ThemedText>
-            </Pressable>
+            {allowVideo ? (
+              <Pressable
+                onPress={handleCameraVideo}
+                style={[styles.optionCard, { backgroundColor: theme.dark ? 'rgba(168, 85, 247, 0.12)' : '#F3E8FF', borderColor: theme.border }]}
+              >
+                <View style={[styles.iconCircle, { backgroundColor: '#9333EA' }]}>
+                  <Ionicons name="videocam" size={24} color="#FFF" />
+                </View>
+                <ThemedText type="smallBold" style={styles.optionTitle}>
+                  Record Video
+                </ThemedText>
+                <ThemedText type="small" themeColor="textSecondary" style={styles.optionDesc}>
+                  Max 20 MB
+                </ThemedText>
+              </Pressable>
+            ) : null}
 
             <Pressable
               onPress={handleGallery}
@@ -159,7 +207,7 @@ export function MediaPickerModal({
                 Gallery
               </ThemedText>
               <ThemedText type="small" themeColor="textSecondary" style={styles.optionDesc}>
-                Photos & Videos
+                {allowVideo ? 'Photos & Videos' : 'Photos'}
               </ThemedText>
             </Pressable>
 

@@ -10,7 +10,7 @@ import { Screen } from '@/components/ui/Screen';
 import { SelectField } from '@/components/ui/SelectField';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { TeacherGuard } from '@/components/ui/TeacherGuard';
-import { downloadResultTemplate, importTeacherResult } from '@/data/teacher-api';
+import { downloadResultTemplate, importTeacherResult, formatClassLabel } from '@/data/teacher-api';
 import { useTeacherAuth } from '@/hooks/use-teacher-auth';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -21,7 +21,7 @@ export default function TeacherImportResultScreen() {
 
   const classes = profile?.classes ?? [];
   const classOptions = classes.map((c) => ({
-    label: `${c.class_name}${c.section_name ? ` - ${c.section_name}` : ''}`,
+    label: formatClassLabel(c.class_name, c.section_name),
     value: String(c.class_id),
   }));
 
@@ -39,7 +39,7 @@ export default function TeacherImportResultScreen() {
     setDownloading(true);
     try {
       const cId = selectedClass ? selectedClass.class_id : undefined;
-      const sId = selectedClass ? selectedClass.section_id : undefined;
+      const sId = selectedClass ? (selectedClass.section_id ?? undefined) : undefined;
       const { uri } = await downloadResultTemplate(cId, sId);
       const canShare = await Sharing.isAvailableAsync();
       if (canShare) {
@@ -80,7 +80,7 @@ export default function TeacherImportResultScreen() {
     setSuccessMessage(null);
     try {
       const cId = selectedClass ? selectedClass.class_id : undefined;
-      const sId = selectedClass ? selectedClass.section_id : undefined;
+      const sId = selectedClass ? (selectedClass.section_id ?? undefined) : undefined;
       const { message } = await importTeacherResult(file, cId, sId);
       setSuccessMessage(message);
       setFile(null);

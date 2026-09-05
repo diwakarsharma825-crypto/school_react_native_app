@@ -26,6 +26,7 @@ import {
   RosterStudent,
   TeacherFeeInvoice,
   updateFeeInvoiceStatus,
+  formatClassLabel,
 } from '@/data/teacher-api';
 import { useTeacherAuth } from '@/hooks/use-teacher-auth';
 import { useTheme } from '@/hooks/use-theme';
@@ -420,7 +421,7 @@ export default function TeacherFeesScreen() {
 
   const classes = profile?.classes ?? [];
   const classOptions = classes.map((c) => ({
-    label: `${c.class_name}${c.section_name ? ` - ${c.section_name}` : ''}`,
+    label: formatClassLabel(c.class_name, c.section_name),
     value: String(c.class_id),
   }));
 

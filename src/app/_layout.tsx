@@ -271,6 +271,7 @@ function RootLayoutInner() {
                   <Stack.Screen name="student-dashboard" options={{ header: () => <DetailHeader title="Student Dashboard" /> }} />
                   <Stack.Screen name="teacher-students" options={{ header: () => <DetailHeader title="Student Roster" /> }} />
                   <Stack.Screen name="student-attendance" options={{ header: () => <DetailHeader title="Attendance Record" /> }} />
+                  <Stack.Screen name="payment" options={{ header: () => <DetailHeader title="App Activation & Upgrade" /> }} />
                 </Stack>
               </View>
               <DynamicBottomBar />

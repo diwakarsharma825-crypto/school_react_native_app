@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import React, { useState } from 'react';
-import { Alert, Dimensions, Modal, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Alert, Dimensions, Modal, Pressable, ScrollView, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native';
 
 import { Brand, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -40,14 +40,15 @@ export function StudentHomeworkSubmitModal({
   onSuccess,
 }: StudentHomeworkSubmitModalProps) {
   const theme = useTheme();
+  const { height: windowHeight } = useWindowDimensions();
   const [description, setDescription] = useState(initialDescription || '');
-  const [photos, setPhotos] = useState<SelectedMediaFile[]>(() => {
-    return (initialPhotos || []).map((url, i) => ({
+  const [photos, setPhotos] = useState<SelectedMediaFile[]>(
+    (initialPhotos || []).map((url, i) => ({
       uri: url,
       name: `Photo_${i + 1}.jpg`,
       mimeType: 'image/jpeg',
-    }));
-  });
+    }))
+  );
   const [pickerVisible, setPickerVisible] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -92,10 +93,12 @@ export function StudentHomeworkSubmitModal({
     }
   }
 
+  const sheetHeight = Math.min(720, Math.max(400, windowHeight * 0.85));
+
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.backdrop}>
-        <View style={[styles.sheet, { backgroundColor: theme.background }]}>
+        <View style={[styles.sheet, { height: sheetHeight, backgroundColor: theme.background }]}>
           {/* Top Handle Bar */}
           <View style={styles.handleWrap}>
             <View style={[styles.handle, { backgroundColor: theme.border }]} />
@@ -177,7 +180,7 @@ export function StudentHomeworkSubmitModal({
                       <ThemedText type="smallBold" numberOfLines={1}>
                         {p.name}
                       </ThemedText>
-                      <ThemedText type="caption" themeColor="textSecondary">
+                      <ThemedText type="small" themeColor="textSecondary">
                         {p.mimeType?.includes('video') ? 'Video File' : 'Photo Attachment'}
                       </ThemedText>
                     </View>
@@ -241,6 +244,8 @@ export function StudentHomeworkSubmitModal({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
+    width: '100%',
+    height: '100%',
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'flex-end',
   },

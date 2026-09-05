@@ -49,7 +49,7 @@ export default function EventsScreen() {
               imageUrl={e.image_url}
               coverMedia={e.cover_media}
               excerpt={e.note ? t(e.note) : undefined}
-              category={t('Event')}
+              category="Event"
               onPress={() => router.push(`/event/${e.id}`)}
             />
           ))}

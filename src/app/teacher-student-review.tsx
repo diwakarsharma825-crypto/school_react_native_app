@@ -7,6 +7,7 @@ import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { Brand, Radius, Spacing } from '@/constants/theme';
 import { Card } from '@/components/ui/Card';
+import { FullImageViewerModal } from '@/components/ui/FullImageViewerModal';
 import { MediaPickerModal } from '@/components/ui/MediaPickerModal';
 import { DatePickerField } from '@/components/ui/DatePickerField';
 import { PasswordInput } from '@/components/ui/PasswordInput';
@@ -50,8 +51,18 @@ export default function TeacherStudentReviewScreen() {
   const [fatherName, setFatherName] = useState(params.fatherName ?? '');
   const [motherName, setMotherName] = useState(params.motherName ?? '');
   const [active, setActive] = useState(params.active === '1');
-  const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [remotePhotoUrl, setRemotePhotoUrl] = useState<string | null>(params.photoUrl ?? null);
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [fullPhotoVisible, setFullPhotoVisible] = useState(false);
+  const currentPhoto = photoUri || remotePhotoUrl;
+
+  function handlePhotoTap() {
+    if (currentPhoto) {
+      setFullPhotoVisible(true);
+    } else {
+      setMediaPickerVisible(true);
+    }
+  }
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [siblings, setSiblings] = useState<StudentSibling[]>([]);
@@ -144,12 +155,17 @@ export default function TeacherStudentReviewScreen() {
     <Screen>
       <Card style={styles.card}>
         <View style={styles.photoRow}>
-          <Pressable onPress={pickPhoto} style={[styles.photoBox, { borderColor: theme.border }]}>
-            {photoUri || remotePhotoUrl ? (
-              <Image source={{ uri: photoUri ?? remotePhotoUrl ?? undefined }} style={styles.photo} contentFit="cover" />
+          <Pressable onPress={handlePhotoTap} style={[styles.photoBox, { borderColor: theme.border }]}>
+            {currentPhoto ? (
+              <Image source={{ uri: currentPhoto }} style={styles.photo} contentFit="cover" />
             ) : (
               <Ionicons name="camera-outline" size={26} color={theme.textSecondary} />
             )}
+            {currentPhoto ? (
+              <Pressable onPress={pickPhoto} style={[styles.cameraBadge, { backgroundColor: theme.tint }]}>
+                <Ionicons name="camera" size={12} color="#FFF" />
+              </Pressable>
+            ) : null}
           </Pressable>
           <View style={styles.headerText}>
             <ThemedText type="subtitle" numberOfLines={1}>
@@ -342,6 +358,13 @@ export default function TeacherStudentReviewScreen() {
           allowDocument={false}
           title="Student Photo Source"
         />
+
+        <FullImageViewerModal
+          visible={fullPhotoVisible}
+          imageUri={currentPhoto}
+          title={name || params.name}
+          onClose={() => setFullPhotoVisible(false)}
+        />
       </Card>
     </Screen>
   );
@@ -358,6 +381,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.two,
   },
   photoBox: {
+    position: 'relative',
     width: 64,
     height: 64,
     borderRadius: 32,
@@ -365,7 +389,18 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'hidden',
+  },
+  cameraBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: '#FFF',
   },
   photo: {
     width: '100%',

@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useFocusEffect, useRouter } from 'expo-router';
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
+import { FullImageViewerModal } from '@/components/ui/FullImageViewerModal';
 import { Radius, Spacing } from '@/constants/theme';
 import { Card } from '@/components/ui/Card';
 import { Screen } from '@/components/ui/Screen';
@@ -111,6 +112,8 @@ export default function ProfileScreen() {
 
   const activeStudent = liveAccess || access;
 
+  const [fullViewerVisible, setFullViewerVisible] = useState(false);
+
   if (studentLoggedIn && activeStudent) {
     const classTitle = activeStudent.className.toLowerCase().startsWith('class')
       ? `${activeStudent.className}${activeStudent.section ? ` - ${activeStudent.section}` : ''}`
@@ -119,20 +122,22 @@ export default function ProfileScreen() {
     return (
       <Screen>
         <Card style={styles.headerCard}>
-          {activeStudent.photoUrl ? (
-            <Image
-              source={{ uri: activeStudent.photoUrl }}
-              style={styles.avatarPhoto}
-              contentFit="cover"
-              cachePolicy="memory-disk"
-              priority="high"
-              transition={200}
-            />
-          ) : (
-            <View style={[styles.avatar, { backgroundColor: theme.dark ? theme.tint : theme.backgroundSelected }]}>
-              <Ionicons name="school" size={32} color={theme.dark ? '#FFFFFF' : theme.tint} />
-            </View>
-          )}
+          <Pressable onPress={() => activeStudent.photoUrl && setFullViewerVisible(true)}>
+            {activeStudent.photoUrl ? (
+              <Image
+                source={{ uri: activeStudent.photoUrl }}
+                style={styles.avatarPhoto}
+                contentFit="cover"
+                cachePolicy="memory-disk"
+                priority="high"
+                transition={200}
+              />
+            ) : (
+              <View style={[styles.avatar, { backgroundColor: theme.dark ? theme.tint : theme.backgroundSelected }]}>
+                <Ionicons name="school" size={32} color={theme.dark ? '#FFFFFF' : theme.tint} />
+              </View>
+            )}
+          </Pressable>
           <ThemedText type="subtitle" style={styles.name}>
             {activeStudent.name}
           </ThemedText>
@@ -143,7 +148,7 @@ export default function ProfileScreen() {
 
         <Card style={styles.section}>
           <InfoRow icon="id-card-outline" label="SRN" value={activeStudent.srn || '—'} />
-          <InfoRow icon="numbers-outline" label="Roll No" value={activeStudent.rollNo || '—'} />
+          <InfoRow icon="list-outline" label="Roll No" value={activeStudent.rollNo || '—'} />
           <InfoRow icon="school-outline" label="Class & Section" value={classTitle} />
           <InfoRow icon="person-outline" label="Father's Name" value={activeStudent.fatherName || '—'} />
           <InfoRow icon="heart-outline" label="Mother's Name" value={activeStudent.motherName || '—'} />
@@ -151,6 +156,12 @@ export default function ProfileScreen() {
           <InfoRow icon="people-outline" label="Gender" value={activeStudent.gender || '—'} />
           <InfoRow icon="calendar-outline" label="Date of Birth" value={activeStudent.dob ? formatDob(activeStudent.dob) : '—'} />
         </Card>
+        <FullImageViewerModal
+          visible={fullViewerVisible}
+          imageUri={activeStudent.photoUrl || null}
+          title={activeStudent.name}
+          onClose={() => setFullViewerVisible(false)}
+        />
       </Screen>
     );
   }

@@ -19,6 +19,7 @@ import {
   saveHomework,
   saveSelectedClassId,
   updateHomework,
+  formatClassLabel,
 } from '@/data/teacher-api';
 import { useTeacherAuth } from '@/hooks/use-teacher-auth';
 import { useTheme } from '@/hooks/use-theme';
@@ -78,7 +79,7 @@ export default function TeacherHomeworkAddScreen() {
   }, [classes, selectedClassId]);
 
   const classOptions = classes.map((c) => ({
-    label: `${c.class_name}${c.section_name ? ` - ${c.section_name}` : ''}`,
+    label: formatClassLabel(c.class_name, c.section_name),
     value: String(c.class_id),
   }));
 
@@ -94,7 +95,7 @@ export default function TeacherHomeworkAddScreen() {
     fetchTeacherStudents(Number(selectedClassId), currentSectionId ? Number(currentSectionId) : undefined)
       .then((students) => {
         const activeList = Array.isArray(students)
-          ? students.filter((s) => s.account_status !== 0 && (s as any).status !== 0)
+          ? students.filter((s) => (s as any).account_status !== 0 && (s as any).status !== 0)
           : [];
         setHasStudents(activeList.length > 0);
       })

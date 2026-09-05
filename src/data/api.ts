@@ -30,6 +30,12 @@ export const USE_MOCK = false;
 
 import { mockEvents, mockGalleries, mockHome, mockNews, mockTeachers } from './mock';
 
+interface ApiEnvelope<T> {
+  status: boolean;
+  message?: string;
+  data: T;
+}
+
 function getMockFallback<T>(path: string): T | null {
   const p = path.toLowerCase();
   if (p.includes('/home')) return mockHome as unknown as T;

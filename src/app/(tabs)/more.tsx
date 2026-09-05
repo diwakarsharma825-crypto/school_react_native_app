@@ -56,6 +56,7 @@ function RowList({ rows }: { rows: Row[] }) {
       'Contact Us': t('contact_us'),
       'Fees & Invoices': t('fees'),
       'My Profile': t('profile'),
+      'My Classmates': 'My Classmates',
       'Change Password': t('change_password'),
       'Log Out': t('logout'),
       'Sign Out': t('logout'),
@@ -123,6 +124,15 @@ export default function MoreScreen() {
       ]
     : studentLoggedIn
       ? [
+          ...(sections.classmates
+            ? [
+                {
+                  label: 'My Classmates',
+                  icon: 'people-outline' as const,
+                  onPress: () => router.push('/classmates' as any),
+                },
+              ]
+            : []),
           {
             label: 'Change Password',
             icon: 'key-outline',
@@ -146,7 +156,7 @@ export default function MoreScreen() {
 
   const exploreRows: Row[] = [
     { label: 'Notifications', icon: 'notifications-outline', onPress: () => router.push('/notifications') },
-    ...(!studentLoggedIn ? [{ label: 'Subject Syllabus', icon: 'book-outline', onPress: () => router.push('/syllabus') }] : []),
+    ...(!studentLoggedIn ? [{ label: 'Subject Syllabus', icon: 'book-outline' as const, onPress: () => router.push('/syllabus') }] : []),
     ...(!instituteMode ? [{ label: 'About Us', icon: 'information-circle-outline' as const, onPress: () => router.push('/about') }] : []),
     {
       label: 'Announcements',
