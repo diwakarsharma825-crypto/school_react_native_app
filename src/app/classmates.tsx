@@ -6,6 +6,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Radius, Spacing } from '@/constants/theme';
 import { Card } from '@/components/ui/Card';
+import { ChildSwitcherCard } from '@/components/ui/ChildSwitcherCard';
 import { FullImageViewerModal } from '@/components/ui/FullImageViewerModal';
 import { EmptyState, Loading } from '@/components/ui/states';
 import { Screen } from '@/components/ui/Screen';
@@ -20,7 +21,7 @@ export default function ClassmatesScreen() {
   const theme = useTheme();
   const router = useRouter();
   const enabled = useSectionEnabled('classmates');
-  const { checking, loggedIn, access } = useStudentAuth();
+  const { checking, loggedIn, access, allChildren, switchChild } = useStudentAuth();
 
   const [classmates, setClassmates] = useState<ClassmateItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -66,6 +67,10 @@ export default function ClassmatesScreen() {
 
   return (
     <Screen>
+      {allChildren.length > 1 && access ? (
+        <ChildSwitcherCard siblings={allChildren} activeSrn={access.srn} onSwitch={switchChild} />
+      ) : null}
+
       {/* Header Info Card */}
       <Card style={styles.headerCard}>
         <View style={styles.headerRow}>

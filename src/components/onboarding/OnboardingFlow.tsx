@@ -2,8 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications';
-import React, { useEffect, useState } from 'react';
-import { Alert, Linking, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Alert, Animated, Easing, Linking, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -26,11 +26,14 @@ import { SelectField } from '@/components/ui/SelectField';
 import { ThemedText } from '@/components/ui/ThemedText';
 
 const logoSource = require('../../../assets/images/icon.png');
+const hwPreviewImg = require('../../../assets/images/onboarding_hw.jpg');
+const attPreviewImg = require('../../../assets/images/onboarding_att.jpg');
+const noticesPreviewImg = require('../../../assets/images/onboarding_notices.jpg');
 
 type Belonging = 'saarthak' | 'other';
 type UserType = 'student' | 'teacher' | 'other';
 
-// Welcome, Belonging, User type, Details, mandatory Permissions gate.
+// Intro Showcase, Belonging, User type, Details, mandatory Permissions gate.
 const TOTAL_STEPS = 5;
 
 const STREAM_OPTIONS = [
@@ -269,7 +272,7 @@ export function OnboardingFlow({ onDone }: OnboardingFlowProps) {
         bottomOffset={24}
         showsVerticalScrollIndicator={false}
       >
-        {step === 0 ? <WelcomeStep schoolName={schoolName} /> : null}
+        {step === 0 ? <IntroShowcaseStep schoolName={schoolName} /> : null}
         {step === 1 ? (
           <BelongingStep value={belonging} onChange={setBelonging} schoolName={schoolName} address={address} />
         ) : null}
@@ -366,38 +369,227 @@ function StepDots({ total, current }: { total: number; current: number }) {
   );
 }
 
-function WelcomeStep({ schoolName }: { schoolName: string }) {
+function IntroShowcaseStep({ schoolName }: { schoolName: string }) {
+  const theme = useTheme();
+
+  // Floating animation for orbital badges
+  const floatAnim = useRef(new Animated.Value(0)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.92)).current;
+
+  // Active feature card index in the bottom animated preview gallery
+  const [activeCardIdx, setActiveCardIdx] = useState(0);
+  const cardFadeAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    // Entrance animation
+    Animated.parallel([
+      Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
+      Animated.spring(scaleAnim, { toValue: 1, friction: 6, tension: 70, useNativeDriver: true }),
+    ]).start();
+
+    // Gentle continuous floating loop
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(floatAnim, {
+          toValue: 5,
+          duration: 1800,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(floatAnim, {
+          toValue: -5,
+          duration: 1800,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, [fadeAnim, floatAnim, scaleAnim]);
+
+  // Switch card automatically or on dot click
+  function switchPreviewCard(newIdx: number) {
+    if (newIdx === activeCardIdx) return;
+    Animated.timing(cardFadeAnim, {
+      toValue: 0,
+      duration: 120,
+      useNativeDriver: true,
+    }).start(() => {
+      setActiveCardIdx(newIdx);
+      Animated.timing(cardFadeAnim, {
+        toValue: 1,
+        duration: 220,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }).start();
+    });
+  }
+
+  const PREVIEW_CARDS = [
+    {
+      badge: 'HOMEWORK & STUDY',
+      title: 'Smart Homework & Classwork',
+      desc: 'Access daily assignments, attached photos, PDFs, and chapter notes.',
+      image: hwPreviewImg,
+      icon: 'book-outline' as const,
+      color: '#3B82F6',
+      tag: 'Photo & PDF Notes',
+    },
+    {
+      badge: 'ATTENDANCE & LOGS',
+      title: 'Real-Time Monthly Attendance',
+      desc: 'Track monthly attendance percentage, present/absent logs in real-time.',
+      image: attPreviewImg,
+      icon: 'checkmark-done-circle-outline' as const,
+      color: '#10B981',
+      tag: 'Live Logs',
+    },
+    {
+      badge: 'ANNOUNCEMENTS',
+      title: 'Direct School Notices & Alerts',
+      desc: 'Stay updated with official school circulars, event announcements & alerts.',
+      image: noticesPreviewImg,
+      icon: 'megaphone-outline' as const,
+      color: '#8B5CF6',
+      tag: 'Live Alerts',
+    },
+  ];
+
+  const currentPreview = PREVIEW_CARDS[activeCardIdx];
+
+  const floatTop = floatAnim;
+  const floatBottom = Animated.multiply(floatAnim, -1);
+
   return (
-    <View style={styles.welcomeWrap}>
-      <Image source={logoSource} style={styles.logo} contentFit="cover" />
-      <ThemedText type="title" style={styles.centerText}>
-        Welcome to {schoolName}
-      </ThemedText>
-      <ThemedText type="default" themeColor="textSecondary" style={[styles.centerText, styles.welcomeSubtitle]}>
-        Let&apos;s personalise your app in a few quick steps so you get the right updates and results.
-      </ThemedText>
-      <View style={styles.featureRow}>
-        <FeatureIcon icon="notifications" label="Instant alerts" />
-        <FeatureIcon icon="document-text" label="Results" />
-        <FeatureIcon icon="images" label="Gallery" />
+    <Animated.View style={[styles.introWrap, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
+      {/* 1. Main Title & Subtitle at the Top */}
+      <View style={styles.topTitleHeader}>
+        <ThemedText type="title" style={[styles.centerText, styles.topMainTitle]}>
+          Welcome to {schoolName}
+        </ThemedText>
+        <ThemedText type="default" themeColor="textSecondary" style={[styles.centerText, styles.topMainSubtitle]}>
+          Your all-in-one digital portal for homework, attendance, leave applications, notices, and school activities.
+        </ThemedText>
       </View>
-    </View>
+
+      {/* 2. Hero Visual Container with Multi-Ring Orbit & 6 Floating Feature Pills */}
+      <View style={styles.introHeroBoxExpanded}>
+        {/* Outer Glow Orbits */}
+        <View style={[styles.introOuterOrbit, { backgroundColor: theme.tint + '08', borderColor: theme.tint + '1A' }]} />
+        <View style={[styles.introMiddleOrbit, { backgroundColor: theme.tint + '10', borderColor: theme.tint + '2A' }]} />
+
+        {/* Central Logo Ring */}
+        <View style={[styles.introLogoRingExpanded, { backgroundColor: theme.surface, borderColor: theme.border }, Shadow.card]}>
+          <Image
+            source={logoSource}
+            style={styles.introLogoImg}
+            contentFit="contain"
+            cachePolicy="memory-disk"
+            priority="high"
+            transition={300}
+          />
+        </View>
+
+        {/* 6 Floating Orbital Feature Badges around the circle */}
+        {/* 1. Daily Homework (Top-Left) */}
+        <Animated.View style={[styles.floatingBadge, styles.badgePosTopLeft, { backgroundColor: '#3B82F6', transform: [{ translateY: floatTop }] }, Shadow.card]}>
+          <Ionicons name="journal-outline" size={13} color="#FFFFFF" />
+          <ThemedText type="smallBold" style={styles.floatingBadgeText}>Daily Homework</ThemedText>
+        </Animated.View>
+
+        {/* 2. Announcements (Top-Right) */}
+        <Animated.View style={[styles.floatingBadge, styles.badgePosTopRight, { backgroundColor: '#8B5CF6', transform: [{ translateY: floatBottom }] }, Shadow.card]}>
+          <Ionicons name="megaphone-outline" size={13} color="#FFFFFF" />
+          <ThemedText type="smallBold" style={styles.floatingBadgeText}>Announcements</ThemedText>
+        </Animated.View>
+
+        {/* 3. Attendance (Mid-Left) */}
+        <Animated.View style={[styles.floatingBadge, styles.badgePosMidLeft, { backgroundColor: '#10B981', transform: [{ translateY: floatBottom }] }, Shadow.card]}>
+          <Ionicons name="checkmark-done-circle-outline" size={13} color="#FFFFFF" />
+          <ThemedText type="smallBold" style={styles.floatingBadgeText}>Attendance</ThemedText>
+        </Animated.View>
+
+        {/* 4. Apply Leave (Mid-Right) */}
+        <Animated.View style={[styles.floatingBadge, styles.badgePosMidRight, { backgroundColor: '#F59E0B', transform: [{ translateY: floatTop }] }, Shadow.card]}>
+          <Ionicons name="calendar-clear-outline" size={13} color="#FFFFFF" />
+          <ThemedText type="smallBold" style={styles.floatingBadgeText}>Apply Leave</ThemedText>
+        </Animated.View>
+
+        {/* 5. Gallery (Bottom-Left) */}
+        <Animated.View style={[styles.floatingBadge, styles.badgePosBottomLeft, { backgroundColor: '#EC4899', transform: [{ translateY: floatTop }] }, Shadow.card]}>
+          <Ionicons name="images-outline" size={13} color="#FFFFFF" />
+          <ThemedText type="smallBold" style={styles.floatingBadgeText}>Gallery</ThemedText>
+        </Animated.View>
+
+        {/* 6. Fees & Invoices (Bottom-Right) */}
+        <Animated.View style={[styles.floatingBadge, styles.badgePosBottomRight, { backgroundColor: '#6366F1', transform: [{ translateY: floatBottom }] }, Shadow.card]}>
+          <Ionicons name="cash-outline" size={13} color="#FFFFFF" />
+          <ThemedText type="smallBold" style={styles.floatingBadgeText}>Fees & Payments</ThemedText>
+        </Animated.View>
+      </View>
+
+      {/* 2-3 Animated Visual Feature Preview Cards Carousel with Images */}
+      <View style={styles.previewCarouselWrap}>
+        <Animated.View
+          style={[
+            styles.featurePreviewCard,
+            { backgroundColor: theme.surface, borderColor: currentPreview.color + '40', opacity: cardFadeAnim },
+            Shadow.card,
+          ]}
+        >
+          {/* Header Row of Preview Card */}
+          <View style={styles.previewCardHeader}>
+            <View style={[styles.previewIconWrap, { backgroundColor: currentPreview.color + '1A' }]}>
+              <Ionicons name={currentPreview.icon} size={22} color={currentPreview.color} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <ThemedText type="smallBold" style={{ color: currentPreview.color, fontSize: 10, letterSpacing: 1 }}>
+                {currentPreview.badge}
+              </ThemedText>
+              <ThemedText type="subtitle" style={{ fontSize: 15, marginTop: 1 }}>
+                {currentPreview.title}
+              </ThemedText>
+            </View>
+            <View style={[styles.previewTagPill, { backgroundColor: currentPreview.color }]}>
+              <ThemedText type="smallBold" style={{ color: '#FFFFFF', fontSize: 10 }}>
+                {currentPreview.tag}
+              </ThemedText>
+            </View>
+          </View>
+
+          {/* Visual App UI Image Preview */}
+          <View style={styles.previewImageWrap}>
+            <Image
+              source={currentPreview.image}
+              style={styles.previewImage}
+              contentFit="cover"
+              cachePolicy="memory-disk"
+              priority="high"
+              transition={300}
+            />
+          </View>
+        </Animated.View>
+
+        {/* Carousel Pagination Dots for Preview Cards */}
+        <View style={styles.carouselDotsRow}>
+          {PREVIEW_CARDS.map((item, idx) => (
+            <Pressable key={idx} onPress={() => switchPreviewCard(idx)} hitSlop={8}>
+              <View
+                style={[
+                  styles.carouselDot,
+                  idx === activeCardIdx
+                    ? [styles.carouselDotActive, { backgroundColor: item.color, width: 22 }]
+                    : { backgroundColor: theme.border },
+                ]}
+              />
+            </Pressable>
+          ))}
+        </View>
+      </View>
+    </Animated.View>
   );
 }
 
-function FeatureIcon({ icon, label }: { icon: keyof typeof Ionicons.glyphMap; label: string }) {
-  const theme = useTheme();
-  return (
-    <View style={styles.featureItem}>
-      <View style={[styles.featureIconWrap, { backgroundColor: theme.backgroundElement }]}>
-        <Ionicons name={icon} size={22} color={theme.tint} />
-      </View>
-      <ThemedText type="small" style={styles.centerText}>
-        {label}
-      </ThemedText>
-    </View>
-  );
-}
 
 function RadioOption({
   icon,
@@ -876,6 +1068,170 @@ const styles = StyleSheet.create({
   welcomeWrap: {
     alignItems: 'center',
     paddingTop: Spacing.four,
+  },
+  introWrap: {
+    alignItems: 'center',
+    paddingTop: Spacing.two,
+  },
+  topTitleHeader: {
+    alignItems: 'center',
+    marginBottom: Spacing.three,
+    paddingHorizontal: Spacing.two,
+  },
+  topMainTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    marginBottom: 6,
+    textAlign: 'center',
+  },
+  topMainSubtitle: {
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: 'center',
+    paddingHorizontal: Spacing.two,
+  },
+  introHeroBoxExpanded: {
+    width: '100%',
+    height: 200,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    marginVertical: Spacing.three,
+  },
+  introOuterOrbit: {
+    width: 195,
+    height: 195,
+    borderRadius: 97.5,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    position: 'absolute',
+  },
+  introMiddleOrbit: {
+    width: 145,
+    height: 145,
+    borderRadius: 72.5,
+    borderWidth: 1,
+    position: 'absolute',
+  },
+  introLogoRingExpanded: {
+    width: 82,
+    height: 82,
+    borderRadius: 41,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 10,
+  },
+  introLogoImg: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 32,
+  },
+  floatingBadge: {
+    position: 'absolute',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: Spacing.two + 2,
+    paddingVertical: 5,
+    borderRadius: Radius.pill,
+  },
+  floatingBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  badgePosTopLeft: {
+    top: 2,
+    left: 0,
+  },
+  badgePosTopRight: {
+    top: 2,
+    right: 0,
+  },
+  badgePosMidLeft: {
+    top: 80,
+    left: -8,
+  },
+  badgePosMidRight: {
+    top: 80,
+    right: -8,
+  },
+  badgePosBottomLeft: {
+    bottom: 2,
+    left: 4,
+  },
+  badgePosBottomRight: {
+    bottom: 2,
+    right: 4,
+  },
+  introSubtitleCompact: {
+    marginTop: Spacing.one,
+    marginBottom: Spacing.two,
+    lineHeight: 19,
+    fontSize: 13,
+  },
+  previewCarouselWrap: {
+    width: '100%',
+    marginTop: Spacing.one,
+    gap: Spacing.two,
+  },
+  featurePreviewCard: {
+    width: '100%',
+    padding: Spacing.three,
+    borderRadius: Radius.xl,
+    borderWidth: 1.5,
+  },
+  previewCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two + 2,
+    marginBottom: Spacing.two,
+  },
+  previewIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  previewTagPill: {
+    paddingHorizontal: Spacing.two + 2,
+    paddingVertical: 4,
+    borderRadius: Radius.pill,
+  },
+  previewDescText: {
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  previewImageWrap: {
+    width: '100%',
+    height: 150,
+    borderRadius: Radius.lg,
+    overflow: 'hidden',
+    marginTop: Spacing.one,
+    backgroundColor: '#F1F5F9',
+  },
+  previewImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: Radius.lg,
+  },
+  carouselDotsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: 2,
+  },
+  carouselDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+  },
+  carouselDotActive: {
+    height: 7,
+    borderRadius: 3.5,
   },
   logo: {
     width: 96,

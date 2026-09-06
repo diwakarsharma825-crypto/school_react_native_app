@@ -18,6 +18,7 @@ import {
 } from '@/data/homework-api';
 import { useStudentAuth } from '@/hooks/use-student-auth';
 import { useTheme } from '@/hooks/use-theme';
+import { useSections, SectionKey } from '@/hooks/use-sections';
 
 interface QuickLink {
   label: string;
@@ -25,15 +26,17 @@ interface QuickLink {
   bg: string;
   fg: string;
   route: string;
+  sectionKey?: SectionKey;
 }
 
 const QUICK_LINKS: QuickLink[] = [
-  { label: 'Homework', icon: 'book-outline', bg: '#EBF8FF', fg: '#2B6CB0', route: '/homework' },
-  { label: 'Attendance', icon: 'checkmark-done-outline', bg: '#E6FFFA', fg: '#234E52', route: '/student-attendance' },
-  { label: 'Apply Leave', icon: 'calendar-clear-outline', bg: '#FEFCBF', fg: '#744210', route: '/apply-leave' },
-  { label: 'Fees', icon: 'cash-outline', bg: '#FED7D7', fg: '#742A2A', route: '/fees' },
-  { label: 'Result', icon: 'school-outline', bg: '#E9D8FD', fg: '#553C9A', route: '/result' },
-  { label: 'Syllabus', icon: 'journal-outline', bg: '#EBF8FF', fg: '#2B6CB0', route: '/syllabus' },
+  { label: 'Homework', icon: 'book-outline', bg: '#EBF8FF', fg: '#2B6CB0', route: '/homework', sectionKey: 'homework' },
+  { label: 'Attendance', icon: 'checkmark-done-outline', bg: '#E6FFFA', fg: '#234E52', route: '/student-attendance', sectionKey: 'attendance' },
+  { label: 'Apply Leave', icon: 'calendar-clear-outline', bg: '#FEFCBF', fg: '#744210', route: '/apply-leave', sectionKey: 'leave' },
+  { label: 'Fees', icon: 'cash-outline', bg: '#FED7D7', fg: '#742A2A', route: '/fees', sectionKey: 'fees' },
+  { label: 'Result', icon: 'school-outline', bg: '#E9D8FD', fg: '#553C9A', route: '/result', sectionKey: 'result' },
+  { label: 'Syllabus', icon: 'journal-outline', bg: '#EBF8FF', fg: '#2B6CB0', route: '/syllabus', sectionKey: 'syllabus' },
+  { label: 'Classmates', icon: 'people-outline', bg: '#E6FFFA', fg: '#234E52', route: '/classmates', sectionKey: 'classmates' },
 ];
 
 /** Student-side landing screen, mirroring the teacher Dashboard and the
@@ -43,6 +46,7 @@ const QUICK_LINKS: QuickLink[] = [
 export default function StudentDashboardScreen() {
   const theme = useTheme();
   const router = useRouter();
+  const sections = useSections();
   const { checking, loggedIn, access, allChildren, switchChild } = useStudentAuth();
 
   const [sessionLabel, setSessionLabel] = useState<string | undefined>(undefined);
@@ -166,23 +170,31 @@ export default function StudentDashboardScreen() {
         </Card>
       </View>
 
-      <ThemedText type="smallBold" style={styles.sectionTitle}>
-        Quick Links
-      </ThemedText>
-      <View style={styles.grid}>
-        {QUICK_LINKS.map((link) => (
-          <Pressable key={link.route} style={styles.tileWrap} onPress={() => router.push(link.route as any)}>
-            <Card style={styles.tile}>
-              <View style={[styles.iconCircle, { backgroundColor: link.bg }]}>
-                <Ionicons name={link.icon} size={22} color={link.fg} />
-              </View>
-              <ThemedText type="small" style={styles.tileLabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
-                {link.label}
-              </ThemedText>
-            </Card>
-          </Pressable>
-        ))}
-      </View>
+      {(() => {
+        const visibleQuickLinks = QUICK_LINKS.filter((link) => !link.sectionKey || sections[link.sectionKey] !== false);
+        if (visibleQuickLinks.length === 0) return null;
+        return (
+          <>
+            <ThemedText type="smallBold" style={styles.sectionTitle}>
+              Quick Links
+            </ThemedText>
+            <View style={styles.grid}>
+              {visibleQuickLinks.map((link) => (
+                <Pressable key={link.route} style={styles.tileWrap} onPress={() => router.push(link.route as any)}>
+                  <Card style={styles.tile}>
+                    <View style={[styles.iconCircle, { backgroundColor: link.bg }]}>
+                      <Ionicons name={link.icon} size={22} color={link.fg} />
+                    </View>
+                    <ThemedText type="small" style={styles.tileLabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
+                      {link.label}
+                    </ThemedText>
+                  </Card>
+                </Pressable>
+              ))}
+            </View>
+          </>
+        );
+      })()}
     </Screen>
   );
 }

@@ -1798,11 +1798,21 @@ export async function reviewSubmission(
   form.append('remarks', remarks);
   form.append('attach_signature', attachSignature ? '1' : '0');
 
+  if (authToken) {
+    form.append('token', authToken);
+  }
+
   const response = await fetch(`${BASE_URL}/teacher_review_submission`, {
     method: 'POST',
     headers: { ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}) },
     body: form,
   });
-  const json = await response.json();
-  if (!json.status) throw new Error(json.message || 'Failed to review submission');
+  const text = await response.text();
+  let json: any = null;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    throw new Error('Server returned an invalid response. Please try again.');
+  }
+  if (!json || !json.status) throw new Error(json?.message || 'Failed to review submission');
 }

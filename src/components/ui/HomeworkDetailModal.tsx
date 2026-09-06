@@ -24,12 +24,13 @@ interface HomeworkDetailModalProps {
   description: string | null;
   photoUrls: string[];
   teacherName?: string | null;
+  teacherPhoto?: string | null;
 }
 
 /** Full-detail view for one homework entry — subject, date, complete
  * description text, and every attached photo at a readable size, opened by
  * tapping an entry in either the teacher or student calendar list. */
-export function HomeworkDetailModal({ visible, onClose, subject, chapter, date, description, photoUrls, teacherName }: HomeworkDetailModalProps) {
+export function HomeworkDetailModal({ visible, onClose, subject, chapter, date, description, photoUrls, teacherName, teacherPhoto }: HomeworkDetailModalProps) {
   const theme = useTheme();
   const [galleryIndex, setGalleryIndex] = useState<number | null>(null);
 
@@ -45,9 +46,18 @@ export function HomeworkDetailModal({ visible, onClose, subject, chapter, date, 
               <View style={styles.badgeRow}>
                 <ThemedText type="title">{subject}</ThemedText>
                 {chapter ? (
-                  <View style={[styles.chapterBadge, { backgroundColor: theme.backgroundSelected }]}>
-                    <ThemedText type="smallBold" style={{ color: theme.tint }}>
-                      {chapter}
+                  <View
+                    style={[
+                      styles.chapterBadge,
+                      {
+                        backgroundColor: theme.dark ? 'rgba(59, 130, 246, 0.25)' : '#EFF6FF',
+                        borderColor: theme.dark ? '#3B82F6' : '#BFDBFE',
+                        borderWidth: 1,
+                      },
+                    ]}
+                  >
+                    <ThemedText type="smallBold" style={{ color: theme.dark ? '#93C5FD' : '#1D4ED8', fontSize: 12 }}>
+                      {chapter ? chapter.replace(/^Ch\s*\d+\s*:\s*(Ch\s*[-:\s]?\d+.*|Chapter\s*[-:\s]?\d+.*)$/i, '$1') : ''}
                     </ThemedText>
                   </View>
                 ) : null}
@@ -56,9 +66,18 @@ export function HomeworkDetailModal({ visible, onClose, subject, chapter, date, 
                 {date}
               </ThemedText>
               {teacherName ? (
-                <ThemedText type="small" themeColor="textSecondary">
-                  Assigned by {teacherName}
-                </ThemedText>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                  {teacherPhoto ? (
+                    <Image source={{ uri: teacherPhoto }} style={{ width: 20, height: 20, borderRadius: 10, borderWidth: 1, borderColor: theme.border }} contentFit="cover" />
+                  ) : (
+                    <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: theme.dark ? '#334155' : '#E2E8F0', alignItems: 'center', justifyContent: 'center' }}>
+                      <Ionicons name="person" size={11} color={theme.dark ? '#94A3B8' : '#64748B'} />
+                    </View>
+                  )}
+                  <ThemedText type="small" themeColor="textSecondary" style={{ fontWeight: '600' }}>
+                    Assigned by {teacherName}
+                  </ThemedText>
+                </View>
               ) : null}
             </View>
             <Pressable onPress={onClose} hitSlop={10}>

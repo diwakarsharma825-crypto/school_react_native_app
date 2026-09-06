@@ -653,48 +653,49 @@ export default function SubjectSyllabusScreen() {
                         setActiveAttachment({
                           url: ch.imageUrl!,
                           type: 'image',
-                          name: ch.fileName || 'Reference_Image.png',
+                          name: `${ch.title} - Image`,
                         })
                       }
-                      style={styles.imagePreviewWrap}
+                      style={({ pressed }) => [styles.imagePreviewWrap, pressed && { opacity: 0.9 }]}
                     >
                       <Image source={{ uri: ch.imageUrl }} style={styles.imagePreview} resizeMode="cover" />
+                      <View style={styles.imageOverlayBadge}>
+                        <Ionicons name="expand-outline" size={13} color="#FFFFFF" />
+                        <ThemedText type="smallBold" style={{ color: '#FFFFFF', fontSize: 11 }}>
+                          Tap to View Full Image
+                        </ThemedText>
+                      </View>
                     </Pressable>
                   ) : null}
 
-                  <Pressable
-                    onPress={() => {
-                      const targetUrl = ch.pdfUrl || ch.imageUrl;
-                      if (targetUrl) {
+                  {ch.pdfUrl ? (
+                    <Pressable
+                      onPress={() =>
                         setActiveAttachment({
-                          url: targetUrl,
-                          type: ch.imageUrl ? 'image' : 'pdf',
-                          name: ch.fileName || (ch.imageUrl ? 'Reference_Image.png' : 'Reference_Document.pdf'),
-                        });
+                          url: ch.pdfUrl!,
+                          type: 'pdf',
+                          name: `${ch.title} - PDF Document`,
+                        })
                       }
-                    }}
-                    style={({ pressed }) => [
-                      styles.attachBtn,
-                      {
-                        backgroundColor: theme.dark ? 'rgba(13,148,136,0.2)' : '#F0FDFA',
-                        borderColor: theme.dark ? '#2DD4BF' : '#0D9488',
-                      },
-                      pressed && { opacity: 0.7 },
-                    ]}
-                  >
-                    <Ionicons
-                      name={ch.imageUrl ? 'image-outline' : 'document-text-outline'}
-                      size={18}
-                      color={theme.dark ? '#2DD4BF' : '#0D9488'}
-                    />
-                    <ThemedText
-                      type="smallBold"
-                      style={{ color: theme.dark ? '#2DD4BF' : '#0D9488', fontSize: 12, flex: 1 }}
+                      style={({ pressed }) => [
+                        styles.attachBtn,
+                        {
+                          backgroundColor: theme.dark ? 'rgba(13,148,136,0.2)' : '#F0FDFA',
+                          borderColor: theme.dark ? '#2DD4BF' : '#0D9488',
+                        },
+                        pressed && { opacity: 0.7 },
+                      ]}
                     >
-                      {ch.fileName || (ch.imageUrl ? 'View Uploaded Image' : 'View Uploaded PDF Document')}
-                    </ThemedText>
-                    <Ionicons name="eye-outline" size={16} color={theme.dark ? '#2DD4BF' : '#0D9488'} />
-                  </Pressable>
+                      <Ionicons name="document-text-outline" size={18} color={theme.dark ? '#2DD4BF' : '#0D9488'} />
+                      <ThemedText
+                        type="smallBold"
+                        style={{ color: theme.dark ? '#2DD4BF' : '#0D9488', fontSize: 12, flex: 1 }}
+                      >
+                        View Attachment (PDF Document)
+                      </ThemedText>
+                      <Ionicons name="eye-outline" size={16} color={theme.dark ? '#2DD4BF' : '#0D9488'} />
+                    </Pressable>
+                  ) : null}
                 </View>
               ) : null}
             </Card>
@@ -1126,14 +1127,27 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   imagePreviewWrap: {
-    borderRadius: Radius.sm,
+    borderRadius: Radius.md,
     overflow: 'hidden',
-    height: 140,
-    backgroundColor: '#000000',
+    height: 160,
+    backgroundColor: '#0F172A',
+    position: 'relative',
   },
   imagePreview: {
     width: '100%',
     height: '100%',
+  },
+  imageOverlayBadge: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    backgroundColor: 'rgba(15, 23, 42, 0.75)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: Radius.pill,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   attachBtn: {
     flexDirection: 'row',

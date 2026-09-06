@@ -44,7 +44,14 @@ export function LaunchScreen() {
   return (
     <Animated.View style={[styles.container, { backgroundColor: splashBg, opacity }]}>
       <Animated.View style={styles.logoWrap}>
-        <Image source={logoSource} style={[styles.logo, { transform: [{ scale }] }]} contentFit="cover" />
+        <Image
+          source={logoSource}
+          style={[styles.logo, { transform: [{ scale }] }]}
+          contentFit="contain"
+          cachePolicy="memory-disk"
+          priority="high"
+          transition={300}
+        />
       </Animated.View>
     </Animated.View>
   );

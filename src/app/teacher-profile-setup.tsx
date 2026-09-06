@@ -73,6 +73,7 @@ export default function TeacherProfileSetupScreen() {
       if (profile.phone) setTeacherPhone(profile.phone);
       if (profile.gender) setTeacherGender(profile.gender);
       if (profile.photo_url) setPhotoUri(profile.photo_url);
+      if (profile.signature_url) setSignatureUri(profile.signature_url);
       if (profile.classes.length > 0) {
         setAssignments(
           profile.classes.map((c) => ({
@@ -229,12 +230,6 @@ export default function TeacherProfileSetupScreen() {
             <ThemedText type="subtitle" style={{ fontSize: 18 }}>
               {profile?.name || teacherName || 'Teacher Profile'}
             </ThemedText>
-
-            {profile?.email ? (
-              <ThemedText type="small" themeColor="textSecondary">
-                {profile.email}
-              </ThemedText>
-            ) : null}
 
             {teacherPhone || profile?.phone ? (
               <ThemedText type="small" themeColor="textSecondary" style={{ marginTop: 2 }}>
@@ -636,9 +631,11 @@ const styles = StyleSheet.create({
   signatureBox: {
     borderWidth: 1,
     borderRadius: Radius.md,
-    height: 90,
+    height: 95,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    overflow: 'hidden',
   },
   signatureBoxWithImage: {
     padding: Spacing.one,

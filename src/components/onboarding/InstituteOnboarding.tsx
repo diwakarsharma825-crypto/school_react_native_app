@@ -16,6 +16,9 @@ interface SlideData {
   badge: string;
   title: string;
   subtitle: string;
+  heroIcon: keyof typeof Ionicons.glyphMap;
+  heroGradient: string;
+  heroAccent: string;
   points: { icon: keyof typeof Ionicons.glyphMap; text: string }[];
 }
 
@@ -24,6 +27,9 @@ const SLIDES: SlideData[] = [
     badge: 'CLASSWORK & HOMEWORK',
     title: 'Smart Learning & Homework',
     subtitle: 'Access daily homework assignments, chapter notes, and study material assigned directly by your teachers.',
+    heroIcon: 'journal-outline',
+    heroGradient: '#3B82F6',
+    heroAccent: '#60A5FA',
     points: [
       { icon: 'document-text-outline', text: 'Daily Classwork & Chapter Notes' },
       { icon: 'attach-outline', text: 'Photo Attachments & Downloads' },
@@ -34,6 +40,9 @@ const SLIDES: SlideData[] = [
     badge: 'PROGRESS & MARKS',
     title: 'Real-Time Attendance & Results',
     subtitle: 'Track monthly attendance records, test marks, and academic performance reports instantly in real-time.',
+    heroIcon: 'trophy-outline',
+    heroGradient: '#10B981',
+    heroAccent: '#34D399',
     points: [
       { icon: 'calendar-outline', text: 'Monthly Attendance Calendar' },
       { icon: 'trophy-outline', text: 'Instant Exam Results & Grades' },
@@ -44,6 +53,9 @@ const SLIDES: SlideData[] = [
     badge: 'NOTICES & LEAVES',
     title: 'Instant Notices & Easy Leaves',
     subtitle: 'Stay updated with important institute announcements and submit leave applications seamlessly.',
+    heroIcon: 'megaphone-outline',
+    heroGradient: '#8B5CF6',
+    heroAccent: '#A78BFA',
     points: [
       { icon: 'megaphone-outline', text: 'Direct Institute Announcements' },
       { icon: 'calendar-clear-outline', text: 'One-Tap Online Leave Applications' },
@@ -61,13 +73,22 @@ export function InstituteOnboarding({ onDone }: { onDone: () => void }) {
 
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const scaleAnim = useRef(new Animated.Value(1)).current;
+  const translateXAnim = useRef(new Animated.Value(0)).current;
 
   const logoSource = !imgError && brand.logoUrl ? { uri: brand.logoUrl } : defaultLogo;
   const instituteTitle = brand.appTitle || 'Our Institute';
   const isLastStep = currentStep === SLIDES.length - 1;
   const slide = SLIDES[currentStep];
 
+  useEffect(() => {
+    if (brand.logoUrl) {
+      Image.prefetch(brand.logoUrl).catch(() => {});
+    }
+  }, [brand.logoUrl]);
+
   function animateStepChange(nextStepIdx: number) {
+    if (nextStepIdx === currentStep) return;
+    const isForward = nextStepIdx > currentStep;
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 0,
@@ -75,12 +96,18 @@ export function InstituteOnboarding({ onDone }: { onDone: () => void }) {
         useNativeDriver: true,
       }),
       Animated.timing(scaleAnim, {
-        toValue: 0.95,
+        toValue: 0.94,
+        duration: 120,
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateXAnim, {
+        toValue: isForward ? -40 : 40,
         duration: 120,
         useNativeDriver: true,
       }),
     ]).start(() => {
       setCurrentStep(nextStepIdx);
+      translateXAnim.setValue(isForward ? 40 : -40);
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
@@ -90,6 +117,12 @@ export function InstituteOnboarding({ onDone }: { onDone: () => void }) {
         }),
         Animated.spring(scaleAnim, {
           toValue: 1,
+          friction: 7,
+          tension: 70,
+          useNativeDriver: true,
+        }),
+        Animated.spring(translateXAnim, {
+          toValue: 0,
           friction: 8,
           tension: 80,
           useNativeDriver: true,
@@ -108,7 +141,7 @@ export function InstituteOnboarding({ onDone }: { onDone: () => void }) {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top + Spacing.two, paddingBottom: insets.bottom + Spacing.three }]}>
-      {/* Top Header with Skip Button Only */}
+      {/* Top Header with Skip Button */}
       <View style={styles.topHeader}>
         <View style={styles.headerTitleWrap}>
           <ThemedText type="smallBold" style={{ color: theme.tint, letterSpacing: 1, fontSize: 11 }}>
@@ -129,26 +162,36 @@ export function InstituteOnboarding({ onDone }: { onDone: () => void }) {
       </View>
 
       {/* Animated Slide Content */}
-      <Animated.View style={[styles.contentWrap, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
-        {/* Dynamic Center Graphic Container showcasing Logo in Central Circle */}
+      <Animated.View style={[styles.contentWrap, { opacity: fadeAnim, transform: [{ scale: scaleAnim }, { translateX: translateXAnim }] }]}>
+        {/* Dynamic Visual Hero Graphic */}
         <View style={styles.heroWrap}>
-          <View style={[styles.outerGlow, { backgroundColor: theme.tint + '12' }]}>
-            <View style={[styles.middleRing, { backgroundColor: theme.tint + '20', borderColor: theme.tint + '38' }]}>
-              <View style={[styles.innerCircle, { backgroundColor: theme.surface, borderColor: theme.border }, Shadow.card]}>
-                <Image
-                  source={logoSource}
-                  onError={() => setImgError(true)}
-                  style={styles.centerLogoImage}
-                  contentFit="contain"
-                />
-              </View>
+          <View style={[styles.heroCard, { backgroundColor: slide.heroGradient + '15', borderColor: slide.heroGradient + '30' }]}>
+            {/* Background Glow */}
+            <View style={[styles.glowCircle, { backgroundColor: slide.heroGradient + '20' }]} />
+
+            {/* Center School Logo Badge */}
+            <View style={[styles.logoBadge, { backgroundColor: theme.surface, borderColor: theme.border }, Shadow.card]}>
+              <Image
+                source={logoSource}
+                onError={() => setImgError(true)}
+                style={styles.centerLogoImage}
+                contentFit="contain"
+                cachePolicy="memory-disk"
+                priority="high"
+                transition={300}
+              />
+            </View>
+
+            {/* Floating Hero Feature Icon Badge */}
+            <View style={[styles.floatingHeroIcon, { backgroundColor: slide.heroGradient }, Shadow.card]}>
+              <Ionicons name={slide.heroIcon} size={24} color="#FFFFFF" />
             </View>
           </View>
         </View>
 
         {/* Category Badge */}
-        <View style={[styles.badge, { backgroundColor: theme.accent + '1A', borderColor: theme.accent }]}>
-          <ThemedText type="smallBold" style={{ color: theme.accent, fontSize: 11, letterSpacing: 1 }}>
+        <View style={[styles.badge, { backgroundColor: slide.heroGradient + '1A', borderColor: slide.heroGradient }]}>
+          <ThemedText type="smallBold" style={{ color: slide.heroGradient, fontSize: 11, letterSpacing: 1 }}>
             {slide.badge}
           </ThemedText>
         </View>
@@ -165,8 +208,8 @@ export function InstituteOnboarding({ onDone }: { onDone: () => void }) {
         <View style={styles.pointsList}>
           {slide.points.map((pt, index) => (
             <View key={index} style={[styles.pointRow, { backgroundColor: theme.surface, borderColor: theme.border }, Shadow.card]}>
-              <View style={[styles.iconWrap, { backgroundColor: theme.tint + '18' }]}>
-                <Ionicons name={pt.icon} size={18} color={theme.tint} />
+              <View style={[styles.iconWrap, { backgroundColor: slide.heroGradient + '18' }]}>
+                <Ionicons name={pt.icon} size={18} color={slide.heroGradient} />
               </View>
               <ThemedText type="smallBold" style={styles.pointText}>
                 {pt.text}
@@ -244,22 +287,22 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: Spacing.three,
   },
-  outerGlow: {
+  heroCard: {
     width: 140,
     height: 140,
     borderRadius: 70,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1.5,
+    position: 'relative',
   },
-  middleRing: {
-    width: 114,
-    height: 114,
-    borderRadius: 57,
-    borderWidth: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
+  glowCircle: {
+    width: 170,
+    height: 170,
+    borderRadius: 85,
+    position: 'absolute',
   },
-  innerCircle: {
+  logoBadge: {
     width: 86,
     height: 86,
     borderRadius: 43,
@@ -272,6 +315,18 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     borderRadius: 33,
+  },
+  floatingHeroIcon: {
+    position: 'absolute',
+    bottom: -4,
+    right: -4,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
   },
   badge: {
     paddingHorizontal: Spacing.three + 2,

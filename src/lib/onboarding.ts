@@ -24,6 +24,11 @@ export async function markInstituteOnboardingComplete(): Promise<void> {
   await AsyncStorage.setItem(INSTITUTE_ONBOARDING_KEY, '1');
 }
 
+export async function resetOnboarding(): Promise<void> {
+  await AsyncStorage.removeItem(ONBOARDING_KEY);
+  await AsyncStorage.removeItem(INSTITUTE_ONBOARDING_KEY);
+}
+
 export type Belonging = 'saarthak' | 'other';
 export type UserType = 'student' | 'teacher' | 'other';
 

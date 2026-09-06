@@ -143,10 +143,18 @@ export default function TeacherHomeworkAddScreen() {
         if (chapters && chapters.length > 0) {
           const options = [
             { label: '+ Add Custom Chapter / Unit', value: '__CUSTOM_CHAPTER__' },
-            ...chapters.map((ch) => ({
-              label: `Ch ${ch.chapter_number}: ${ch.chapter_title}`,
-              value: `Ch ${ch.chapter_number}: ${ch.chapter_title}`,
-            })),
+            ...chapters.map((ch) => {
+              const rawTitle = (ch.chapter_title || '').trim();
+              const formattedLabel = /^(ch|chapter|unit)\b/i.test(rawTitle)
+                ? rawTitle
+                : ch.chapter_number
+                ? `Ch ${ch.chapter_number}: ${rawTitle}`
+                : rawTitle;
+              return {
+                label: formattedLabel,
+                value: formattedLabel,
+              };
+            }),
           ];
           setSyllabusOptions(options);
         } else {

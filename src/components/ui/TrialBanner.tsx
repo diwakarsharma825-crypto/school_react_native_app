@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, usePathname } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Modal, Pressable, StyleSheet, View } from 'react-native';
 
@@ -22,17 +22,26 @@ function todayStr() {
  * with the ✕ just hides it for the rest of today; it reappears tomorrow. */
 export function TrialBanner({ trial }: { trial: TrialStatus }) {
   const theme = useTheme();
+  const pathname = usePathname();
   const [visible, setVisible] = useState(false);
   const anim = useRef(new Animated.Value(0)).current;
 
+  const isEnded = trial.ended;
+  const isPaymentScreen = pathname === '/payment' || pathname === 'payment' || pathname?.endsWith('/payment');
+
   useEffect(() => {
+    if (isEnded) {
+      // Free trial HAS ENDED — must be visible with no close option
+      setVisible(true);
+      return;
+    }
     if (!trial.startDate) return;
     AsyncStorage.getItem(LAST_SHOWN_KEY).then((lastShown) => {
       if (lastShown !== todayStr()) {
         setVisible(true);
       }
     });
-  }, [trial.startDate]);
+  }, [trial.startDate, isEnded]);
 
   useEffect(() => {
     if (visible) {
@@ -41,14 +50,22 @@ export function TrialBanner({ trial }: { trial: TrialStatus }) {
   }, [visible, anim]);
 
   function dismiss() {
+    if (isEnded) return;
     AsyncStorage.setItem(LAST_SHOWN_KEY, todayStr()).catch(() => {});
     setVisible(false);
   }
 
-  if (!visible) return null;
+  if (isPaymentScreen || !visible) return null;
 
   return (
-    <Modal visible transparent animationType="fade" onRequestClose={dismiss}>
+    <Modal
+      visible
+      transparent
+      animationType="fade"
+      onRequestClose={() => {
+        if (!isEnded) dismiss();
+      }}
+    >
       <View style={styles.backdrop}>
         <Animated.View
           style={[
@@ -69,16 +86,18 @@ export function TrialBanner({ trial }: { trial: TrialStatus }) {
                 FREE TRIAL
               </ThemedText>
             </View>
-            <Pressable onPress={dismiss} hitSlop={10} style={styles.closeButton}>
-              <Ionicons name="close" size={20} color={Brand.white} />
-            </Pressable>
+            {!isEnded ? (
+              <Pressable onPress={dismiss} hitSlop={10} style={styles.closeButton}>
+                <Ionicons name="close" size={20} color={Brand.white} />
+              </Pressable>
+            ) : null}
           </View>
 
           <ThemedText type="title" style={styles.title}>
-            {trial.ended ? 'Your free trial has ended' : `${trial.remainingDays} day${trial.remainingDays === 1 ? '' : 's'} left in your free trial!`}
+            {isEnded ? 'Your free trial has ended' : `${trial.remainingDays} day${trial.remainingDays === 1 ? '' : 's'} left in your free trial!`}
           </ThemedText>
           <ThemedText type="default" style={styles.subtitle}>
-            {trial.ended
+            {isEnded
               ? 'Keep enjoying everything the app offers — thanks for trying it out!'
               : 'Enjoy full access to everything the school app has to offer:'}
           </ThemedText>
@@ -98,13 +117,15 @@ export function TrialBanner({ trial }: { trial: TrialStatus }) {
 
           <Pressable
             onPress={() => {
-              dismiss();
+              if (!isEnded) {
+                dismiss();
+              }
               router.push('/payment' as any);
             }}
             style={[styles.ctaButton, { backgroundColor: theme.accent }]}
           >
             <ThemedText type="smallBold" style={styles.ctaLabel}>
-              {trial.ended ? 'Upgrade & Activate App' : 'Explore Activation Options'}
+              {isEnded ? 'Upgrade & Activate App' : 'Explore Activation Options'}
             </ThemedText>
           </Pressable>
         </Animated.View>

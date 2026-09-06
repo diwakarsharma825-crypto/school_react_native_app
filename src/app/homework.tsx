@@ -44,6 +44,16 @@ function pad(n: number) {
   return n < 10 ? `0${n}` : String(n);
 }
 
+export function cleanChapterText(text?: string | null): string {
+  if (!text) return '';
+  let str = text.trim();
+  const dupMatch = str.match(/^Ch\s*\d+\s*:\s*(Ch\s*[-:\s]?\d+.*|Chapter\s*[-:\s]?\d+.*)$/i);
+  if (dupMatch && dupMatch[1]) {
+    return dupMatch[1];
+  }
+  return str;
+}
+
 function AccessForm({ onDone }: { onDone: () => void }) {
   const theme = useTheme();
   const router = useRouter();
@@ -349,15 +359,27 @@ function HomeworkCalendar({ access, onLogout }: { access: HomeworkAccess; onLogo
       <Card key={entry.id} style={styles.entryCard}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, flexWrap: 'wrap', marginRight: 8 }}>
-            <View style={[styles.subjectBadge, { backgroundColor: theme.tint }]}>
+            <View style={[styles.subjectBadge, { backgroundColor: theme.dark ? '#2563EB' : theme.tint }]}>
               <ThemedText type="smallBold" style={{ color: Brand.white, fontSize: 12 }}>
                 {t(entry.subject)}
               </ThemedText>
             </View>
             {entry.chapter ? (
-              <View style={[styles.chapterBadge, { backgroundColor: theme.accent + '22', borderColor: theme.accent, borderWidth: 1 }]}>
-                <ThemedText type="smallBold" style={{ color: theme.accent, fontSize: 12 }}>
-                  {t(entry.chapter)}
+              <View
+                style={[
+                  styles.chapterBadge,
+                  {
+                    backgroundColor: theme.dark ? 'rgba(236, 72, 153, 0.25)' : '#FCE7F3',
+                    borderColor: theme.dark ? '#F43F5E' : '#F472B6',
+                    borderWidth: 1,
+                  },
+                ]}
+              >
+                <ThemedText
+                  type="smallBold"
+                  style={{ color: theme.dark ? '#F472B6' : '#DB2777', fontSize: 12 }}
+                >
+                  {t(cleanChapterText(entry.chapter))}
                 </ThemedText>
               </View>
             ) : null}
@@ -399,15 +421,24 @@ function HomeworkCalendar({ access, onLogout }: { access: HomeworkAccess; onLogo
               });
             }}
           >
-            <Ionicons name="document-text-outline" size={14} color={theme.tint} />
-            <ThemedText style={{ fontSize: 11, fontWeight: '700', color: theme.text }}>PDF Export</ThemedText>
+            <Ionicons name="document-text-outline" size={14} color={theme.dark ? '#60A5FA' : theme.tint} />
+            <ThemedText style={{ fontSize: 11, fontWeight: '700', color: theme.dark ? '#FFFFFF' : theme.text }}>PDF Export</ThemedText>
           </Pressable>
         </View>
 
         {entry.teacher_name ? (
-          <ThemedText type="small" style={[styles.entryTeacher, { color: theme.dark ? '#CBD5E1' : theme.textSecondary }]}>
-            Assigned by {entry.teacher_name}
-          </ThemedText>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6, marginTop: 2 }}>
+            {entry.teacher_photo ? (
+              <Image source={{ uri: entry.teacher_photo }} style={{ width: 22, height: 22, borderRadius: 11, borderWidth: 1, borderColor: theme.dark ? '#3B82F6' : theme.border }} contentFit="cover" />
+            ) : (
+              <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: theme.dark ? '#334155' : '#E2E8F0', alignItems: 'center', justifyContent: 'center' }}>
+                <Ionicons name="person" size={12} color={theme.dark ? '#94A3B8' : '#64748B'} />
+              </View>
+            )}
+            <ThemedText type="small" style={{ fontSize: 12, fontWeight: '600', color: theme.dark ? '#CBD5E1' : theme.textSecondary }}>
+              Assigned by {entry.teacher_name}
+            </ThemedText>
+          </View>
         ) : null}
         {entry.description ? (
           <ThemedText type="small" style={[styles.entryDescription, { color: theme.dark ? '#E2E8F0' : theme.textSecondary }]} numberOfLines={2}>
@@ -436,8 +467,8 @@ function HomeworkCalendar({ access, onLogout }: { access: HomeworkAccess; onLogo
               borderLeftColor: entry.submission.status === 'reviewed' ? '#10B981' : '#F59E0B',
             }}
           >
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 }}>
                 <Ionicons
                   name={entry.submission.status === 'reviewed' ? 'checkmark-circle' : 'time'}
                   size={18}
@@ -505,13 +536,15 @@ function HomeworkCalendar({ access, onLogout }: { access: HomeworkAccess; onLogo
               paddingHorizontal: 10,
               borderRadius: Radius.pill,
               borderWidth: 1,
-              borderColor: theme.border,
-              backgroundColor: theme.surface,
+              borderColor: theme.dark ? '#475569' : theme.border,
+              backgroundColor: theme.dark ? '#1E293B' : theme.surface,
             }}
             onPress={() => setDetailEntry(entry)}
           >
-            <Ionicons name="eye-outline" size={16} color={theme.text} />
-            <ThemedText style={{ fontSize: 12, fontWeight: '700', color: theme.text }}>View Details</ThemedText>
+            <Ionicons name="eye-outline" size={16} color={theme.dark ? '#FFFFFF' : theme.text} />
+            <ThemedText style={{ fontSize: 12, fontWeight: '700', color: theme.dark ? '#FFFFFF' : theme.text }}>
+              View Details
+            </ThemedText>
           </Pressable>
 
           {/* View My Submission Button (ONLY shows AFTER teacher has reviewed) */}
@@ -527,13 +560,15 @@ function HomeworkCalendar({ access, onLogout }: { access: HomeworkAccess; onLogo
                 paddingHorizontal: 10,
                 borderRadius: Radius.pill,
                 borderWidth: 1,
-                borderColor: theme.tint,
-                backgroundColor: theme.dark ? '#1E293B' : '#EFF6FF',
+                borderColor: theme.dark ? '#3B82F6' : theme.tint,
+                backgroundColor: theme.dark ? '#2563EB' : '#EFF6FF',
               }}
               onPress={() => setViewSubmissionTarget(entry)}
             >
-              <Ionicons name="document-text-outline" size={16} color={theme.tint} />
-              <ThemedText style={{ fontSize: 12, fontWeight: '700', color: theme.tint }}>View Submission</ThemedText>
+              <Ionicons name="document-text-outline" size={16} color={theme.dark ? '#FFFFFF' : theme.tint} />
+              <ThemedText style={{ fontSize: 12, fontWeight: '700', color: theme.dark ? '#FFFFFF' : theme.tint }}>
+                View Submission
+              </ThemedText>
             </Pressable>
           ) : null}
 
@@ -549,15 +584,27 @@ function HomeworkCalendar({ access, onLogout }: { access: HomeworkAccess; onLogo
                 paddingVertical: 8,
                 paddingHorizontal: 10,
                 borderRadius: Radius.pill,
-                backgroundColor: entry.submission ? (theme.dark ? '#334155' : '#E2E8F0') : theme.tint,
+                backgroundColor: entry.submission
+                  ? (theme.dark ? '#334155' : '#E2E8F0')
+                  : (theme.dark ? '#2563EB' : theme.tint),
               }}
               onPress={(e) => {
                 e.stopPropagation();
                 setSubmitTargetHomework(entry);
               }}
             >
-              <Ionicons name={entry.submission ? 'cloud-upload-outline' : 'send-outline'} size={14} color={entry.submission ? theme.text : '#FFFFFF'} />
-              <ThemedText style={{ fontSize: 12, fontWeight: '700', color: entry.submission ? theme.text : '#FFFFFF' }}>
+              <Ionicons
+                name={entry.submission ? 'cloud-upload-outline' : 'send-outline'}
+                size={14}
+                color={entry.submission ? (theme.dark ? '#FFFFFF' : theme.text) : '#FFFFFF'}
+              />
+              <ThemedText
+                style={{
+                  fontSize: 12,
+                  fontWeight: '700',
+                  color: entry.submission ? (theme.dark ? '#FFFFFF' : theme.text) : '#FFFFFF',
+                }}
+              >
                 {entry.submission ? 'Re-Submit' : 'Submit Homework'}
               </ThemedText>
             </Pressable>
@@ -881,6 +928,7 @@ function HomeworkCalendar({ access, onLogout }: { access: HomeworkAccess; onLogo
           description={detailEntry.description}
           photoUrls={detailEntry.attachments.map((a) => a.photo_url)}
           teacherName={detailEntry.teacher_name}
+          teacherPhoto={detailEntry.teacher_photo}
         />
       ) : null}
 
@@ -920,6 +968,8 @@ function HomeworkCalendar({ access, onLogout }: { access: HomeworkAccess; onLogo
                   rating: viewSubmissionTarget.submission.rating,
                   teacherRemarks: viewSubmissionTarget.submission.teacher_remarks,
                   signatureUrl: viewSubmissionTarget.submission.signature_url,
+                  teacherName: viewSubmissionTarget.submission.teacher_name || viewSubmissionTarget.teacher_name,
+                  teacherPhoto: viewSubmissionTarget.submission.teacher_photo || viewSubmissionTarget.teacher_photo,
                 }
               : null
           }

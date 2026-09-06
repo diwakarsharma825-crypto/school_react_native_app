@@ -812,7 +812,7 @@ function HomeworkTab({ classId, sectionId }: { classId: number; sectionId?: numb
                       {entry.chapter ? (
                         <View style={[styles.chapterBadge, { backgroundColor: theme.accent + '22', borderColor: theme.accent, borderWidth: 1 }]}>
                           <ThemedText type="smallBold" style={{ color: theme.accent, fontSize: 12 }}>
-                            {entry.chapter}
+                            {entry.chapter ? entry.chapter.replace(/^Ch\s*\d+\s*:\s*(Ch\s*[-:\s]?\d+.*|Chapter\s*[-:\s]?\d+.*)$/i, '$1') : ''}
                           </ThemedText>
                         </View>
                       ) : null}
@@ -1023,7 +1023,7 @@ function HomeworkTab({ classId, sectionId }: { classId: number; sectionId?: numb
                             {entry.chapter ? (
                               <View style={[styles.chapterBadge, { backgroundColor: theme.accent + '22', borderColor: theme.accent, borderWidth: 1 }]}>
                                 <ThemedText type="smallBold" style={{ color: theme.accent, fontSize: 12 }}>
-                                  {entry.chapter}
+                                  {entry.chapter ? entry.chapter.replace(/^Ch\s*\d+\s*:\s*(Ch\s*[-:\s]?\d+.*|Chapter\s*[-:\s]?\d+.*)$/i, '$1') : ''}
                                 </ThemedText>
                               </View>
                             ) : null}

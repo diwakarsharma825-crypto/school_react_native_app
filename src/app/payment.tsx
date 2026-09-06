@@ -409,8 +409,14 @@ export default function PaymentScreen() {
                 pressed && { opacity: 0.8 },
               ]}
             >
-              <Ionicons name="call" size={18} color="#FFFFFF" />
-              <ThemedText type="smallBold" style={{ color: '#FFFFFF' }}>
+              <Ionicons name="call" size={15} color="#FFFFFF" />
+              <ThemedText
+                type="smallBold"
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.8}
+                style={styles.btnText}
+              >
                 Call Support
               </ThemedText>
             </Pressable>
@@ -423,8 +429,14 @@ export default function PaymentScreen() {
                 pressed && { opacity: 0.8 },
               ]}
             >
-              <Ionicons name="logo-whatsapp" size={18} color="#FFFFFF" />
-              <ThemedText type="smallBold" style={{ color: '#FFFFFF' }}>
+              <Ionicons name="logo-whatsapp" size={15} color="#FFFFFF" />
+              <ThemedText
+                type="smallBold"
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.8}
+                style={styles.btnText}
+              >
                 WhatsApp
               </ThemedText>
             </Pressable>
@@ -438,8 +450,14 @@ export default function PaymentScreen() {
                 pressed && { opacity: 0.8 },
               ]}
             >
-              <Ionicons name="mail" size={18} color={theme.dark ? '#60A5FA' : '#2563EB'} />
-              <ThemedText type="smallBold" style={{ color: theme.dark ? '#60A5FA' : '#2563EB' }}>
+              <Ionicons name="mail" size={15} color={theme.dark ? '#60A5FA' : '#2563EB'} />
+              <ThemedText
+                type="smallBold"
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.8}
+                style={[styles.btnText, { color: theme.dark ? '#60A5FA' : '#2563EB' }]}
+              >
                 Email Us
               </ThemedText>
             </Pressable>
@@ -606,18 +624,22 @@ const styles = StyleSheet.create({
   },
   actionGrid: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.two,
+    alignItems: 'center',
+    gap: 6,
   },
   contactButton: {
     flex: 1,
-    minWidth: '30%',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
+    gap: 4,
     paddingVertical: Spacing.two,
+    paddingHorizontal: 4,
     borderRadius: Radius.pill,
+  },
+  btnText: {
+    color: '#FFFFFF',
+    fontSize: 12,
   },
   outlineBtn: {
     backgroundColor: 'transparent',

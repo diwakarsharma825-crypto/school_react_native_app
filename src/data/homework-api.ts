@@ -19,6 +19,8 @@ export interface HomeworkSubmission {
   rating: string | null; // 'Good' | 'V.Good' | 'Star' | '2 Star' | '3 Star'
   teacher_remarks: string | null;
   signature_url: string | null;
+  teacher_name?: string | null;
+  teacher_photo?: string | null;
   photos: string[];
   created_at: string;
 }
@@ -31,6 +33,7 @@ export interface HomeworkEntry {
   description: string | null;
   attachments: { photo_url: string }[];
   teacher_name: string | null;
+  teacher_photo?: string | null;
   submission?: HomeworkSubmission | null;
 }
 
@@ -66,8 +69,14 @@ export async function submitStudentHomework(formData: FormData): Promise<{ submi
     method: 'POST',
     body: formData,
   });
-  const json = await response.json();
-  if (!json.status) throw new Error(json.message || 'Submission failed');
+  const text = await response.text();
+  let json: any = null;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    throw new Error('Server returned an invalid response. Please try again.');
+  }
+  if (!json || !json.status) throw new Error(json?.message || 'Submission failed');
   return json.data;
 }
 

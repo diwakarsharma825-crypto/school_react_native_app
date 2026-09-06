@@ -22,6 +22,7 @@ export type LayoutTarget =
   | 'teacher_subjects'
   | 'teacher_promote'
   | 'login'
+  | 'classmates'
   | 'url';
 
 export const TARGET_ROUTES: Record<Exclude<LayoutTarget, 'url'>, Href> = {
@@ -42,6 +43,7 @@ export const TARGET_ROUTES: Record<Exclude<LayoutTarget, 'url'>, Href> = {
   teacher_subjects: '/teacher-subjects',
   teacher_promote: '/teacher-promote',
   login: '/login',
+  classmates: '/classmates',
 };
 
 /** Only some targets correspond to an admin-togglable section (see
@@ -55,6 +57,7 @@ export const TARGET_SECTION_KEY: Partial<Record<LayoutTarget, SectionKey>> = {
   teachers: 'teachers',
   top_students: 'top_students',
   disclosure: 'disclosure',
+  classmates: 'classmates',
 };
 
 export interface LayoutItem {

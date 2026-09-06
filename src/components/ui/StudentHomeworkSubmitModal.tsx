@@ -76,8 +76,14 @@ export function StudentHomeworkSubmitModal({
       form.append('description', description);
 
       for (let i = 0; i < photos.length; i++) {
-        const fileObj = await createFileBlob(photos[i].uri, photos[i].mimeType, photos[i].name);
-        form.append('photos[]', fileObj);
+        const photoItem = photos[i];
+        if (!photoItem.uri) continue;
+        if (photoItem.uri.startsWith('http://') || photoItem.uri.startsWith('https://')) {
+          form.append('existing_photos[]', photoItem.uri);
+        } else {
+          const fileObj = await createFileBlob(photoItem.uri, photoItem.mimeType, photoItem.name);
+          form.append('photos[]', fileObj);
+        }
       }
 
       await submitStudentHomework(form);

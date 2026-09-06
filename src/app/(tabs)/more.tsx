@@ -124,15 +124,6 @@ export default function MoreScreen() {
       ]
     : studentLoggedIn
       ? [
-          ...(sections.classmates
-            ? [
-                {
-                  label: 'My Classmates',
-                  icon: 'people-outline' as const,
-                  onPress: () => router.push('/classmates' as any),
-                },
-              ]
-            : []),
           {
             label: 'Change Password',
             icon: 'key-outline',
