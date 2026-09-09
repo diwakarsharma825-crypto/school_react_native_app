@@ -166,6 +166,26 @@ export async function fetchGalleryImages(albumId: string): Promise<GalleryImage[
   return getJson<GalleryImage[]>(`/galleries/${albumId}`);
 }
 
+export async function fetchLaunchImages(): Promise<GalleryImage[]> {
+  try {
+    const images = await getJson<GalleryImage[]>('/launch_images');
+    if (images && images.length > 0) return images;
+  } catch {
+    // ignore error and try gallery fallback
+  }
+
+  try {
+    const albums = await fetchGalleries();
+    const launchAlbum = albums.find((a) => /launch\s*screen/i.test(a.title));
+    if (launchAlbum) {
+      return await fetchGalleryImages(String(launchAlbum.id));
+    }
+  } catch {
+    // ignore
+  }
+  return [];
+}
+
 export async function fetchTeachers(): Promise<Teacher[]> {
   return getJson<Teacher[]>('/teachers');
 }
