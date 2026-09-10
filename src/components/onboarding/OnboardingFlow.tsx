@@ -26,9 +26,10 @@ import { SelectField } from '@/components/ui/SelectField';
 import { ThemedText } from '@/components/ui/ThemedText';
 
 const logoSource = require('../../../assets/images/icon.png');
-const hwPreviewImg = require('../../../assets/images/onboarding_hw.jpg');
-const attPreviewImg = require('../../../assets/images/onboarding_att.jpg');
-const noticesPreviewImg = require('../../../assets/images/onboarding_notices.jpg');
+const homePreviewImg = require('../../../assets/images/onboarding_home.jpg');
+const galleryPreviewImg = require('../../../assets/images/onboarding_gallery.jpg');
+const eventsPreviewImg = require('../../../assets/images/onboarding_events.jpg');
+const toppersPreviewImg = require('../../../assets/images/onboarding_toppers.jpg');
 
 type Belonging = 'saarthak' | 'other';
 type UserType = 'student' | 'teacher' | 'other';
@@ -386,9 +387,10 @@ function IntroShowcaseStep({ schoolName }: { schoolName: string }) {
 
   const fallbackCards = useMemo(
     () => [
-      { image: hwPreviewImg, color: '#3B82F6' },
-      { image: attPreviewImg, color: '#10B981' },
-      { image: noticesPreviewImg, color: '#8B5CF6' },
+      { image: homePreviewImg, color: '#3B82F6', title: 'Home Page' },
+      { image: galleryPreviewImg, color: '#EC4899', title: 'Gallery' },
+      { image: eventsPreviewImg, color: '#10B981', title: 'Event Page' },
+      { image: toppersPreviewImg, color: '#8B5CF6', title: 'Toppers Page' },
     ],
     []
   );
@@ -396,9 +398,10 @@ function IntroShowcaseStep({ schoolName }: { schoolName: string }) {
   const PREVIEW_CARDS = useMemo(() => {
     if (remoteLaunchImages && remoteLaunchImages.length > 0) {
       const palette = ['#3B82F6', '#8B5CF6', '#10B981', '#F59E0B', '#EC4899', '#6366F1'];
-      return remoteLaunchImages.map((img, i) => ({
+      return remoteLaunchImages.map((img: any, i: number) => ({
         image: img.image_url ? { uri: img.image_url } : fallbackCards[i % fallbackCards.length].image,
         color: palette[i % palette.length],
+        title: img.title || fallbackCards[i % fallbackCards.length].title,
       }));
     }
     return fallbackCards;
@@ -543,14 +546,14 @@ function IntroShowcaseStep({ schoolName }: { schoolName: string }) {
         </Animated.View>
       </View>
 
-      {/* 3. Dynamic Launch Screen Gallery Image Showcase Card (Parallax + Scale + Fade Slide) */}
+      {/* 3. Launch Screen Gallery Image Showcase Card (Clean Widescreen 16:9) */}
       <View style={styles.previewCarouselWrap}>
         <Animated.View
           style={[
             styles.featurePreviewCard,
             {
               backgroundColor: theme.surface,
-              borderColor: currentPreview.color + '60',
+              borderColor: currentPreview.color + '40',
               opacity: cardFadeAnim,
               transform: [{ scale: cardScaleAnim }, { translateX: cardSlideAnim }],
             },
@@ -561,13 +564,33 @@ function IntroShowcaseStep({ schoolName }: { schoolName: string }) {
             <Image
               source={currentPreview.image}
               style={styles.previewImage}
-              contentFit="contain"
+              contentFit="cover"
               cachePolicy="memory-disk"
               priority="high"
               transition={300}
             />
           </View>
         </Animated.View>
+
+        {/* Clean User-Friendly Indicator Dots */}
+        <View style={styles.carouselDotsRow}>
+          {PREVIEW_CARDS.map((card, idx) => {
+            const isActive = idx === activeCardIdx % PREVIEW_CARDS.length;
+            return (
+              <Pressable
+                key={idx}
+                onPress={() => switchPreviewCard(idx)}
+                hitSlop={8}
+                style={[
+                  styles.carouselDot,
+                  isActive
+                    ? [styles.carouselDotActive, { backgroundColor: card.color, width: 22 }]
+                    : { backgroundColor: theme.border },
+                ]}
+              />
+            );
+          })}
+        </View>
       </View>
     </Animated.View>
   );
@@ -1167,10 +1190,11 @@ const styles = StyleSheet.create({
   },
   previewImageWrap: {
     width: '100%',
-    height: 185,
+    aspectRatio: 16 / 9,
     borderRadius: Radius.lg,
     overflow: 'hidden',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#0F172A',
+    position: 'relative',
   },
   previewImage: {
     width: '100%',
@@ -1182,8 +1206,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    marginTop: 8,
-    marginBottom: 24,
+    marginTop: 12,
+    marginBottom: 16,
   },
   carouselDot: {
     width: 7,

@@ -72,7 +72,8 @@ export async function submitStudentHomework(formData: FormData): Promise<{ submi
   const text = await response.text();
   let json: any = null;
   try {
-    json = JSON.parse(text);
+    const match = text.match(/\{[\s\S]*\}/);
+    json = match ? JSON.parse(match[0]) : JSON.parse(text);
   } catch {
     throw new Error('Server returned an invalid response. Please try again.');
   }
@@ -123,7 +124,8 @@ export async function studentLogin(identifier: string, password: string): Promis
   const text = await response.text();
   let json: ApiEnvelope<{ children: StudentChild[] }> | null = null;
   try {
-    json = JSON.parse(text);
+    const match = text.match(/\{[\s\S]*\}/);
+    json = match ? JSON.parse(match[0]) : JSON.parse(text);
   } catch {
     throw new Error('Server response error. Please try again.');
   }

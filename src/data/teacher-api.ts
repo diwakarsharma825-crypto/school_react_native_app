@@ -1810,7 +1810,8 @@ export async function reviewSubmission(
   const text = await response.text();
   let json: any = null;
   try {
-    json = JSON.parse(text);
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    json = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(text);
   } catch {
     throw new Error('Server returned an invalid response. Please try again.');
   }
