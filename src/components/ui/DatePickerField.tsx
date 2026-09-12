@@ -10,6 +10,10 @@ const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December',
 ];
+const MONTH_NAMES_SHORT = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+];
 const WEEKDAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
 function pad(n: number) {
@@ -110,7 +114,7 @@ export function DatePickerField({
     ? (() => {
         const p = parseDate(value);
         if (!p) return value;
-        return `${p.d} ${MONTH_NAMES[p.m - 1]} ${p.y}`;
+        return `${p.d} ${MONTH_NAMES_SHORT[p.m - 1]} ${p.y}`;
       })()
     : null;
 
@@ -282,7 +286,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: Radius.sm,
     paddingHorizontal: Spacing.two,
-    paddingVertical: Spacing.two + 2,
+    paddingVertical: Spacing.two,
+    minHeight: 46,
     marginBottom: Spacing.two,
   },
   backdrop: {

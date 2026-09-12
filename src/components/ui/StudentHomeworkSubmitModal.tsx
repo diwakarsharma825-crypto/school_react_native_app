@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import React, { useState } from 'react';
-import { Alert, Dimensions, Modal, Pressable, ScrollView, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native';
+import { Alert, Dimensions, Modal, Platform, Pressable, ScrollView, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native';
 
 import { Brand, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -81,8 +81,18 @@ export function StudentHomeworkSubmitModal({
         if (photoItem.uri.startsWith('http://') || photoItem.uri.startsWith('https://')) {
           form.append('existing_photos[]', photoItem.uri);
         } else {
-          const fileObj = await createFileBlob(photoItem.uri, photoItem.mimeType, photoItem.name);
-          form.append('photos[]', fileObj);
+          const fileName = photoItem.name || `photo_${i + 1}.jpg`;
+          const fileMime = photoItem.mimeType || 'image/jpeg';
+          if (Platform.OS === 'web') {
+            const fileObj = await createFileBlob(photoItem.uri, fileMime, fileName);
+            form.append('photos[]', fileObj as unknown as Blob, fileName);
+          } else {
+            form.append('photos[]', {
+              uri: photoItem.uri,
+              name: fileName,
+              type: fileMime,
+            } as any);
+          }
         }
       }
 

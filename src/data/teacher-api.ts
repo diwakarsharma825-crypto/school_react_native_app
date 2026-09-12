@@ -537,22 +537,7 @@ export async function saveHomework(params: {
     token
   );
   if (!json.status) throw new Error(json.message);
-
-  let warning: string | undefined;
-  try {
-    const notifRes = await sendTeacherNotification({
-      classId: params.classId,
-      sectionId: params.sectionId,
-      title: `New Homework: ${params.subject}${params.chapter ? ` - ${params.chapter}` : ''}`,
-      body: `Homework assigned for ${params.date}: ${params.description}`,
-    });
-    if (notifRes.message) {
-      warning = notifRes.message;
-    }
-  } catch (e: any) {
-    warning = e?.message;
-  }
-  return { id: json.data?.id, notificationWarning: warning };
+  return { id: json.data?.id };
 }
 
 export async function deleteHomework(id: number): Promise<void> {
@@ -732,12 +717,6 @@ export async function addTeacherEvent(params: TeacherEventParams): Promise<AddTe
     token
   );
   if (!json.status) throw new Error(json.message);
-  sendTeacherNotification({
-    classId: params.classId,
-    sectionId: params.sectionId,
-    title: `New Event: ${params.title}`,
-    body: params.note || params.eventPlace || 'New event published for your class.',
-  }).catch(() => {});
   return { id: json.data.id, skipped: json.data.skipped ?? [] };
 }
 
@@ -827,7 +806,7 @@ export interface TeacherNoticeParams {
   sectionId?: number;
 }
 
-export async function addTeacherNotice(params: TeacherNoticeParams): Promise<{ notificationWarning?: string }> {
+export async function addTeacherNotice(params: TeacherNoticeParams): Promise<void> {
   await authedRequest('/teacher_add_notice', {
     method: 'POST',
     body: (() => {
@@ -839,22 +818,6 @@ export async function addTeacherNotice(params: TeacherNoticeParams): Promise<{ n
       return body;
     })(),
   });
-
-  let warning: string | undefined;
-  try {
-    const notifRes = await sendTeacherNotification({
-      classId: params.classId,
-      sectionId: params.sectionId,
-      title: `Notice: ${params.title}`,
-      body: params.body,
-    });
-    if (notifRes.message) {
-      warning = notifRes.message;
-    }
-  } catch (e: any) {
-    warning = e?.message;
-  }
-  return { notificationWarning: warning };
 }
 
 export interface TeacherNotice {
@@ -1005,13 +968,6 @@ export async function saveAttendance(
       return body;
     })(),
   });
-
-  sendTeacherNotification({
-    classId,
-    sectionId,
-    title: 'Attendance Marked',
-    body: `Today's (${date}) attendance for your class has been updated.`,
-  }).catch(() => {});
 }
 
 export interface ExportParams {
@@ -1317,13 +1273,6 @@ export async function reviewLeaveApplication(id: number, status: 'approved' | 'r
   body.append('status', status);
   if (note) body.append('note', note);
   await authedRequest<{ updated: boolean }>('/teacher_review_leave', { method: 'POST', body });
-
-  sendTeacherNotification({
-    classId: classId || 0,
-    studentRef: studentSrn,
-    title: `Leave Request ${status === 'approved' ? 'Approved' : 'Rejected'}`,
-    body: `Your leave request has been ${status}.${note ? ` Note: ${note}` : ''}`,
-  }).catch(() => {});
 }
 
 export type FeeType = 'monthly' | 'bus' | 'fine' | 'other';
@@ -1385,12 +1334,6 @@ export async function addFeeInvoice(params: {
     }
   }
   const res = await postFormData<{ id: number }>('/teacher_add_fee_invoice', body);
-  sendTeacherNotification({
-    classId: params.classId || 1,
-    studentRef: params.srn,
-    title: `New Fee Invoice: ${params.title}`,
-    body: `Fee amount ₹${params.amount} is due ${params.dueDate ? `by ${params.dueDate}` : ''}.`,
-  }).catch(() => {});
   return res;
 }
 
