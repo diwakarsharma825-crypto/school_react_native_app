@@ -10,6 +10,7 @@ import { ProfileHeaderBar } from '@/components/ui/ProfileHeaderBar';
 import { Screen } from '@/components/ui/Screen';
 import { SendNotificationModal } from '@/components/ui/SendNotificationModal';
 import { SelectField } from '@/components/ui/SelectField';
+import { TeacherVoiceAssistantModal } from '@/components/ui/TeacherVoiceAssistantModal';
 import { EmptyState, ErrorState, Loading } from '@/components/ui/states';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { Brand, Radius, Spacing } from '@/constants/theme';
@@ -1121,6 +1122,7 @@ interface TeacherQuickLink {
 }
 
 const TEACHER_QUICK_LINKS: TeacherQuickLink[] = [
+  { label: 'Voice AI', icon: 'sparkles-outline', bg: '#F3E8FF', fg: '#7C3AED', route: 'voice_assistant' },
   { label: 'Students', icon: 'people-outline', bg: '#E0F2FE', fg: '#0284C7', route: '/teacher-students' },
   { label: 'Homework', icon: 'book-outline', bg: '#E0E7FF', fg: '#4338CA', route: '/teacher-homework', permKey: 'homework', sectionKey: 'homework' },
   { label: 'Attendance', icon: 'checkmark-done-outline', bg: '#DFF1E1', fg: '#2E7D32', route: '/teacher-attendance', permKey: 'attendance', sectionKey: 'attendance' },
@@ -1137,7 +1139,15 @@ const TEACHER_QUICK_LINKS: TeacherQuickLink[] = [
 
 /** Teacher-side counterpart to the student dashboard's Quick Links grid —
  * same visual pattern, filtered by admin section toggles and teacher per-section permissions. */
-function TeacherQuickLinks({ permissions, selectedClassId }: { permissions?: TeacherProfile['permissions']; selectedClassId?: string | null }) {
+function TeacherQuickLinks({
+  permissions,
+  selectedClassId,
+  onOpenVoiceAssistant,
+}: {
+  permissions?: TeacherProfile['permissions'];
+  selectedClassId?: string | null;
+  onOpenVoiceAssistant?: () => void;
+}) {
   const router = useRouter();
   const sections = useSections();
   const links = TEACHER_QUICK_LINKS.filter((l) => {
@@ -1158,12 +1168,16 @@ function TeacherQuickLinks({ permissions, selectedClassId }: { permissions?: Tea
           <Pressable
             key={link.route}
             style={quickLinkStyles.tileWrap}
-            onPress={() =>
-              router.push({
-                pathname: link.route as any,
-                params: { classId: selectedClassId || '', class_id: selectedClassId || '' },
-              })
-            }
+            onPress={() => {
+              if (link.route === 'voice_assistant') {
+                onOpenVoiceAssistant?.();
+              } else {
+                router.push({
+                  pathname: link.route as any,
+                  params: { classId: selectedClassId || '', class_id: selectedClassId || '' },
+                });
+              }
+            }}
           >
             <Card style={quickLinkStyles.tile}>
               <View style={[quickLinkStyles.iconCircle, { backgroundColor: link.bg }]}>
@@ -1218,6 +1232,7 @@ export default function TeacherDashboardScreen() {
   const [classId, setClassId] = useState<string | null>(null);
   const theme = useTheme();
   const [sessionLabel, setSessionLabel] = useState<string | undefined>(undefined);
+  const [voiceAssistantVisible, setVoiceAssistantVisible] = useState(false);
 
   useEffect(() => {
     fetchCurrentAcademicYear()
@@ -1289,11 +1304,51 @@ export default function TeacherDashboardScreen() {
         menu={[]}
       />
 
+      {/* Voice AI Assistant Featured Banner */}
+      <Pressable
+        onPress={() => setVoiceAssistantVisible(true)}
+        style={({ pressed }) => [
+          styles.voiceBannerContainer,
+          { backgroundColor: theme.surface, borderColor: '#7C3AED', opacity: pressed ? 0.9 : 1 },
+        ]}
+      >
+        <View style={styles.voiceIconCircle}>
+          <Ionicons name="sparkles" size={20} color="#FFFFFF" />
+        </View>
+        <View style={{ flex: 1 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <ThemedText type="subtitle" style={{ color: '#7C3AED' }}>
+              Voice AI Assistant
+            </ThemedText>
+            <View style={styles.liveBadge}>
+              <ThemedText type="smallBold" style={{ color: '#FFFFFF', fontSize: 10 }}>
+                LIVE
+              </ThemedText>
+            </View>
+          </View>
+          <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+            Speak to query attendance, roster & reports for your classes
+          </ThemedText>
+        </View>
+        <Ionicons name="mic-circle" size={34} color="#7C3AED" />
+      </Pressable>
+
       {classes.length > 0 ? (
         <SelectField label="Class" placeholder="Select class" value={classId} options={classOptions} onChange={handleClassChange} />
       ) : null}
 
-      <TeacherQuickLinks permissions={profile?.permissions} selectedClassId={classId} />
+      <TeacherQuickLinks
+        permissions={profile?.permissions}
+        selectedClassId={classId}
+        onOpenVoiceAssistant={() => setVoiceAssistantVisible(true)}
+      />
+
+      <TeacherVoiceAssistantModal
+        visible={voiceAssistantVisible}
+        onClose={() => setVoiceAssistantVisible(false)}
+        teacherClasses={profile.classes}
+        currentClassId={classId ? Number(classId) : undefined}
+      />
     </Screen>
   );
 }
@@ -1647,5 +1702,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.one + 2,
     borderRadius: Radius.pill,
+  },
+  voiceBannerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.three,
+    padding: Spacing.three,
+    borderRadius: Radius.lg,
+    borderWidth: 1.5,
+    marginVertical: Spacing.two,
+  },
+  voiceIconCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#7C3AED',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  liveBadge: {
+    backgroundColor: '#7C3AED',
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 8,
   },
 });
