@@ -11,7 +11,11 @@
     "ios": {
       "icon": "./assets/images/icon.png",
       "bundleIdentifier": "org.saarthakgimsss.app",
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Teacher Voice AI requires access to your microphone to transcribe queries.",
+        "NSSpeechRecognitionUsageDescription": "Teacher Voice AI requires speech recognition to search queries."
+      }
     },
     "android": {
       "package": "org.saarthakgimsss.app",
@@ -27,7 +31,9 @@
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION",
         "POST_NOTIFICATIONS",
-        "READ_PHONE_STATE"
+        "READ_PHONE_STATE",
+        "RECORD_AUDIO",
+        "MODIFY_AUDIO_SETTINGS"
       ],
       "predictiveBackGestureEnabled": false
     },

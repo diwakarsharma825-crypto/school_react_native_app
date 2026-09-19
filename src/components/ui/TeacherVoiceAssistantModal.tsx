@@ -4,27 +4,39 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
+  PermissionsAndroid,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   TextInput,
   View,
 } from 'react-native';
+import { WebView } from 'react-native-webview';
 
 import { Card } from '@/components/ui/Card';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { Brand, Radius, Spacing } from '@/constants/theme';
 import {
+  ApiSyllabusChapter,
   AttendanceStudent,
   fetchAttendance,
   fetchHomeworkForDate,
+  fetchSyllabusApi,
+  fetchSubjectsCatalog,
+  fetchTeacherEvents,
   fetchTeacherFeeInvoices,
   fetchTeacherLeaveApplications,
+  fetchTeacherNotices,
   fetchTeacherStudents,
+  fetchTeacherSubjects,
   HomeworkEntry,
+  MappedSubjectItem,
   RosterStudent,
+  TeacherEvent,
   TeacherFeeInvoice,
   TeacherLeaveApplication,
+  TeacherNotice,
   TeacherProfileClass,
 } from '@/data/teacher-api';
 import { useTheme } from '@/hooks/use-theme';
@@ -44,7 +56,13 @@ interface QueryResultData {
     | 'roster'
     | 'leave'
     | 'fees'
+    | 'fee_paid'
+    | 'fee_unpaid'
     | 'homework'
+    | 'subjects'
+    | 'syllabus'
+    | 'notices'
+    | 'events'
     | 'student_detail'
     | 'gender'
     | 'all_classes'
@@ -58,6 +76,10 @@ interface QueryResultData {
   leaveList?: { studentName: string; dates: string; reason: string; status: string }[];
   feeList?: { studentName: string; title: string; amount: string; status: string }[];
   homeworkList?: { subject: string; title: string; date: string }[];
+  subjectsList?: { name: string; code?: string }[];
+  syllabusList?: { chapterNumber: number; title: string; subject: string; completed: boolean; topics?: string[] }[];
+  noticeList?: { title: string; body: string; date?: string; status?: string }[];
+  eventList?: { title: string; date?: string; description?: string; location?: string }[];
   studentDetail?: {
     name: string;
     rollNo?: string | null;
@@ -97,8 +119,9 @@ export function TeacherVoiceAssistantModal({
   const [result, setResult] = useState<QueryResultData | null>(null);
   const [soundEnabled, setSoundEnabled] = useState(true);
 
-  // Speech recognition instance ref for web
+  // Web Recognition ref & Native WebView ref
   const recognitionRef = useRef<any>(null);
+  const webViewRef = useRef<any>(null);
 
   function stopSpeech() {
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
@@ -143,11 +166,44 @@ export function TeacherVoiceAssistantModal({
     }
   }
 
-  function startListening() {
-    stopSpeech(); // Instantly cancel existing voice output when tapping speech for next query
+  async function requestMicrophonePermission(): Promise<boolean> {
+    if (Platform.OS === 'android') {
+      try {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+          {
+            title: 'Microphone Permission Needed',
+            message: 'Teacher Voice AI requires access to your microphone to speak queries.',
+            buttonNeutral: 'Ask Later',
+            buttonNegative: 'Cancel',
+            buttonPositive: 'Allow',
+          }
+        );
+        return granted === PermissionsAndroid.RESULTS.GRANTED;
+      } catch {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  async function startListening() {
+    stopSpeech();
     setResult(null);
     setTranscript('');
-    if (typeof window !== 'undefined') {
+
+    if (Platform.OS === 'android') {
+      const hasPermission = await requestMicrophonePermission();
+      if (!hasPermission) {
+        Alert.alert(
+          'Microphone Permission Required',
+          'Please enable microphone permission in device Settings to use Voice Assistant.'
+        );
+        return;
+      }
+    }
+
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
       const SpeechRecognition =
         (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       if (SpeechRecognition) {
@@ -160,6 +216,8 @@ export function TeacherVoiceAssistantModal({
           recognition.interimResults = true;
           recognition.lang = 'en-US';
 
+          let lastTranscript = '';
+
           recognition.onstart = () => {
             setListening(true);
           };
@@ -169,19 +227,26 @@ export function TeacherVoiceAssistantModal({
             for (let i = event.resultIndex; i < event.results.length; i++) {
               current += event.results[i][0].transcript;
             }
-            setTranscript(current);
-            setQueryText(current);
+            if (current) {
+              lastTranscript = current;
+              setTranscript(current);
+              setQueryText(current);
+            }
           };
 
           recognition.onerror = (event: any) => {
             setListening(false);
             if (event.error !== 'no-speech') {
-              Alert.alert('Voice Recognition Error', `Speech recognition error: ${event.error}`);
+              Alert.alert('Voice Recognition Error', `Speech error: ${event.error}`);
             }
           };
 
           recognition.onend = () => {
             setListening(false);
+            const textToSearch = lastTranscript.trim();
+            if (textToSearch) {
+              processVoiceQuery(textToSearch);
+            }
           };
 
           recognitionRef.current = recognition;
@@ -193,18 +258,27 @@ export function TeacherVoiceAssistantModal({
       }
     }
 
-    // Fallback if SpeechRecognition API is not available
-    setListening(true);
-    setTimeout(() => {
-      setListening(false);
-    }, 4000);
+    // Native Mobile WebView Speech Bridge
+    if (webViewRef.current) {
+      setListening(true);
+      webViewRef.current.injectJavaScript('startRec(); true;');
+    } else {
+      setListening(true);
+    }
   }
 
   function stopListening() {
     setListening(false);
-    if (recognitionRef.current) {
+    if (Platform.OS === 'web' && recognitionRef.current) {
       try {
         recognitionRef.current.stop();
+      } catch {
+        // ignore
+      }
+    }
+    if (webViewRef.current) {
+      try {
+        webViewRef.current.injectJavaScript('stopRec(); true;');
       } catch {
         // ignore
       }
@@ -216,6 +290,29 @@ export function TeacherVoiceAssistantModal({
       stopListening();
     } else {
       startListening();
+    }
+  }
+
+  function handleWebViewMessage(event: any) {
+    try {
+      const data = JSON.parse(event.nativeEvent.data);
+      if (data.type === 'start') {
+        setListening(true);
+      } else if (data.type === 'result') {
+        const text = data.transcript || '';
+        setTranscript(text);
+        setQueryText(text);
+      } else if (data.type === 'end') {
+        setListening(false);
+        const textToSearch = (data.finalTranscript || queryText || transcript).trim();
+        if (textToSearch) {
+          processVoiceQuery(textToSearch);
+        }
+      } else if (data.type === 'error') {
+        setListening(false);
+      }
+    } catch {
+      // ignore
     }
   }
 
@@ -368,12 +465,89 @@ export function TeacherVoiceAssistantModal({
         matchedClass.section_name ? ` Section ${matchedClass.section_name}` : ''
       }`;
 
-      // Fetch roster for the target class to enable student-level matching
+      // Fetch roster for target class
       const classStudents = await fetchTeacherStudents(classId, sectionId).catch(
         () => [] as RosterStudent[]
       );
 
-      // Check if prompt references a specific student by name or SRN/roll number
+      // 1. ROLL NUMBER SEARCH QUERY
+      const rollMatch =
+        pLower.match(/(?:roll\s*(?:no\.?|number)?\s*|roll\s+)(\d+)/i) ||
+        pLower.match(/\broll\b.*?(\d+)/i);
+
+      if (rollMatch) {
+        const requestedRoll = rollMatch[1];
+        const matchedRollStudent = classStudents.find(
+          (s) =>
+            s.roll_no &&
+            (String(s.roll_no).trim() === requestedRoll || Number(s.roll_no) === Number(requestedRoll))
+        );
+
+        if (matchedRollStudent) {
+          const attendanceData = await fetchAttendance(classId, sectionId, todayStr()).catch(
+            () => [] as AttendanceStudent[]
+          );
+          const attRecord = attendanceData.find(
+            (a) =>
+              String(a.id) === String(matchedRollStudent.id) ||
+              a.name.toLowerCase() === matchedRollStudent.name.toLowerCase()
+          );
+          const attStatus = attRecord
+            ? attRecord.status === 'P'
+              ? 'PRESENT'
+              : attRecord.status === 'A'
+              ? 'ABSENT'
+              : 'ON LEAVE'
+            : 'NOT MARKED YET';
+
+          const summary = `Found Roll No ${requestedRoll}: ${matchedRollStudent.name} in ${classDisplayName}. Today's Attendance: ${attStatus}. Father: ${
+            matchedRollStudent.father_name || 'N/A'
+          }, Phone: ${matchedRollStudent.phone || 'N/A'}.`;
+
+          setResult({
+            type: 'student_detail',
+            title: `Student Details (Roll No: ${requestedRoll})`,
+            summaryText: summary,
+            className: matchedClass.class_name,
+            sectionName: matchedClass.section_name ?? undefined,
+            studentDetail: {
+              name: matchedRollStudent.name,
+              rollNo: String(matchedRollStudent.roll_no),
+              srn: matchedRollStudent.srn,
+              className: matchedClass.class_name,
+              sectionName: matchedClass.section_name,
+              fatherName: matchedRollStudent.father_name,
+              motherName: matchedRollStudent.mother_name,
+              phone: matchedRollStudent.phone,
+              gender: matchedRollStudent.gender,
+              status: `Attendance Today: ${attStatus}`,
+            },
+          });
+          speakText(summary);
+          setProcessing(false);
+          return;
+        } else {
+          const summary = `No student with Roll No ${requestedRoll} was found in ${classDisplayName}. Total registered students: ${classStudents.length}.`;
+          setResult({
+            type: 'roster',
+            title: `Roll No ${requestedRoll} Not Found`,
+            summaryText: summary,
+            className: matchedClass.class_name,
+            sectionName: matchedClass.section_name ?? undefined,
+            stats: [{ label: 'Class Strength', value: classStudents.length, color: '#3B82F6' }],
+            studentsList: classStudents.map((s) => ({
+              name: s.name,
+              rollNo: s.roll_no,
+              srn: s.srn,
+            })),
+          });
+          speakText(summary);
+          setProcessing(false);
+          return;
+        }
+      }
+
+      // Check if prompt references a specific student by name or SRN
       const matchedStudent = classStudents.find((s) => {
         const sNameLower = s.name.toLowerCase();
         const parts = sNameLower.split(' ').filter((pt) => pt.length >= 3);
@@ -394,9 +568,8 @@ export function TeacherVoiceAssistantModal({
         return false;
       });
 
-      // Handle queries for a SPECIFIC STUDENT
+      // Handle queries for a SPECIFIC NAMED STUDENT
       if (matchedStudent) {
-        // A. Specific Student Attendance
         if (
           pLower.includes('present') ||
           pLower.includes('absent') ||
@@ -445,7 +618,6 @@ export function TeacherVoiceAssistantModal({
           return;
         }
 
-        // B. Specific Student Fee Status
         if (
           pLower.includes('fee') ||
           pLower.includes('unpaid') ||
@@ -499,7 +671,6 @@ export function TeacherVoiceAssistantModal({
           return;
         }
 
-        // C. Default Student Profile Details Query
         const summary = `Found student ${matchedStudent.name} in ${classDisplayName}. Roll No: ${
           matchedStudent.roll_no || 'N/A'
         }, SRN: ${matchedStudent.srn || 'N/A'}. Father: ${
@@ -530,7 +701,277 @@ export function TeacherVoiceAssistantModal({
         return;
       }
 
-      // 1. Gender Ratio & Breakdown Query
+      // 2. UNPAID FEES / WHICH STUDENT NOT PAID FEES QUERY
+      if (
+        pLower.includes('not paid') ||
+        pLower.includes('unpaid') ||
+        pLower.includes("didn't pay") ||
+        pLower.includes('who has not paid') ||
+        pLower.includes('who not paid') ||
+        pLower.includes('which student not paid') ||
+        pLower.includes('students not paid') ||
+        pLower.includes('fee pending')
+      ) {
+        const fees = await fetchTeacherFeeInvoices(classId, sectionId).catch(
+          () => [] as TeacherFeeInvoice[]
+        );
+        const dueFees = fees.filter((f) => f.status === 'due');
+        const totalUnpaidAmount = dueFees.reduce((acc, f) => acc + Number(f.amount || 0), 0);
+
+        // Group unique unpaid student names
+        const unpaidNames = Array.from(
+          new Set(dueFees.map((f) => f.student_name || `SRN ${f.student_srn}`).filter(Boolean))
+        );
+
+        const summary =
+          dueFees.length > 0
+            ? `In ${classDisplayName}, ${unpaidNames.length} student(s) have unpaid fee invoices totaling ₹${totalUnpaidAmount.toLocaleString()}: ${unpaidNames.join(', ')}.`
+            : `Great news! No students have unpaid fees in ${classDisplayName}. All fee invoices are cleared!`;
+
+        setResult({
+          type: 'fee_unpaid',
+          title: `Unpaid Fee Students (${classDisplayName})`,
+          summaryText: summary,
+          className: matchedClass.class_name,
+          sectionName: matchedClass.section_name ?? undefined,
+          stats: [
+            { label: 'Unpaid Students', value: unpaidNames.length, color: '#EF4444' },
+            { label: 'Pending Dues', value: `₹${totalUnpaidAmount.toLocaleString()}`, color: '#F59E0B' },
+            { label: 'Total Invoices', value: dueFees.length, color: '#3B82F6' },
+          ],
+          feeList: dueFees.map((f) => ({
+            studentName: f.student_name || `SRN ${f.student_srn}`,
+            title: f.title,
+            amount: `₹${f.amount}`,
+            status: 'UNPAID',
+          })),
+        });
+        speakText(summary);
+        setProcessing(false);
+        return;
+      }
+
+      // 3. TOTAL PAID FEES / HOW MUCH PAID TOTAL QUERY
+      if (
+        pLower.includes('how much paid') ||
+        pLower.includes('total fee paid') ||
+        pLower.includes('paid fee') ||
+        pLower.includes('paid total') ||
+        pLower.includes('total fee collected') ||
+        pLower.includes('fee collection') ||
+        pLower.includes('total collected') ||
+        pLower.includes('amount collected')
+      ) {
+        const fees = await fetchTeacherFeeInvoices(classId, sectionId).catch(
+          () => [] as TeacherFeeInvoice[]
+        );
+        const paidFees = fees.filter((f) => f.status === 'paid');
+        const dueFees = fees.filter((f) => f.status === 'due');
+        const totalPaidAmount = paidFees.reduce((acc, f) => acc + Number(f.amount || 0), 0);
+        const totalDueAmount = dueFees.reduce((acc, f) => acc + Number(f.amount || 0), 0);
+
+        const summary = `In ${classDisplayName}, a total of ₹${totalPaidAmount.toLocaleString()} has been collected from ${paidFees.length} paid invoice(s). Remaining unpaid dues: ₹${totalDueAmount.toLocaleString()}.`;
+
+        setResult({
+          type: 'fee_paid',
+          title: `Total Fee Paid (${classDisplayName})`,
+          summaryText: summary,
+          className: matchedClass.class_name,
+          sectionName: matchedClass.section_name ?? undefined,
+          stats: [
+            { label: 'Total Paid', value: `₹${totalPaidAmount.toLocaleString()}`, color: '#10B981' },
+            { label: 'Paid Invoices', value: paidFees.length, color: '#3B82F6' },
+            { label: 'Pending Dues', value: `₹${totalDueAmount.toLocaleString()}`, color: '#EF4444' },
+          ],
+          feeList: paidFees.map((f) => ({
+            studentName: f.student_name || `SRN ${f.student_srn}`,
+            title: f.title,
+            amount: `₹${f.amount}`,
+            status: 'PAID',
+          })),
+        });
+        speakText(summary);
+        setProcessing(false);
+        return;
+      }
+
+      // 4. SUBJECTS QUERY
+      if (
+        pLower.includes('subject') ||
+        pLower.includes('subjects') ||
+        pLower.includes('which subject') ||
+        pLower.includes('what subject') ||
+        pLower.includes('list of subjects')
+      ) {
+        let subjects = await fetchTeacherSubjects(classId).catch(() => [] as MappedSubjectItem[]);
+        if (subjects.length === 0) {
+          const catalog = await fetchSubjectsCatalog(classId).catch(() => [] as SubjectCatalogItem[]);
+          subjects = catalog.map((s) => ({ id: s.id, name: s.name, code: s.code }));
+        }
+
+        const subjectNames = subjects.map((s) => s.name);
+        const summary =
+          subjects.length > 0
+            ? `In ${classDisplayName}, there are ${subjects.length} subject(s) taught: ${subjectNames.join(', ')}.`
+            : `No specific subjects found for ${classDisplayName}.`;
+
+        setResult({
+          type: 'subjects',
+          title: `Subjects (${classDisplayName})`,
+          summaryText: summary,
+          className: matchedClass.class_name,
+          sectionName: matchedClass.section_name ?? undefined,
+          stats: [{ label: 'Total Subjects', value: subjects.length, color: '#3B82F6' }],
+          subjectsList: subjects.map((s) => ({
+            name: s.name,
+            code: s.code || s.subject_code,
+          })),
+        });
+        speakText(summary);
+        setProcessing(false);
+        return;
+      }
+
+      // 5. SYLLABUS QUERY
+      if (
+        pLower.includes('syllabus') ||
+        pLower.includes('chapter') ||
+        pLower.includes('chapters') ||
+        pLower.includes('course syllabus')
+      ) {
+        // Detect subject name in prompt
+        const knownSubjects = [
+          'english',
+          'mathematics',
+          'math',
+          'science',
+          'hindi',
+          'evs',
+          'social',
+          'computer',
+        ];
+        let targetSubject: string | undefined = undefined;
+        for (const subj of knownSubjects) {
+          if (pLower.includes(subj)) {
+            targetSubject = subj;
+            break;
+          }
+        }
+
+        const syllabusChapters: ApiSyllabusChapter[] = await fetchSyllabusApi(
+          classDisplayName,
+          targetSubject
+        ).catch(() => [] as ApiSyllabusChapter[]);
+
+        const completedCount = syllabusChapters.filter((c) => c.completed || c.status === 1).length;
+        const summary =
+          syllabusChapters.length > 0
+            ? `Found ${syllabusChapters.length} syllabus chapter(s) for ${
+                targetSubject ? targetSubject.toUpperCase() : classDisplayName
+              }. ${completedCount} chapter(s) completed.`
+            : `No syllabus chapters recorded yet for ${
+                targetSubject ? targetSubject.toUpperCase() : classDisplayName
+              }.`;
+
+        setResult({
+          type: 'syllabus',
+          title: `Syllabus Overview (${targetSubject ? targetSubject.toUpperCase() : classDisplayName})`,
+          summaryText: summary,
+          className: matchedClass.class_name,
+          sectionName: matchedClass.section_name ?? undefined,
+          stats: [
+            { label: 'Total Chapters', value: syllabusChapters.length, color: '#7C3AED' },
+            { label: 'Completed', value: completedCount, color: '#10B981' },
+            { label: 'Pending', value: syllabusChapters.length - completedCount, color: '#F59E0B' },
+          ],
+          syllabusList: syllabusChapters.map((c) => ({
+            chapterNumber: c.chapter_number,
+            title: c.chapter_title,
+            subject: c.subject,
+            completed: Boolean(c.completed || c.status === 1),
+            topics: c.topics,
+          })),
+        });
+        speakText(summary);
+        setProcessing(false);
+        return;
+      }
+
+      // 6. NOTICES QUERY
+      if (
+        pLower.includes('notice') ||
+        pLower.includes('notices') ||
+        pLower.includes('circular') ||
+        pLower.includes('announcement') ||
+        pLower.includes('school notice')
+      ) {
+        const notices: TeacherNotice[] = await fetchTeacherNotices().catch(
+          () => [] as TeacherNotice[]
+        );
+        const activeNotices = notices.filter((n) => n.is_active !== false);
+
+        const summary =
+          activeNotices.length > 0
+            ? `There are ${activeNotices.length} published school notice(s) available.`
+            : `No active school notices found currently.`;
+
+        setResult({
+          type: 'notices',
+          title: `School Notices (${activeNotices.length} Active)`,
+          summaryText: summary,
+          className: matchedClass.class_name,
+          sectionName: matchedClass.section_name ?? undefined,
+          stats: [
+            { label: 'Active Notices', value: activeNotices.length, color: '#3B82F6' },
+            { label: 'Total Published', value: notices.length, color: '#7C3AED' },
+          ],
+          noticeList: activeNotices.map((n) => ({
+            title: n.title,
+            body: n.body,
+            date: n.created_at ? n.created_at.split('T')[0] : undefined,
+          })),
+        });
+        speakText(summary);
+        setProcessing(false);
+        return;
+      }
+
+      // 7. EVENTS QUERY
+      if (
+        pLower.includes('event') ||
+        pLower.includes('events') ||
+        pLower.includes('upcoming event') ||
+        pLower.includes('activity') ||
+        pLower.includes('activities') ||
+        pLower.includes('calendar') ||
+        pLower.includes('program')
+      ) {
+        const events: TeacherEvent[] = await fetchTeacherEvents().catch(() => [] as TeacherEvent[]);
+        const summary =
+          events.length > 0
+            ? `There are ${events.length} school event(s) scheduled on calendar.`
+            : `No upcoming school events scheduled right now.`;
+
+        setResult({
+          type: 'events',
+          title: `School Events (${events.length} Scheduled)`,
+          summaryText: summary,
+          className: matchedClass.class_name,
+          sectionName: matchedClass.section_name ?? undefined,
+          stats: [{ label: 'Scheduled Events', value: events.length, color: '#7C3AED' }],
+          eventList: events.map((e) => ({
+            title: e.title,
+            date: e.event_date,
+            description: e.description,
+            location: e.location,
+          })),
+        });
+        speakText(summary);
+        setProcessing(false);
+        return;
+      }
+
+      // 8. GENDER RATIO & BREAKDOWN QUERY
       if (
         pLower.includes('boy') ||
         pLower.includes('girl') ||
@@ -570,7 +1011,7 @@ export function TeacherVoiceAssistantModal({
         return;
       }
 
-      // 2. Attendance Query (e.g. "how many present", "who is absent", "attendance today")
+      // 9. ATTENDANCE QUERY
       if (
         pLower.includes('present') ||
         pLower.includes('absent') ||
@@ -609,7 +1050,7 @@ export function TeacherVoiceAssistantModal({
         return;
       }
 
-      // 3. Pending Leave Requests Query
+      // 10. PENDING LEAVE REQUESTS QUERY
       if (
         pLower.includes('leave') ||
         pLower.includes('leave request') ||
@@ -643,8 +1084,8 @@ export function TeacherVoiceAssistantModal({
         return;
       }
 
-      // 4. Fee Dues Query
-      if (pLower.includes('fee') || pLower.includes('unpaid') || pLower.includes('due')) {
+      // 11. GENERAL FEE DUES QUERY
+      if (pLower.includes('fee') || pLower.includes('due') || pLower.includes('invoice')) {
         const fees = await fetchTeacherFeeInvoices(classId, sectionId).catch(
           () => [] as TeacherFeeInvoice[]
         );
@@ -676,7 +1117,7 @@ export function TeacherVoiceAssistantModal({
         return;
       }
 
-      // 5. Homework Query
+      // 12. HOMEWORK QUERY
       if (pLower.includes('homework') || pLower.includes('assignment')) {
         const hwList = await fetchHomeworkForDate(classId, sectionId, todayStr()).catch(
           () => [] as HomeworkEntry[]
@@ -703,7 +1144,7 @@ export function TeacherVoiceAssistantModal({
         return;
       }
 
-      // 6. Inactive / Pending Students Query
+      // 13. INACTIVE / PENDING STUDENTS QUERY
       if (
         pLower.includes('inactive') ||
         pLower.includes('unapproved') ||
@@ -741,7 +1182,7 @@ export function TeacherVoiceAssistantModal({
         return;
       }
 
-      // 7. Default Roster / Student Count Query
+      // 14. DEFAULT ROSTER QUERY
       const summary = `There are ${classStudents.length} registered students in ${classDisplayName}.`;
 
       setResult({
@@ -773,14 +1214,18 @@ export function TeacherVoiceAssistantModal({
   }
 
   const SAMPLE_PROMPTS = [
+    'Which students have not paid the fees?',
+    'How much total fee is paid in LKG A?',
+    'Details of Roll No 12',
+    'What subjects are in LKG Section A?',
+    'Show syllabus for English',
+    'Show school notices',
+    'Upcoming school events',
     'How many students are present in LKG Section A today?',
     'Is Rahul Kumar present today?',
-    'Details of student Rahul',
-    'Fee status of Rahul Kumar',
-    'How many boys and girls in LKG Section A?',
     'Who is absent today in LKG Section A?',
+    'How many boys and girls in LKG Section A?',
     'Show pending leave requests for LKG A',
-    'List students with unpaid fees',
     'What homework is assigned today?',
     'Summary of all my assigned classes',
   ];
@@ -796,7 +1241,7 @@ export function TeacherVoiceAssistantModal({
                 <Ionicons name="mic" size={18} color={theme.tint} />
               </View>
               <View style={{ flex: 1 }}>
-                <ThemedText type="smallBold" style={styles.headerTitle} numberOfLines={1}>
+                <ThemedText type="smallBold" style={[styles.headerTitle, { color: theme.text }]} numberOfLines={1}>
                   Teacher Voice AI
                 </ThemedText>
                 <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
@@ -810,7 +1255,7 @@ export function TeacherVoiceAssistantModal({
           </View>
 
           {/* Assigned Classes Badge Bar */}
-          <View style={styles.classesScopeBar}>
+          <View style={[styles.classesScopeBar, { backgroundColor: theme.backgroundElement, borderColor: theme.border, borderWidth: 1 }]}>
             <Ionicons name="shield-checkmark" size={14} color="#10B981" />
             <ThemedText type="small" style={{ color: '#10B981', fontSize: 11 }}>
               Scope: Authorized for{' '}
@@ -835,12 +1280,12 @@ export function TeacherVoiceAssistantModal({
                 <Ionicons name={listening ? 'mic-sharp' : 'mic'} size={32} color="#FFFFFF" />
               </Pressable>
 
-              <ThemedText type="smallBold" style={styles.micStatusText}>
+              <ThemedText type="smallBold" style={[styles.micStatusText, { color: theme.text }]}>
                 {listening ? 'Listening… Speak your query now' : 'Tap Microphone to Speak'}
               </ThemedText>
 
               {transcript ? (
-                <View style={[styles.transcriptBox, { borderColor: theme.tint + '50' }]}>
+                <View style={[styles.transcriptBox, { borderColor: theme.tint, backgroundColor: theme.surface }]}>
                   <ThemedText type="small" style={{ color: theme.tint, fontStyle: 'italic' }}>
                     "{transcript}"
                   </ThemedText>
@@ -853,11 +1298,11 @@ export function TeacherVoiceAssistantModal({
               <TextInput
                 value={queryText}
                 onChangeText={setQueryText}
-                placeholder="Or type e.g. Is Rahul present today? / Details of Rahul"
+                placeholder="Or type e.g. Roll 12 details / Unpaid fees"
                 placeholderTextColor={theme.textSecondary}
                 style={[
                   styles.input,
-                  { borderColor: theme.border, color: theme.text, backgroundColor: theme.background },
+                  { borderColor: theme.border, color: theme.text, backgroundColor: theme.backgroundElement },
                 ]}
                 onSubmitEditing={() => processVoiceQuery(queryText)}
               />
@@ -894,10 +1339,10 @@ export function TeacherVoiceAssistantModal({
                         setQueryText(prompt);
                         processVoiceQuery(prompt);
                       }}
-                      style={[styles.chip, { backgroundColor: theme.backgroundElement }]}
+                      style={[styles.chip, { backgroundColor: theme.backgroundElement, borderColor: theme.border, borderWidth: 1 }]}
                     >
                       <Ionicons name="sparkles" size={12} color={theme.tint} />
-                      <ThemedText type="small" style={{ fontSize: 11 }}>
+                      <ThemedText type="small" style={{ fontSize: 11, color: theme.text }}>
                         {prompt}
                       </ThemedText>
                     </Pressable>
@@ -922,7 +1367,7 @@ export function TeacherVoiceAssistantModal({
                 ]}
               >
                 <View style={styles.resultHeader}>
-                  <ThemedText type="subtitle" style={{ fontSize: 15, flex: 1, paddingRight: 4 }}>
+                  <ThemedText type="subtitle" style={{ fontSize: 15, flex: 1, paddingRight: 4, color: theme.text }}>
                     {result.title}
                   </ThemedText>
                   
@@ -939,7 +1384,7 @@ export function TeacherVoiceAssistantModal({
                       }}
                       style={[
                         styles.soundPillBtn,
-                        { backgroundColor: soundEnabled ? theme.tint + '15' : theme.backgroundElement },
+                        { backgroundColor: soundEnabled ? theme.tint + '20' : theme.backgroundElement },
                       ]}
                     >
                       <Ionicons
@@ -979,7 +1424,7 @@ export function TeacherVoiceAssistantModal({
                   </View>
                 </View>
 
-                <ThemedText type="default" style={styles.summaryText}>
+                <ThemedText type="default" style={[styles.summaryText, { color: theme.text }]}>
                   {result.summaryText}
                 </ThemedText>
 
@@ -987,11 +1432,11 @@ export function TeacherVoiceAssistantModal({
                 {result.stats && result.stats.length > 0 ? (
                   <View style={styles.statsGrid}>
                     {result.stats.map((s, idx) => (
-                      <View key={idx} style={[styles.statBox, { backgroundColor: s.color + '15' }]}>
+                      <View key={idx} style={[styles.statBox, { backgroundColor: s.color + '22' }]}>
                         <ThemedText type="title" style={{ color: s.color, fontSize: 18 }}>
                           {s.value}
                         </ThemedText>
-                        <ThemedText type="small" style={{ color: s.color, fontSize: 11 }}>
+                        <ThemedText type="small" style={{ color: theme.text, fontSize: 11 }}>
                           {s.label}
                         </ThemedText>
                       </View>
@@ -1009,26 +1454,26 @@ export function TeacherVoiceAssistantModal({
                   >
                     <View style={styles.detailRow}>
                       <Ionicons name="person" size={16} color={theme.tint} />
-                      <ThemedText type="smallBold" style={{ flex: 1 }}>
+                      <ThemedText type="smallBold" style={{ flex: 1, color: theme.text }}>
                         Name: {result.studentDetail.name}
                       </ThemedText>
                     </View>
                     {result.studentDetail.rollNo ? (
                       <View style={styles.detailRow}>
                         <Ionicons name="id-card-outline" size={16} color={theme.textSecondary} />
-                        <ThemedText type="small">Roll No: {result.studentDetail.rollNo}</ThemedText>
+                        <ThemedText type="small" style={{ color: theme.text }}>Roll No: {result.studentDetail.rollNo}</ThemedText>
                       </View>
                     ) : null}
                     {result.studentDetail.srn ? (
                       <View style={styles.detailRow}>
                         <Ionicons name="barcode-outline" size={16} color={theme.textSecondary} />
-                        <ThemedText type="small">SRN: {result.studentDetail.srn}</ThemedText>
+                        <ThemedText type="small" style={{ color: theme.text }}>SRN: {result.studentDetail.srn}</ThemedText>
                       </View>
                     ) : null}
                     {result.studentDetail.fatherName ? (
                       <View style={styles.detailRow}>
                         <Ionicons name="people-outline" size={16} color={theme.textSecondary} />
-                        <ThemedText type="small">
+                        <ThemedText type="small" style={{ color: theme.text }}>
                           Father's Name: {result.studentDetail.fatherName}
                         </ThemedText>
                       </View>
@@ -1036,7 +1481,7 @@ export function TeacherVoiceAssistantModal({
                     {result.studentDetail.motherName ? (
                       <View style={styles.detailRow}>
                         <Ionicons name="people-outline" size={16} color={theme.textSecondary} />
-                        <ThemedText type="small">
+                        <ThemedText type="small" style={{ color: theme.text }}>
                           Mother's Name: {result.studentDetail.motherName}
                         </ThemedText>
                       </View>
@@ -1044,7 +1489,7 @@ export function TeacherVoiceAssistantModal({
                     {result.studentDetail.phone ? (
                       <View style={styles.detailRow}>
                         <Ionicons name="call-outline" size={16} color={theme.textSecondary} />
-                        <ThemedText type="small">Contact: {result.studentDetail.phone}</ThemedText>
+                        <ThemedText type="small" style={{ color: theme.text }}>Contact: {result.studentDetail.phone}</ThemedText>
                       </View>
                     ) : null}
                     {result.studentDetail.status ? (
@@ -1061,16 +1506,16 @@ export function TeacherVoiceAssistantModal({
                 {/* All Classes Overview Breakdown */}
                 {result.classList && result.classList.length > 0 ? (
                   <View style={styles.listWrap}>
-                    <ThemedText type="smallBold" style={{ marginBottom: 6 }}>
+                    <ThemedText type="smallBold" style={{ marginBottom: 6, color: theme.text }}>
                       Assigned Class Sections ({result.classList.length}):
                     </ThemedText>
                     {result.classList.map((c, i) => (
-                      <View key={i} style={styles.listItemRow}>
+                      <View key={i} style={[styles.listItemRow, { borderBottomColor: theme.border }]}>
                         <Ionicons name="easel-outline" size={16} color={theme.tint} />
-                        <ThemedText type="smallBold" style={{ flex: 1, marginLeft: 6 }}>
+                        <ThemedText type="smallBold" style={{ flex: 1, marginLeft: 6, color: theme.text }}>
                           {c.className} {c.sectionName ? `(Sec ${c.sectionName})` : ''}
                         </ThemedText>
-                        <View style={[styles.statusBadge, { backgroundColor: theme.tint + '15' }]}>
+                        <View style={[styles.statusBadge, { backgroundColor: theme.tint + '20' }]}>
                           <ThemedText type="small" style={{ color: theme.tint, fontSize: 11 }}>
                             {c.studentCount} Students
                           </ThemedText>
@@ -1080,10 +1525,144 @@ export function TeacherVoiceAssistantModal({
                   </View>
                 ) : null}
 
+                {/* Subjects List */}
+                {result.subjectsList && result.subjectsList.length > 0 ? (
+                  <View style={styles.listWrap}>
+                    <ThemedText type="smallBold" style={{ marginBottom: 6, color: theme.text }}>
+                      Subjects ({result.subjectsList.length}):
+                    </ThemedText>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                      {result.subjectsList.map((subj, i) => (
+                        <View
+                          key={i}
+                          style={[
+                            styles.subjectChip,
+                            { backgroundColor: theme.backgroundElement, borderColor: theme.border, borderWidth: 1 },
+                          ]}
+                        >
+                          <Ionicons name="book" size={14} color={theme.tint} />
+                          <ThemedText type="smallBold" style={{ color: theme.text, fontSize: 12 }}>
+                            {subj.name} {subj.code ? `(${subj.code})` : ''}
+                          </ThemedText>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                ) : null}
+
+                {/* Syllabus List */}
+                {result.syllabusList && result.syllabusList.length > 0 ? (
+                  <View style={styles.listWrap}>
+                    <ThemedText type="smallBold" style={{ marginBottom: 6, color: theme.text }}>
+                      Syllabus Chapters ({result.syllabusList.length}):
+                    </ThemedText>
+                    {result.syllabusList.map((ch, i) => (
+                      <View
+                        key={i}
+                        style={[
+                          styles.listItemRow,
+                          { flexDirection: 'column', alignItems: 'flex-start', borderBottomColor: theme.border, gap: 2 },
+                        ]}
+                      >
+                        <View style={{ flexDirection: 'row', width: '100%', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <ThemedText type="smallBold" style={{ flex: 1, color: theme.text }}>
+                            Ch {ch.chapterNumber}: {ch.title}
+                          </ThemedText>
+                          <View style={[styles.statusBadge, { backgroundColor: ch.completed ? '#D1FAE5' : '#FEF3C7' }]}>
+                            <ThemedText type="small" style={{ color: ch.completed ? '#065F46' : '#92400E', fontSize: 10 }}>
+                              {ch.completed ? 'Completed' : 'Pending'}
+                            </ThemedText>
+                          </View>
+                        </View>
+                        <ThemedText type="small" themeColor="textSecondary" style={{ fontSize: 11 }}>
+                          Subject: {ch.subject} {ch.topics && ch.topics.length > 0 ? `| Topics: ${ch.topics.join(', ')}` : ''}
+                        </ThemedText>
+                      </View>
+                    ))}
+                  </View>
+                ) : null}
+
+                {/* Notices List */}
+                {result.noticeList && result.noticeList.length > 0 ? (
+                  <View style={styles.listWrap}>
+                    <ThemedText type="smallBold" style={{ marginBottom: 6, color: theme.text }}>
+                      Published Notices ({result.noticeList.length}):
+                    </ThemedText>
+                    {result.noticeList.map((n, i) => (
+                      <View
+                        key={i}
+                        style={[
+                          styles.listItemRow,
+                          { flexDirection: 'column', alignItems: 'flex-start', borderBottomColor: theme.border, gap: 2 },
+                        ]}
+                      >
+                        <View style={{ flexDirection: 'row', width: '100%', alignItems: 'center', gap: 6 }}>
+                          <Ionicons name="megaphone-outline" size={14} color={theme.tint} />
+                          <ThemedText type="smallBold" style={{ flex: 1, color: theme.text }}>
+                            {n.title}
+                          </ThemedText>
+                          {n.date ? (
+                            <ThemedText type="small" themeColor="textSecondary" style={{ fontSize: 10 }}>
+                              {n.date}
+                            </ThemedText>
+                          ) : null}
+                        </View>
+                        {n.body ? (
+                          <ThemedText type="small" themeColor="textSecondary" numberOfLines={2} style={{ fontSize: 11, marginLeft: 20 }}>
+                            {n.body}
+                          </ThemedText>
+                        ) : null}
+                      </View>
+                    ))}
+                  </View>
+                ) : null}
+
+                {/* Events List */}
+                {result.eventList && result.eventList.length > 0 ? (
+                  <View style={styles.listWrap}>
+                    <ThemedText type="smallBold" style={{ marginBottom: 6, color: theme.text }}>
+                      School Events ({result.eventList.length}):
+                    </ThemedText>
+                    {result.eventList.map((ev, i) => (
+                      <View
+                        key={i}
+                        style={[
+                          styles.listItemRow,
+                          { flexDirection: 'column', alignItems: 'flex-start', borderBottomColor: theme.border, gap: 2 },
+                        ]}
+                      >
+                        <View style={{ flexDirection: 'row', width: '100%', alignItems: 'center', gap: 6 }}>
+                          <Ionicons name="calendar-outline" size={14} color="#7C3AED" />
+                          <ThemedText type="smallBold" style={{ flex: 1, color: theme.text }}>
+                            {ev.title}
+                          </ThemedText>
+                          {ev.date ? (
+                            <View style={[styles.statusBadge, { backgroundColor: '#7C3AED20' }]}>
+                              <ThemedText type="small" style={{ color: '#7C3AED', fontSize: 10 }}>
+                                {ev.date}
+                              </ThemedText>
+                            </View>
+                          ) : null}
+                        </View>
+                        {ev.description ? (
+                          <ThemedText type="small" themeColor="textSecondary" numberOfLines={2} style={{ fontSize: 11, marginLeft: 20 }}>
+                            {ev.description}
+                          </ThemedText>
+                        ) : null}
+                        {ev.location ? (
+                          <ThemedText type="small" themeColor="textSecondary" style={{ fontSize: 10, marginLeft: 20, fontStyle: 'italic' }}>
+                            Location: {ev.location}
+                          </ThemedText>
+                        ) : null}
+                      </View>
+                    ))}
+                  </View>
+                ) : null}
+
                 {/* Leave Applications List */}
                 {result.leaveList && result.leaveList.length > 0 ? (
                   <View style={styles.listWrap}>
-                    <ThemedText type="smallBold" style={{ marginBottom: 6 }}>
+                    <ThemedText type="smallBold" style={{ marginBottom: 6, color: theme.text }}>
                       Leave Applications ({result.leaveList.length}):
                     </ThemedText>
                     {result.leaveList.map((l, i) => (
@@ -1091,7 +1670,7 @@ export function TeacherVoiceAssistantModal({
                         key={i}
                         style={[
                           styles.listItemRow,
-                          { flexDirection: 'column', alignItems: 'flex-start', gap: 2 },
+                          { flexDirection: 'column', alignItems: 'flex-start', gap: 2, borderBottomColor: theme.border },
                         ]}
                       >
                         <View
@@ -1101,7 +1680,7 @@ export function TeacherVoiceAssistantModal({
                             justifyContent: 'space-between',
                           }}
                         >
-                          <ThemedText type="smallBold">
+                          <ThemedText type="smallBold" style={{ color: theme.text }}>
                             {i + 1}. {l.studentName}
                           </ThemedText>
                           <ThemedText
@@ -1125,22 +1704,29 @@ export function TeacherVoiceAssistantModal({
                 {/* Fee Invoices List */}
                 {result.feeList && result.feeList.length > 0 ? (
                   <View style={styles.listWrap}>
-                    <ThemedText type="smallBold" style={{ marginBottom: 6 }}>
+                    <ThemedText type="smallBold" style={{ marginBottom: 6, color: theme.text }}>
                       Fee Invoices ({result.feeList.length}):
                     </ThemedText>
                     {result.feeList.map((f, i) => (
-                      <View key={i} style={styles.listItemRow}>
+                      <View key={i} style={[styles.listItemRow, { borderBottomColor: theme.border }]}>
                         <View style={{ flex: 1 }}>
-                          <ThemedText type="smallBold">
+                          <ThemedText type="smallBold" style={{ color: theme.text }}>
                             {i + 1}. {f.studentName}
                           </ThemedText>
                           <ThemedText type="small" themeColor="textSecondary" style={{ fontSize: 11 }}>
                             {f.title}
                           </ThemedText>
                         </View>
-                        <ThemedText type="smallBold" style={{ color: '#EF4444' }}>
-                          {f.amount}
-                        </ThemedText>
+                        <View style={{ alignItems: 'flex-end' }}>
+                          <ThemedText type="smallBold" style={{ color: f.status === 'PAID' ? '#10B981' : '#EF4444' }}>
+                            {f.amount}
+                          </ThemedText>
+                          <View style={[styles.statusBadge, { backgroundColor: f.status === 'PAID' ? '#D1FAE5' : '#FEE2E2' }]}>
+                            <ThemedText type="small" style={{ color: f.status === 'PAID' ? '#065F46' : '#991B1B', fontSize: 9 }}>
+                              {f.status}
+                            </ThemedText>
+                          </View>
+                        </View>
                       </View>
                     ))}
                   </View>
@@ -1149,7 +1735,7 @@ export function TeacherVoiceAssistantModal({
                 {/* Homework List */}
                 {result.homeworkList && result.homeworkList.length > 0 ? (
                   <View style={styles.listWrap}>
-                    <ThemedText type="smallBold" style={{ marginBottom: 6 }}>
+                    <ThemedText type="smallBold" style={{ marginBottom: 6, color: theme.text }}>
                       Assigned Homework ({result.homeworkList.length}):
                     </ThemedText>
                     {result.homeworkList.map((h, i) => (
@@ -1157,7 +1743,7 @@ export function TeacherVoiceAssistantModal({
                         key={i}
                         style={[
                           styles.listItemRow,
-                          { flexDirection: 'column', alignItems: 'flex-start' },
+                          { flexDirection: 'column', alignItems: 'flex-start', borderBottomColor: theme.border },
                         ]}
                       >
                         <ThemedText type="smallBold" style={{ color: theme.tint }}>
@@ -1174,12 +1760,12 @@ export function TeacherVoiceAssistantModal({
                 {/* Student Roster / Attendance List */}
                 {result.studentsList && result.studentsList.length > 0 ? (
                   <View style={styles.listWrap}>
-                    <ThemedText type="smallBold" style={{ marginBottom: 6 }}>
+                    <ThemedText type="smallBold" style={{ marginBottom: 6, color: theme.text }}>
                       Student List ({result.studentsList.length}):
                     </ThemedText>
                     {result.studentsList.slice(0, 15).map((st, i) => (
-                      <View key={i} style={styles.listItemRow}>
-                        <ThemedText type="smallBold" style={{ flex: 1 }}>
+                      <View key={i} style={[styles.listItemRow, { borderBottomColor: theme.border }]}>
+                        <ThemedText type="smallBold" style={{ flex: 1, color: theme.text }}>
                           {i + 1}. {st.name} {st.rollNo ? `(Roll: ${st.rollNo})` : ''}
                         </ThemedText>
                         {st.status ? (
@@ -1219,6 +1805,74 @@ export function TeacherVoiceAssistantModal({
               </Card>
             ) : null}
           </ScrollView>
+
+          {/* Hidden Speech Bridge for Native Android/iOS */}
+          {Platform.OS !== 'web' ? (
+            <View style={{ height: 0, width: 0, opacity: 0, overflow: 'hidden' }}>
+              <WebView
+                ref={webViewRef}
+                originWhitelist={['*']}
+                onMessage={handleWebViewMessage}
+                source={{
+                  html: `
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    </head>
+                    <body>
+                      <script>
+                        let rec = null;
+                        let finalTranscriptText = '';
+                        function startRec() {
+                          const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                          if (!SpeechRecognition) {
+                            window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'error', error: 'not_supported' }));
+                            return;
+                          }
+                          if (rec) {
+                            try { rec.abort(); } catch(e){}
+                          }
+                          rec = new SpeechRecognition();
+                          rec.continuous = false;
+                          rec.interimResults = true;
+                          rec.lang = 'en-US';
+                          finalTranscriptText = '';
+
+                          rec.onstart = function() {
+                            window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'start' }));
+                          };
+                          rec.onresult = function(e) {
+                            let curr = '';
+                            for (let i = e.resultIndex; i < e.results.length; i++) {
+                              curr += e.results[i][0].transcript;
+                            }
+                            if (curr) {
+                              finalTranscriptText = curr;
+                              window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'result', transcript: curr }));
+                            }
+                          };
+                          rec.onerror = function(e) {
+                            window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'error', error: e.error }));
+                          };
+                          rec.onend = function() {
+                            window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'end', finalTranscript: finalTranscriptText }));
+                          };
+                          rec.start();
+                        }
+                        function stopRec() {
+                          if (rec) {
+                            try { rec.stop(); } catch(e){}
+                          }
+                        }
+                      </script>
+                    </body>
+                    </html>
+                  `,
+                }}
+              />
+            </View>
+          ) : null}
         </View>
       </View>
     </Modal>
@@ -1228,34 +1882,88 @@ export function TeacherVoiceAssistantModal({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
   },
   sheet: {
     borderTopLeftRadius: Radius.xl,
     borderTopRightRadius: Radius.xl,
-    padding: Spacing.four,
     maxHeight: '90%',
+    minHeight: '65%',
+    padding: Spacing.four,
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: Spacing.two,
-    gap: 8,
   },
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: Spacing.two,
     flex: 1,
-    overflow: 'hidden',
+  },
+  micHeaderIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    fontSize: 16,
+  },
+  classesScopeBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: 6,
+    borderRadius: Radius.md,
+    marginBottom: Spacing.three,
+  },
+  bodyScroll: {
+    flex: 1,
+  },
+  voiceBox: {
+    alignItems: 'center',
+    padding: Spacing.four,
+    borderRadius: Radius.lg,
+    marginBottom: Spacing.three,
+  },
+  micCircleButton: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.two,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  micCircleButtonActive: {
+    transform: [{ scale: 1.08 }],
+  },
+  micStatusText: {
+    fontSize: 14,
+    marginBottom: 4,
+  },
+  transcriptBox: {
+    marginTop: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: 6,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    maxWidth: '90%',
   },
   audioControlsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    flexShrink: 0,
   },
   soundPillBtn: {
     flexDirection: 'row',
@@ -1273,62 +1981,6 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: Radius.pill,
   },
-  micHeaderIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    fontSize: 16,
-  },
-  classesScopeBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: Radius.pill,
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-    marginBottom: Spacing.three,
-  },
-  bodyScroll: {
-    marginBottom: Spacing.two,
-  },
-  voiceBox: {
-    alignItems: 'center',
-    paddingVertical: Spacing.four,
-    borderRadius: Radius.lg,
-    marginBottom: Spacing.three,
-  },
-  micCircleButton: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-  },
-  micCircleButtonActive: {
-    transform: [{ scale: 1.08 }],
-  },
-  micStatusText: {
-    marginTop: Spacing.two,
-    fontSize: 13,
-  },
-  transcriptBox: {
-    marginTop: Spacing.two,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.one + 2,
-    borderWidth: 1,
-    borderRadius: Radius.md,
-    backgroundColor: 'rgba(0,0,0,0.02)',
-  },
   inputRow: {
     flexDirection: 'row',
     gap: Spacing.two,
@@ -1336,10 +1988,10 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
+    height: 44,
+    borderRadius: Radius.md,
     borderWidth: 1,
-    borderRadius: Radius.pill,
     paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
     fontSize: 13,
   },
   submitBtn: {
@@ -1402,12 +2054,19 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 6,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(0,0,0,0.08)',
   },
   statusBadge: {
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: Radius.pill,
+  },
+  subjectChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: Radius.md,
   },
   detailBox: {
     borderWidth: 1,
