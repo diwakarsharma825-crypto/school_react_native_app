@@ -33,6 +33,7 @@ import {
   HomeworkEntry,
   MappedSubjectItem,
   RosterStudent,
+  SubjectCatalogItem,
   TeacherEvent,
   TeacherFeeInvoice,
   TeacherLeaveApplication,
@@ -803,10 +804,12 @@ export function TeacherVoiceAssistantModal({
         pLower.includes('what subject') ||
         pLower.includes('list of subjects')
       ) {
-        let subjects = await fetchTeacherSubjects(classId).catch(() => [] as MappedSubjectItem[]);
+        let subjects: (MappedSubjectItem | SubjectCatalogItem)[] = await fetchTeacherSubjects(
+          classId
+        ).catch(() => [] as MappedSubjectItem[]);
         if (subjects.length === 0) {
           const catalog = await fetchSubjectsCatalog(classId).catch(() => [] as SubjectCatalogItem[]);
-          subjects = catalog.map((s) => ({ id: s.id, name: s.name, code: s.code }));
+          subjects = catalog;
         }
 
         const subjectNames = subjects.map((s) => s.name);
@@ -824,7 +827,7 @@ export function TeacherVoiceAssistantModal({
           stats: [{ label: 'Total Subjects', value: subjects.length, color: '#3B82F6' }],
           subjectsList: subjects.map((s) => ({
             name: s.name,
-            code: s.code || s.subject_code,
+            code: (s as MappedSubjectItem).code || (s as MappedSubjectItem).subject_code,
           })),
         });
         speakText(summary);
@@ -908,7 +911,9 @@ export function TeacherVoiceAssistantModal({
         const notices: TeacherNotice[] = await fetchTeacherNotices().catch(
           () => [] as TeacherNotice[]
         );
-        const activeNotices = notices.filter((n) => n.is_active !== false);
+        const activeNotices = notices.filter(
+          (n) => n.is_view_on_web !== 0 && n.is_view_on_web !== '0'
+        );
 
         const summary =
           activeNotices.length > 0
@@ -927,8 +932,8 @@ export function TeacherVoiceAssistantModal({
           ],
           noticeList: activeNotices.map((n) => ({
             title: n.title,
-            body: n.body,
-            date: n.created_at ? n.created_at.split('T')[0] : undefined,
+            body: n.notice,
+            date: n.date ? n.date.split('T')[0] : undefined,
           })),
         });
         speakText(summary);
@@ -961,9 +966,9 @@ export function TeacherVoiceAssistantModal({
           stats: [{ label: 'Scheduled Events', value: events.length, color: '#7C3AED' }],
           eventList: events.map((e) => ({
             title: e.title,
-            date: e.event_date,
-            description: e.description,
-            location: e.location,
+            date: e.event_from || e.event_to,
+            description: e.note ?? undefined,
+            location: e.event_place ?? undefined,
           })),
         });
         speakText(summary);

@@ -1,24 +1,24 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { Radius, Spacing } from '@/constants/theme';
+import { ClassAITeacherModal } from '@/components/ai/ClassAITeacherModal';
 import { Card } from '@/components/ui/Card';
 import { ChildSwitcherCard } from '@/components/ui/ChildSwitcherCard';
 import { Screen } from '@/components/ui/Screen';
 import { Loading } from '@/components/ui/states';
 import { ThemedText } from '@/components/ui/ThemedText';
+import { Radius, Spacing } from '@/constants/theme';
 import { fetchCurrentAcademicYear } from '@/data/api';
 import {
   fetchStudentAttendance,
   fetchStudentFeeInvoices,
   fetchStudentLeaveApplications,
 } from '@/data/homework-api';
+import { SectionKey, useSections } from '@/hooks/use-sections';
 import { useStudentAuth } from '@/hooks/use-student-auth';
 import { useTheme } from '@/hooks/use-theme';
-import { useSections, SectionKey } from '@/hooks/use-sections';
 
 interface QuickLink {
   label: string;
@@ -30,6 +30,7 @@ interface QuickLink {
 }
 
 const QUICK_LINKS: QuickLink[] = [
+  { label: 'AI Teacher', icon: 'school-outline', bg: '#D1FAE5', fg: '#059669', route: 'ai_teacher' },
   { label: 'Homework', icon: 'book-outline', bg: '#EBF8FF', fg: '#2B6CB0', route: '/homework', sectionKey: 'homework' },
   { label: 'Attendance', icon: 'checkmark-done-outline', bg: '#E6FFFA', fg: '#234E52', route: '/student-attendance', sectionKey: 'attendance' },
   { label: 'Apply Leave', icon: 'calendar-clear-outline', bg: '#FEFCBF', fg: '#744210', route: '/apply-leave', sectionKey: 'leave' },
@@ -39,10 +40,6 @@ const QUICK_LINKS: QuickLink[] = [
   { label: 'Classmates', icon: 'people-outline', bg: '#E6FFFA', fg: '#234E52', route: '/classmates', sectionKey: 'classmates' },
 ];
 
-/** Student-side landing screen, mirroring the teacher Dashboard and the
- * Home tab's own quick-action-grid pattern (04-design-system.md) rather
- * than inventing a new layout — active-child header, a few at-a-glance
- * stats, then quick links into every student feature. */
 export default function StudentDashboardScreen() {
   const theme = useTheme();
   const router = useRouter();
@@ -54,95 +51,77 @@ export default function StudentDashboardScreen() {
   const [feeDue, setFeeDue] = useState<number | null>(null);
   const [pendingLeaves, setPendingLeaves] = useState<number | null>(null);
   const [loadingStats, setLoadingStats] = useState(true);
+  const [aiTeacherVisible, setAiTeacherVisible] = useState(false);
 
   useEffect(() => {
     fetchCurrentAcademicYear()
       .then((r) => setSessionLabel(r.label))
-      .catch(() => {});
+      .catch(() => setSessionLabel(undefined));
   }, []);
 
-  const loadStats = useCallback(() => {
-    if (!access) return;
-    setLoadingStats(true);
-    const validSrn = access.srn && access.srn !== '0' && access.srn !== '0.0' ? access.srn : null;
-    const identifier = validSrn || access.phone;
-    if (!identifier) {
+  const loadStats = useCallback(async () => {
+    if (!loggedIn || !access || !access.srn) {
       setLoadingStats(false);
       return;
     }
-    Promise.all([
-      fetchStudentAttendance(identifier).catch(() => []),
-      fetchStudentFeeInvoices(identifier).catch(() => []),
-      fetchStudentLeaveApplications(identifier).catch(() => []),
-    ]).then(([attendance, fees, leaves]) => {
-      const now = new Date();
-      const prefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-`;
-      const monthDays = attendance.filter((d) => d.date.startsWith(prefix));
-      const present = monthDays.filter((d) => d.status === 'P').length;
-      setAttendancePercent(monthDays.length > 0 ? Math.round((present / monthDays.length) * 100) : null);
-      setFeeDue(fees.filter((f) => f.status === 'due').reduce((sum, f) => sum + Number(f.amount), 0));
-      setPendingLeaves(leaves.filter((l) => l.status === 'pending').length);
+    setLoadingStats(true);
+    try {
+      const studentSrn = access.srn;
+      const [att, fees, leaves] = await Promise.all([
+        fetchStudentAttendance(studentSrn).catch(() => null),
+        fetchStudentFeeInvoices(studentSrn).catch(() => null),
+        fetchStudentLeaveApplications(studentSrn).catch(() => null),
+      ]);
+
+      if (att && Array.isArray(att) && att.length > 0) {
+        const presentCount = att.filter(
+          (a) => a.status === 'P' || a.status === 'Present' || a.status === '1'
+        ).length;
+        const pct = Math.round((presentCount / att.length) * 100);
+        setAttendancePercent(pct);
+      } else {
+        setAttendancePercent(null);
+      }
+
+      if (fees && Array.isArray(fees)) {
+        const totalDue = fees
+          .filter((f: any) => f.status === 'due')
+          .reduce((sum: number, f: any) => sum + Number(f.amount || 0), 0);
+        setFeeDue(totalDue);
+      } else {
+        setFeeDue(null);
+      }
+
+      if (leaves && Array.isArray(leaves)) {
+        const pendingCount = leaves.filter((l: any) => l.status === 'pending').length;
+        setPendingLeaves(pendingCount);
+      } else {
+        setPendingLeaves(null);
+      }
+    } finally {
       setLoadingStats(false);
-    });
-  }, [access]);
+    }
+  }, [loggedIn, access]);
 
   useFocusEffect(
     useCallback(() => {
-      if (!checking && !loggedIn) {
-        router.replace('/homework');
-        return;
-      }
       loadStats();
-    }, [checking, loggedIn, router, loadStats])
+    }, [loadStats])
   );
 
-  if (checking || !loggedIn || !access) {
-    return (
-      <Screen scroll={false}>
-        <Loading label="Loading dashboard…" />
-      </Screen>
-    );
-  }
+  if (checking) return <Loading />;
+  if (!loggedIn || !access) return null;
 
   return (
     <Screen>
-      {allChildren.length > 1 ? (
-        <ChildSwitcherCard siblings={allChildren} activeSrn={access.srn} onSwitch={switchChild} sessionLabel={sessionLabel} />
-      ) : (
-        <Pressable onPress={() => router.push('/profile')}>
-          <Card style={[styles.headerCard, { flexDirection: 'row', alignItems: 'center' }]}>
-            {access.photoUrl ? (
-              <Image
-                source={{ uri: access.photoUrl }}
-                style={{ width: 44, height: 44, borderRadius: 22, marginRight: 12 }}
-                contentFit="cover"
-                cachePolicy="memory-disk"
-                priority="high"
-                transition={200}
-              />
-            ) : (
-              <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: theme.dark ? theme.tint : theme.backgroundSelected, alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
-                <Ionicons name="school" size={20} color={theme.dark ? '#FFFFFF' : theme.tint} />
-              </View>
-            )}
-            <View style={{ flex: 1 }}>
-              <ThemedText type="smallBold" style={{ color: theme.dark ? '#FFFFFF' : theme.text }}>{access.name}</ThemedText>
-              <ThemedText type="small" themeColor="textSecondary">
-                {`${/\bclass\b/i.test(access.className) ? access.className : `Class ${access.className}`}${
-                  access.section ? ` - ${access.section}` : ''
-                } · SRN ${access.srn}`}
-              </ThemedText>
-              {sessionLabel ? (
-                <ThemedText type="small" style={{ color: theme.dark ? '#60A5FA' : theme.tint }}>
-                  Session: {sessionLabel}
-                </ThemedText>
-              ) : null}
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={theme.dark ? '#FFFFFF' : theme.textSecondary} />
-          </Card>
-        </Pressable>
-      )}
+      <ChildSwitcherCard
+        siblings={allChildren}
+        activeSrn={access.srn}
+        onSwitch={switchChild}
+        sessionLabel={sessionLabel}
+      />
 
+      {/* Summary Stats Row */}
       <View style={styles.statsRow}>
         <Card style={styles.statCard}>
           <ThemedText type="title" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={styles.statValue}>
@@ -170,6 +149,37 @@ export default function StudentDashboardScreen() {
         </Card>
       </View>
 
+      {/* Hero AI Teacher Banner */}
+      <Pressable onPress={() => setAiTeacherVisible(true)} style={{ marginBottom: Spacing.four }}>
+        <Card style={styles.aiHeroCard}>
+          <View style={styles.aiHeroHeader}>
+            <View style={styles.aiBadge}>
+              <Ionicons name="sparkles" size={14} color="#059669" />
+              <ThemedText type="smallBold" style={{ color: '#059669', fontSize: 11 }}>
+                24/7 Grok AI Tutor
+              </ThemedText>
+            </View>
+            <View style={styles.langBadges}>
+              <ThemedText style={{ fontSize: 11 }}>🇮🇳 🇬🇧 🗣️</ThemedText>
+            </View>
+          </View>
+
+          <View style={styles.aiHeroBody}>
+            <View style={{ flex: 1, gap: 4 }}>
+              <ThemedText type="subtitle" style={{ fontSize: 16, fontWeight: '700' }}>
+                Class AI Teacher & Scanner 📚
+              </ThemedText>
+              <ThemedText type="small" themeColor="textSecondary">
+                Scan chapter pages, listen to Hindi/English audio explanations & solve interactive quizzes!
+              </ThemedText>
+            </View>
+            <View style={styles.aiHeroButton}>
+              <Ionicons name="scan-outline" size={20} color="#FFFFFF" />
+            </View>
+          </View>
+        </Card>
+      </Pressable>
+
       {(() => {
         const visibleQuickLinks = QUICK_LINKS.filter((link) => !link.sectionKey || sections[link.sectionKey] !== false);
         if (visibleQuickLinks.length === 0) return null;
@@ -180,7 +190,17 @@ export default function StudentDashboardScreen() {
             </ThemedText>
             <View style={styles.grid}>
               {visibleQuickLinks.map((link) => (
-                <Pressable key={link.route} style={styles.tileWrap} onPress={() => router.push(link.route as any)}>
+                <Pressable
+                  key={link.route}
+                  style={styles.tileWrap}
+                  onPress={() => {
+                    if (link.route === 'ai_teacher') {
+                      setAiTeacherVisible(true);
+                    } else {
+                      router.push(link.route as any);
+                    }
+                  }}
+                >
                   <Card style={styles.tile}>
                     <View style={[styles.iconCircle, { backgroundColor: link.bg }]}>
                       <Ionicons name={link.icon} size={22} color={link.fg} />
@@ -195,6 +215,12 @@ export default function StudentDashboardScreen() {
           </>
         );
       })()}
+
+      <ClassAITeacherModal
+        visible={aiTeacherVisible}
+        onClose={() => setAiTeacherVisible(false)}
+        initialClassName={access?.className || 'Class 1st'}
+      />
     </Screen>
   );
 }
@@ -245,5 +271,50 @@ const styles = StyleSheet.create({
   },
   tileLabel: {
     textAlign: 'center',
+  },
+  aiHeroCard: {
+    padding: Spacing.three,
+    borderRadius: Radius.medium,
+    borderWidth: 1,
+    borderColor: 'rgba(5, 150, 105, 0.25)',
+    backgroundColor: 'rgba(5, 150, 105, 0.05)',
+    gap: 8,
+  },
+  aiHeroHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  aiBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(5, 150, 105, 0.15)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: Radius.pill,
+  },
+  langBadges: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  aiHeroBody: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  aiHeroButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#059669',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#059669',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
   },
 });

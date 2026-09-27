@@ -2,7 +2,7 @@ import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
 
-import { BASE_URL } from './api';
+import { BASE_URL, VERCEL_AI_BACKEND_URL } from './api';
 
 const SELECTED_CLASS_KEY = '@school_app_teacher_selected_class_id';
 
@@ -1760,3 +1760,58 @@ export async function reviewSubmission(
   }
   if (!json || !json.status) throw new Error(json?.message || 'Failed to review submission');
 }
+
+export async function fetchAITeacherChapterReading(params: {
+  className: string;
+  subject: string;
+  language: 'Hindi' | 'English' | 'Hinglish';
+  images: string[];
+}): Promise<any> {
+  try {
+    const res = await fetch(`${VERCEL_AI_BACKEND_URL}/read-chapter`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    });
+    const json = await res.json();
+    if (json.status && json.data) return json.data;
+  } catch {}
+  return null;
+}
+
+export async function evaluateAITeacherAnswer(params: {
+  question: string;
+  studentAnswer: string;
+  language: 'Hindi' | 'English' | 'Hinglish';
+}): Promise<any> {
+  try {
+    const res = await fetch(`${VERCEL_AI_BACKEND_URL}/evaluate-answer`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    });
+    const json = await res.json();
+    if (json.status && json.data) return json.data;
+  } catch {}
+  return null;
+}
+
+export async function checkAITeacherNotebook(params: {
+  studentName: string;
+  rollNo?: string;
+  subject: string;
+  teacherSignatureUrl?: string | null;
+  notebookImageBase64?: string;
+}): Promise<any> {
+  try {
+    const res = await fetch(`${VERCEL_AI_BACKEND_URL}/check-notebook`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    });
+    const json = await res.json();
+    if (json.status && json.data) return json.data;
+  } catch {}
+  return null;
+}
+

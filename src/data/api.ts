@@ -26,6 +26,7 @@ import { getHomeworkAccess } from '@/lib/homework-access';
 // unreachable in your environment. src/data/mock.ts is kept as a reference
 // for the old shapes and is no longer wired into these functions.
 export const BASE_URL = 'https://testing.saarthakgimsss12a.org/index.php/api';
+export const VERCEL_AI_BACKEND_URL = 'https://vercel-ai-backend-b62eusj9u-diwakarsharma603-5431.vercel.app/api/ai-teacher';
 export const USE_MOCK = false;
 
 import { mockEvents, mockGalleries, mockHome, mockNews, mockTeachers } from './mock';

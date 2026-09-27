@@ -11,6 +11,7 @@ import { Screen } from '@/components/ui/Screen';
 import { SendNotificationModal } from '@/components/ui/SendNotificationModal';
 import { SelectField } from '@/components/ui/SelectField';
 import { TeacherVoiceAssistantModal } from '@/components/ui/TeacherVoiceAssistantModal';
+import { ClassAITeacherModal } from '@/components/ai/ClassAITeacherModal';
 import { EmptyState, ErrorState, Loading } from '@/components/ui/states';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { Brand, Radius, Spacing } from '@/constants/theme';
@@ -1122,6 +1123,7 @@ interface TeacherQuickLink {
 }
 
 const TEACHER_QUICK_LINKS: TeacherQuickLink[] = [
+  { label: 'Class AI Teacher', icon: 'school-outline', bg: '#D1FAE5', fg: '#059669', route: 'class_ai_teacher' },
   { label: 'Voice AI', icon: 'sparkles-outline', bg: '#F3E8FF', fg: '#7C3AED', route: 'voice_assistant' },
   { label: 'Students', icon: 'people-outline', bg: '#E0F2FE', fg: '#0284C7', route: '/teacher-students' },
   { label: 'Homework', icon: 'book-outline', bg: '#E0E7FF', fg: '#4338CA', route: '/teacher-homework', permKey: 'homework', sectionKey: 'homework' },
@@ -1143,10 +1145,12 @@ function TeacherQuickLinks({
   permissions,
   selectedClassId,
   onOpenVoiceAssistant,
+  onOpenClassAITeacher,
 }: {
   permissions?: TeacherProfile['permissions'];
   selectedClassId?: string | null;
   onOpenVoiceAssistant?: () => void;
+  onOpenClassAITeacher?: () => void;
 }) {
   const router = useRouter();
   const sections = useSections();
@@ -1171,6 +1175,8 @@ function TeacherQuickLinks({
             onPress={() => {
               if (link.route === 'voice_assistant') {
                 onOpenVoiceAssistant?.();
+              } else if (link.route === 'class_ai_teacher') {
+                onOpenClassAITeacher?.();
               } else {
                 router.push({
                   pathname: link.route as any,
@@ -1233,6 +1239,7 @@ export default function TeacherDashboardScreen() {
   const theme = useTheme();
   const [sessionLabel, setSessionLabel] = useState<string | undefined>(undefined);
   const [voiceAssistantVisible, setVoiceAssistantVisible] = useState(false);
+  const [aiTeacherVisible, setAiTeacherVisible] = useState(false);
 
   useEffect(() => {
     fetchCurrentAcademicYear()
@@ -1341,6 +1348,7 @@ export default function TeacherDashboardScreen() {
         permissions={profile?.permissions}
         selectedClassId={classId}
         onOpenVoiceAssistant={() => setVoiceAssistantVisible(true)}
+        onOpenClassAITeacher={() => setAiTeacherVisible(true)}
       />
 
       <TeacherVoiceAssistantModal
@@ -1348,6 +1356,14 @@ export default function TeacherDashboardScreen() {
         onClose={() => setVoiceAssistantVisible(false)}
         teacherClasses={profile.classes}
         currentClassId={classId ? Number(classId) : undefined}
+      />
+
+      <ClassAITeacherModal
+        visible={aiTeacherVisible}
+        onClose={() => setAiTeacherVisible(false)}
+        teacherClasses={profile.classes}
+        teacherSignatureUrl={profile.signature_url}
+        initialClassName={profile.classes[0]?.class_name || 'Class 1st'}
       />
     </Screen>
   );
