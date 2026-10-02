@@ -22,7 +22,9 @@ export type SectionKey =
   | 'syllabus'
   | 'teacher_export'
   | 'teacher_storage'
-  | 'classmates';
+  | 'classmates'
+  | 'ai_teacher'
+  | 'voice_assistant';
 
 /** Admin-controlled section visibility. Defaults to all-true so nothing
  * flickers hidden while the first app_status check is still in flight. */
@@ -47,6 +49,8 @@ export const ALL_SECTIONS_ENABLED: EnabledSections = {
   teacher_export: true,
   teacher_storage: true,
   classmates: true,
+  ai_teacher: true,
+  voice_assistant: true,
 };
 
 export interface AppStatus {

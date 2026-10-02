@@ -1123,8 +1123,8 @@ interface TeacherQuickLink {
 }
 
 const TEACHER_QUICK_LINKS: TeacherQuickLink[] = [
-  { label: 'Class AI Teacher', icon: 'school-outline', bg: '#D1FAE5', fg: '#059669', route: 'class_ai_teacher' },
-  { label: 'Voice AI', icon: 'sparkles-outline', bg: '#F3E8FF', fg: '#7C3AED', route: 'voice_assistant' },
+  { label: 'Class AI Teacher', icon: 'school-outline', bg: '#D1FAE5', fg: '#059669', route: 'class_ai_teacher', permKey: 'ai_teacher' as any, sectionKey: 'ai_teacher' },
+  { label: 'Voice AI', icon: 'sparkles-outline', bg: '#F3E8FF', fg: '#7C3AED', route: 'voice_assistant', permKey: 'voice_assistant' as any, sectionKey: 'voice_assistant' },
   { label: 'Students', icon: 'people-outline', bg: '#E0F2FE', fg: '#0284C7', route: '/teacher-students' },
   { label: 'Homework', icon: 'book-outline', bg: '#E0E7FF', fg: '#4338CA', route: '/teacher-homework', permKey: 'homework', sectionKey: 'homework' },
   { label: 'Attendance', icon: 'checkmark-done-outline', bg: '#DFF1E1', fg: '#2E7D32', route: '/teacher-attendance', permKey: 'attendance', sectionKey: 'attendance' },
@@ -1237,6 +1237,7 @@ export default function TeacherDashboardScreen() {
   const { profile, checking, loggedIn } = useTeacherAuth();
   const [classId, setClassId] = useState<string | null>(null);
   const theme = useTheme();
+  const sections = useSections();
   const [sessionLabel, setSessionLabel] = useState<string | undefined>(undefined);
   const [voiceAssistantVisible, setVoiceAssistantVisible] = useState(false);
   const [aiTeacherVisible, setAiTeacherVisible] = useState(false);
@@ -1312,33 +1313,35 @@ export default function TeacherDashboardScreen() {
       />
 
       {/* Voice AI Assistant Featured Banner */}
-      <Pressable
-        onPress={() => setVoiceAssistantVisible(true)}
-        style={({ pressed }) => [
-          styles.voiceBannerContainer,
-          { backgroundColor: theme.surface, borderColor: '#7C3AED', opacity: pressed ? 0.9 : 1 },
-        ]}
-      >
-        <View style={styles.voiceIconCircle}>
-          <Ionicons name="sparkles" size={20} color="#FFFFFF" />
-        </View>
-        <View style={{ flex: 1 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <ThemedText type="subtitle" style={{ color: '#7C3AED' }}>
-              Voice AI Assistant
-            </ThemedText>
-            <View style={styles.liveBadge}>
-              <ThemedText type="smallBold" style={{ color: '#FFFFFF', fontSize: 10 }}>
-                LIVE
-              </ThemedText>
-            </View>
+      {sections.voice_assistant !== false && (profile?.permissions as any)?.voice_assistant !== false && (
+        <Pressable
+          onPress={() => setVoiceAssistantVisible(true)}
+          style={({ pressed }) => [
+            styles.voiceBannerContainer,
+            { backgroundColor: theme.surface, borderColor: '#7C3AED', opacity: pressed ? 0.9 : 1 },
+          ]}
+        >
+          <View style={styles.voiceIconCircle}>
+            <Ionicons name="sparkles" size={20} color="#FFFFFF" />
           </View>
-          <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-            Speak to query attendance, roster & reports for your classes
-          </ThemedText>
-        </View>
-        <Ionicons name="mic-circle" size={34} color="#7C3AED" />
-      </Pressable>
+          <View style={{ flex: 1 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <ThemedText type="subtitle" style={{ color: '#7C3AED' }}>
+                Voice AI Assistant
+              </ThemedText>
+              <View style={styles.liveBadge}>
+                <ThemedText type="smallBold" style={{ color: '#FFFFFF', fontSize: 10 }}>
+                  LIVE
+                </ThemedText>
+              </View>
+            </View>
+            <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+              Speak to query attendance, roster & reports for your classes
+            </ThemedText>
+          </View>
+          <Ionicons name="mic-circle" size={34} color="#7C3AED" />
+        </Pressable>
+      )}
 
       {classes.length > 0 ? (
         <SelectField label="Class" placeholder="Select class" value={classId} options={classOptions} onChange={handleClassChange} />

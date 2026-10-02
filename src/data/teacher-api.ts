@@ -1815,3 +1815,21 @@ export async function checkAITeacherNotebook(params: {
   return null;
 }
 
+export async function queryGrokAIAssistant(params: {
+  prompt: string;
+  className: string;
+  contextData?: any;
+  language?: 'Hindi' | 'English' | 'Hinglish';
+}): Promise<any> {
+  try {
+    const res = await fetch(`${VERCEL_AI_BACKEND_URL}/query-assistant`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    });
+    const json = await res.json();
+    if (json.status && json.data) return json.data;
+  } catch {}
+  return null;
+}
+

@@ -39,6 +39,7 @@ import {
   TeacherLeaveApplication,
   TeacherNotice,
   TeacherProfileClass,
+  queryGrokAIAssistant,
 } from '@/data/teacher-api';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -711,7 +712,13 @@ export function TeacherVoiceAssistantModal({
         pLower.includes('who not paid') ||
         pLower.includes('which student not paid') ||
         pLower.includes('students not paid') ||
-        pLower.includes('fee pending')
+        pLower.includes('fee pending') ||
+        pLower.includes('baki') ||
+        pLower.includes('baaki') ||
+        pLower.includes('nahi di') ||
+        pLower.includes('nahi diya') ||
+        pLower.includes('kiski fee') ||
+        pLower.includes('kiska fee')
       ) {
         const fees = await fetchTeacherFeeInvoices(classId, sectionId).catch(
           () => [] as TeacherFeeInvoice[]
@@ -1187,7 +1194,33 @@ export function TeacherVoiceAssistantModal({
         return;
       }
 
-      // 14. DEFAULT ROSTER QUERY
+      // 14. GROK AI NATURAL LANGUAGE ASSISTANT FALLBACK
+      const grokAiRes = await queryGrokAIAssistant({
+        prompt: rawPrompt,
+        className: classDisplayName,
+        contextData: {
+          totalStudents: classStudents.length,
+          sampleStudents: classStudents.slice(0, 10).map((s) => ({ name: s.name, roll_no: s.roll_no, phone: s.phone })),
+        },
+        language: 'Hinglish',
+      }).catch(() => null);
+
+      if (grokAiRes && grokAiRes.aiResponseText) {
+        const aiText = grokAiRes.aiResponseText;
+        setResult({
+          type: 'roster',
+          title: `AI Assistant Answer (${classDisplayName})`,
+          summaryText: aiText,
+          className: matchedClass.class_name,
+          sectionName: matchedClass.section_name ?? undefined,
+          stats: [{ label: 'Class Strength', value: classStudents.length, color: '#7C3AED' }],
+        });
+        speakText(aiText);
+        setProcessing(false);
+        return;
+      }
+
+      // 15. DEFAULT ROSTER QUERY
       const summary = `There are ${classStudents.length} registered students in ${classDisplayName}.`;
 
       setResult({

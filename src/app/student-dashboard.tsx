@@ -30,7 +30,7 @@ interface QuickLink {
 }
 
 const QUICK_LINKS: QuickLink[] = [
-  { label: 'AI Teacher', icon: 'school-outline', bg: '#D1FAE5', fg: '#059669', route: 'ai_teacher' },
+  { label: 'AI Teacher', icon: 'school-outline', bg: '#D1FAE5', fg: '#059669', route: 'ai_teacher', sectionKey: 'ai_teacher' },
   { label: 'Homework', icon: 'book-outline', bg: '#EBF8FF', fg: '#2B6CB0', route: '/homework', sectionKey: 'homework' },
   { label: 'Attendance', icon: 'checkmark-done-outline', bg: '#E6FFFA', fg: '#234E52', route: '/student-attendance', sectionKey: 'attendance' },
   { label: 'Apply Leave', icon: 'calendar-clear-outline', bg: '#FEFCBF', fg: '#744210', route: '/apply-leave', sectionKey: 'leave' },
@@ -75,7 +75,7 @@ export default function StudentDashboardScreen() {
 
       if (att && Array.isArray(att) && att.length > 0) {
         const presentCount = att.filter(
-          (a) => a.status === 'P' || a.status === 'Present' || a.status === '1'
+          (a) => String(a.status) === 'P' || String(a.status) === 'Present' || String(a.status) === '1'
         ).length;
         const pct = Math.round((presentCount / att.length) * 100);
         setAttendancePercent(pct);
@@ -150,35 +150,37 @@ export default function StudentDashboardScreen() {
       </View>
 
       {/* Hero AI Teacher Banner */}
-      <Pressable onPress={() => setAiTeacherVisible(true)} style={{ marginBottom: Spacing.four }}>
-        <Card style={styles.aiHeroCard}>
-          <View style={styles.aiHeroHeader}>
-            <View style={styles.aiBadge}>
-              <Ionicons name="sparkles" size={14} color="#059669" />
-              <ThemedText type="smallBold" style={{ color: '#059669', fontSize: 11 }}>
-                24/7 Grok AI Tutor
-              </ThemedText>
+      {sections.ai_teacher !== false && (
+        <Pressable onPress={() => setAiTeacherVisible(true)} style={{ marginBottom: Spacing.four }}>
+          <Card style={styles.aiHeroCard}>
+            <View style={styles.aiHeroHeader}>
+              <View style={styles.aiBadge}>
+                <Ionicons name="sparkles" size={14} color="#059669" />
+                <ThemedText type="smallBold" style={{ color: '#059669', fontSize: 11 }}>
+                  24/7 Grok AI Tutor
+                </ThemedText>
+              </View>
+              <View style={styles.langBadges}>
+                <ThemedText style={{ fontSize: 11 }}>🇮🇳 🇬🇧 🗣️</ThemedText>
+              </View>
             </View>
-            <View style={styles.langBadges}>
-              <ThemedText style={{ fontSize: 11 }}>🇮🇳 🇬🇧 🗣️</ThemedText>
-            </View>
-          </View>
 
-          <View style={styles.aiHeroBody}>
-            <View style={{ flex: 1, gap: 4 }}>
-              <ThemedText type="subtitle" style={{ fontSize: 16, fontWeight: '700' }}>
-                Class AI Teacher & Scanner 📚
-              </ThemedText>
-              <ThemedText type="small" themeColor="textSecondary">
-                Scan chapter pages, listen to Hindi/English audio explanations & solve interactive quizzes!
-              </ThemedText>
+            <View style={styles.aiHeroBody}>
+              <View style={{ flex: 1, gap: 4 }}>
+                <ThemedText type="subtitle" style={{ fontSize: 16, fontWeight: '700' }}>
+                  Class AI Teacher & Scanner 📚
+                </ThemedText>
+                <ThemedText type="small" themeColor="textSecondary">
+                  Scan chapter pages, listen to Hindi/English audio explanations & solve interactive quizzes!
+                </ThemedText>
+              </View>
+              <View style={styles.aiHeroButton}>
+                <Ionicons name="scan-outline" size={20} color="#FFFFFF" />
+              </View>
             </View>
-            <View style={styles.aiHeroButton}>
-              <Ionicons name="scan-outline" size={20} color="#FFFFFF" />
-            </View>
-          </View>
-        </Card>
-      </Pressable>
+          </Card>
+        </Pressable>
+      )}
 
       {(() => {
         const visibleQuickLinks = QUICK_LINKS.filter((link) => !link.sectionKey || sections[link.sectionKey] !== false);
@@ -274,7 +276,7 @@ const styles = StyleSheet.create({
   },
   aiHeroCard: {
     padding: Spacing.three,
-    borderRadius: Radius.medium,
+    borderRadius: Radius.md,
     borderWidth: 1,
     borderColor: 'rgba(5, 150, 105, 0.25)',
     backgroundColor: 'rgba(5, 150, 105, 0.05)',
