@@ -52,6 +52,44 @@ function todayStr() {
   return `${t.getFullYear()}-${pad(t.getMonth() + 1)}-${pad(t.getDate())}`;
 }
 
+function resolveQueryDate(pLower: string): { dateStr: string; label: string; timeContext: string } {
+  const now = new Date();
+
+  if (
+    pLower.includes('yesterday') ||
+    pLower.includes('kal') ||
+    pLower.includes('previous day') ||
+    pLower.includes('last day') ||
+    pLower.includes('gaya kal') ||
+    pLower.includes('beete kal')
+  ) {
+    const y = new Date(now);
+    y.setDate(y.getDate() - 1);
+    const dateStr = `${y.getFullYear()}-${pad(y.getMonth() + 1)}-${pad(y.getDate())}`;
+    return { dateStr, label: "Yesterday's", timeContext: 'Yesterday' };
+  }
+
+  if (
+    pLower.includes('day before yesterday') ||
+    pLower.includes('parso') ||
+    pLower.includes('parson')
+  ) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - 2);
+    const dateStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    return { dateStr, label: "Day Before Yesterday's", timeContext: 'Day before yesterday' };
+  }
+
+  if (pLower.includes('tomorrow')) {
+    const tm = new Date(now);
+    tm.setDate(tm.getDate() + 1);
+    const dateStr = `${tm.getFullYear()}-${pad(tm.getMonth() + 1)}-${pad(tm.getDate())}`;
+    return { dateStr, label: "Tomorrow's", timeContext: 'Tomorrow' };
+  }
+
+  return { dateStr: todayStr(), label: "Today's", timeContext: 'Today' };
+}
+
 interface QueryResultData {
   type:
     | 'attendance'
@@ -114,6 +152,34 @@ export function TeacherVoiceAssistantModal({
   currentSectionId,
 }: TeacherVoiceAssistantModalProps) {
   const theme = useTheme();
+  const isDark = theme.dark;
+
+  const getBadgeStyle = (status?: string | null) => {
+    const s = (status || '').toUpperCase();
+    if (s === 'PRESENT' || s === 'COMPLETED' || s === 'PAID' || s === 'ACTIVE STUDENT' || s === 'ACTIVE') {
+      return {
+        bg: isDark ? '#064E3B' : '#D1FAE5',
+        text: isDark ? '#A7F3D0' : '#065F46',
+      };
+    }
+    if (s === 'ABSENT' || s === 'UNPAID' || s === 'INACTIVE' || s === 'ERROR') {
+      return {
+        bg: isDark ? '#7F1D1D' : '#FEE2E2',
+        text: isDark ? '#FCA5A5' : '#991B1B',
+      };
+    }
+    if (s === 'LEAVE' || s === 'PENDING' || s === 'ON LEAVE') {
+      return {
+        bg: isDark ? '#78350F' : '#FEF3C7',
+        text: isDark ? '#FDE68A' : '#92400E',
+      };
+    }
+    return {
+      bg: isDark ? '#4C1D95' : '#EDE9FE',
+      text: isDark ? '#DDD6FE' : '#6D28D9',
+    };
+  };
+
   const [listening, setListening] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [queryText, setQueryText] = useState('');
@@ -121,14 +187,22 @@ export function TeacherVoiceAssistantModal({
   const [result, setResult] = useState<QueryResultData | null>(null);
   const [soundEnabled, setSoundEnabled] = useState(true);
 
-  // Web Recognition ref & Native WebView ref
+  // Web Recognition ref & Native WebView ref & ScrollView ref
   const recognitionRef = useRef<any>(null);
   const webViewRef = useRef<any>(null);
+  const scrollViewRef = useRef<ScrollView>(null);
 
   function stopSpeech() {
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       try {
         window.speechSynthesis.cancel();
+      } catch {
+        // ignore
+      }
+    }
+    if (webViewRef.current) {
+      try {
+        webViewRef.current.injectJavaScript('stopTxt(); true;');
       } catch {
         // ignore
       }
@@ -153,15 +227,37 @@ export function TeacherVoiceAssistantModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
+  // Auto-scroll to result card whenever AI returns output
+  useEffect(() => {
+    if (result) {
+      const timer = setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 250);
+      return () => clearTimeout(timer);
+    }
+  }, [result]);
+
   function speakText(text: string) {
     stopSpeech();
     if (!soundEnabled) return;
+
+    // Web Browser SpeechSynthesis
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       try {
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.rate = 1.0;
         utterance.pitch = 1.0;
         window.speechSynthesis.speak(utterance);
+      } catch {
+        // Ignore audio errors
+      }
+    }
+
+    // Native Mobile WebView SpeechSynthesis Injection
+    if (webViewRef.current) {
+      try {
+        const escapedText = JSON.stringify(text);
+        webViewRef.current.injectJavaScript(`speakTxt(${escapedText}); true;`);
       } catch {
         // Ignore audio errors
       }
@@ -398,7 +494,18 @@ export function TeacherVoiceAssistantModal({
     stopListening();
 
     try {
-      const pLower = prompt.toLowerCase();
+      // Phonetic speech-to-text normalizer for Indian English / Hinglish speech recognition mistranscriptions
+      const normalizedPrompt = prompt.toLowerCase()
+        .replace(/\bped\s+fees\b/g, 'paid fees')
+        .replace(/\bped\s+fee\b/g, 'paid fee')
+        .replace(/\bped\b/g, 'paid')
+        .replace(/\bpayed\b/g, 'paid')
+        .replace(/\bpade\b/g, 'paid')
+        .replace(/\bpead\b/g, 'paid')
+        .replace(/\bchuki\b/g, 'chuki')
+        .replace(/\bchooki\b/g, 'chuki');
+
+      const pLower = normalizedPrompt;
 
       // 0. All Assigned Classes Summary Query
       if (
@@ -472,27 +579,49 @@ export function TeacherVoiceAssistantModal({
         () => [] as RosterStudent[]
       );
 
-      // 1. ROLL NUMBER SEARCH QUERY
-      const rollMatch =
-        pLower.match(/(?:roll\s*(?:no\.?|number)?\s*|roll\s+)(\d+)/i) ||
-        pLower.match(/\broll\b.*?(\d+)/i);
+      // 1. ROLL NUMBER / SRN / NUMBER SEARCH QUERY
+      const numbersInPrompt = pLower.match(/\b\d+\b/g) || [];
+      const hasNumberKeyword =
+        pLower.includes('roll') ||
+        pLower.includes('srn') ||
+        pLower.includes('number') ||
+        pLower.includes('no') ||
+        pLower.includes('student') ||
+        numbersInPrompt.length > 0;
 
-      if (rollMatch) {
-        const requestedRoll = rollMatch[1];
-        const matchedRollStudent = classStudents.find(
-          (s) =>
-            s.roll_no &&
-            (String(s.roll_no).trim() === requestedRoll || Number(s.roll_no) === Number(requestedRoll))
-        );
+      if (numbersInPrompt.length > 0 && hasNumberKeyword) {
+        let matchedRollStudent: RosterStudent | undefined = undefined;
+        let requestedRoll = numbersInPrompt[0];
+
+        for (const numStr of numbersInPrompt) {
+          const found = classStudents.find((s) => {
+            if (!s) return false;
+            const rNo = s.roll_no ? String(s.roll_no).trim() : '';
+            const sSrn = s.srn ? String(s.srn).trim().toLowerCase() : '';
+            const sId = s.id ? String(s.id).trim() : '';
+
+            return (
+              (rNo && (rNo === numStr || Number(rNo) === Number(numStr))) ||
+              (sSrn && (sSrn === numStr.toLowerCase() || sSrn.includes(numStr.toLowerCase()))) ||
+              (sId && sId === numStr)
+            );
+          });
+          if (found) {
+            matchedRollStudent = found;
+            requestedRoll = numStr;
+            break;
+          }
+        }
 
         if (matchedRollStudent) {
-          const attendanceData = await fetchAttendance(classId, sectionId, todayStr()).catch(
+          const { dateStr, label } = resolveQueryDate(pLower);
+          const attendanceData = await fetchAttendance(classId, sectionId, dateStr).catch(
             () => [] as AttendanceStudent[]
           );
           const attRecord = attendanceData.find(
             (a) =>
-              String(a.id) === String(matchedRollStudent.id) ||
-              a.name.toLowerCase() === matchedRollStudent.name.toLowerCase()
+              String(a.id) === String(matchedRollStudent!.id) ||
+              a.name.toLowerCase() === matchedRollStudent!.name.toLowerCase()
           );
           const attStatus = attRecord
             ? attRecord.status === 'P'
@@ -502,19 +631,21 @@ export function TeacherVoiceAssistantModal({
               : 'ON LEAVE'
             : 'NOT MARKED YET';
 
-          const summary = `Found Roll No ${requestedRoll}: ${matchedRollStudent.name} in ${classDisplayName}. Today's Attendance: ${attStatus}. Father: ${
+          const summary = `Found Student: ${matchedRollStudent.name} (Roll No: ${
+            matchedRollStudent.roll_no || 'N/A'
+          }, SRN: ${matchedRollStudent.srn || 'N/A'}) in ${classDisplayName}. ${label} Attendance (${dateStr}): ${attStatus}. Father: ${
             matchedRollStudent.father_name || 'N/A'
           }, Phone: ${matchedRollStudent.phone || 'N/A'}.`;
 
           setResult({
             type: 'student_detail',
-            title: `Student Details (Roll No: ${requestedRoll})`,
+            title: `Student Details (${matchedRollStudent.name})`,
             summaryText: summary,
             className: matchedClass.class_name,
             sectionName: matchedClass.section_name ?? undefined,
             studentDetail: {
               name: matchedRollStudent.name,
-              rollNo: String(matchedRollStudent.roll_no),
+              rollNo: matchedRollStudent.roll_no ? String(matchedRollStudent.roll_no) : null,
               srn: matchedRollStudent.srn,
               className: matchedClass.class_name,
               sectionName: matchedClass.section_name,
@@ -522,17 +653,23 @@ export function TeacherVoiceAssistantModal({
               motherName: matchedRollStudent.mother_name,
               phone: matchedRollStudent.phone,
               gender: matchedRollStudent.gender,
-              status: `Attendance Today: ${attStatus}`,
+              status: `Attendance (${label} ${dateStr}): ${attStatus}`,
             },
           });
           speakText(summary);
           setProcessing(false);
           return;
-        } else {
-          const summary = `No student with Roll No ${requestedRoll} was found in ${classDisplayName}. Total registered students: ${classStudents.length}.`;
+        } else if (
+          pLower.includes('roll') ||
+          pLower.includes('srn') ||
+          pLower.includes('number') ||
+          pLower.includes('no') ||
+          pLower.includes('student')
+        ) {
+          const summary = `No student with Roll No or SRN ${requestedRoll} was found in ${classDisplayName}. Total registered students: ${classStudents.length}.`;
           setResult({
             type: 'roster',
-            title: `Roll No ${requestedRoll} Not Found`,
+            title: `Roll No / SRN ${requestedRoll} Not Found`,
             summaryText: summary,
             className: matchedClass.class_name,
             sectionName: matchedClass.section_name ?? undefined,
@@ -550,23 +687,37 @@ export function TeacherVoiceAssistantModal({
       }
 
       // Check if prompt references a specific student by name or SRN
+      const stopWords = new Set([
+        'about', 'student', 'students', 'is', 'are', 'fee', 'fees', 'detail', 'details',
+        'roll', 'number', 'no', 'code', 'srn', 'class', 'section', 'hai', 'hain', 'ka',
+        'ki', 'ke', 'ko', 'me', 'mein', 'se', 'bhi', 'total', 'paid', 'unpaid', 'due',
+        'pending', 'present', 'absent', 'leave', 'not', 'nahi', 'baki', 'baaki', 'how',
+        'much', 'many', 'what', 'which', 'who', 'where', 'when', 'show', 'tell', 'give',
+        'kitni', 'kitna', 'kitne', 'aaya', 'aayi', 'aagayi', 'chuki', 'jama', 'ped', 'pade'
+      ]);
+
       const matchedStudent = classStudents.find((s) => {
-        const sNameLower = s.name.toLowerCase();
-        const parts = sNameLower.split(' ').filter((pt) => pt.length >= 3);
+        const sNameLower = s.name.toLowerCase().trim();
         if (pLower.includes(sNameLower)) return true;
+
+        const parts = sNameLower.split(/\s+/).filter((pt) => pt.length >= 3 && !stopWords.has(pt));
+        if (parts.length === 0) return false;
+
         for (const part of parts) {
           if (
             pLower.includes(`about ${part}`) ||
             pLower.includes(`student ${part}`) ||
-            pLower.includes(`is ${part}`) ||
             pLower.includes(`fee of ${part}`) ||
+            pLower.includes(`fees of ${part}`) ||
             pLower.includes(`detail of ${part}`) ||
-            pLower.includes(part)
+            pLower.includes(`details of ${part}`) ||
+            pLower.includes(`${part}'s`)
           ) {
             return true;
           }
         }
-        if (s.srn && pLower.includes(s.srn.toLowerCase())) return true;
+
+        if (s.srn && s.srn.length >= 3 && pLower.includes(s.srn.toLowerCase())) return true;
         return false;
       });
 
@@ -577,7 +728,8 @@ export function TeacherVoiceAssistantModal({
           pLower.includes('absent') ||
           pLower.includes('attendance')
         ) {
-          const attendanceData = await fetchAttendance(classId, sectionId, todayStr()).catch(
+          const { dateStr, label, timeContext } = resolveQueryDate(pLower);
+          const attendanceData = await fetchAttendance(classId, sectionId, dateStr).catch(
             () => [] as AttendanceStudent[]
           );
           const attRecord = attendanceData.find(
@@ -592,13 +744,14 @@ export function TeacherVoiceAssistantModal({
               ? 'ABSENT'
               : 'ON LEAVE'
             : 'NOT MARKED YET';
+          const verb = timeContext === 'Today' ? 'is' : 'was';
           const summary = `Student ${matchedStudent.name} (Roll No: ${
             matchedStudent.roll_no || 'N/A'
-          }) in ${classDisplayName} is ${attStatus} today.`;
+          }) in ${classDisplayName} ${verb} ${attStatus} on ${timeContext.toLowerCase()} (${dateStr}).`;
 
           setResult({
             type: 'student_detail',
-            title: `Today's Attendance: ${matchedStudent.name}`,
+            title: `${label} Attendance: ${matchedStudent.name}`,
             summaryText: summary,
             className: matchedClass.class_name,
             sectionName: matchedClass.section_name ?? undefined,
@@ -612,7 +765,7 @@ export function TeacherVoiceAssistantModal({
               motherName: matchedStudent.mother_name,
               phone: matchedStudent.phone,
               gender: matchedStudent.gender,
-              status: `Today's Attendance: ${attStatus}`,
+              status: `${label} Attendance (${dateStr}): ${attStatus}`,
             },
           });
           speakText(summary);
@@ -761,14 +914,43 @@ export function TeacherVoiceAssistantModal({
 
       // 3. TOTAL PAID FEES / HOW MUCH PAID TOTAL QUERY
       if (
+        pLower.includes('fees paid') ||
+        pLower.includes('fee paid') ||
+        pLower.includes('paid fee') ||
+        pLower.includes('paid fees') ||
+        pLower.includes('paid hai') ||
+        pLower.includes('paid h') ||
         pLower.includes('how much paid') ||
         pLower.includes('total fee paid') ||
-        pLower.includes('paid fee') ||
+        pLower.includes('total fees paid') ||
         pLower.includes('paid total') ||
         pLower.includes('total fee collected') ||
         pLower.includes('fee collection') ||
         pLower.includes('total collected') ||
-        pLower.includes('amount collected')
+        pLower.includes('amount collected') ||
+        pLower.includes('kitni fees paid') ||
+        pLower.includes('kitni fee paid') ||
+        pLower.includes('kitna fee paid') ||
+        pLower.includes('kitna fees paid') ||
+        pLower.includes('kitne paid') ||
+        pLower.includes('kitni paid') ||
+        pLower.includes('paid kitna') ||
+        pLower.includes('paid kitni') ||
+        pLower.includes('ped fees') ||
+        pLower.includes('ped fee') ||
+        pLower.includes('a chuki') ||
+        pLower.includes('aa chuki') ||
+        pLower.includes('chuki') ||
+        pLower.includes('chooki') ||
+        pLower.includes('kitni fee aayi') ||
+        pLower.includes('kitna fee aayi') ||
+        pLower.includes('kitni fees aayi') ||
+        pLower.includes('kitna fees aayi') ||
+        pLower.includes('kitna aaya') ||
+        pLower.includes('kitni aayi') ||
+        pLower.includes('jama') ||
+        pLower.includes('aa gayi') ||
+        pLower.includes('aagayi')
       ) {
         const fees = await fetchTeacherFeeInvoices(classId, sectionId).catch(
           () => [] as TeacherFeeInvoice[]
@@ -1027,9 +1209,16 @@ export function TeacherVoiceAssistantModal({
       if (
         pLower.includes('present') ||
         pLower.includes('absent') ||
-        pLower.includes('attendance')
+        pLower.includes('attendance') ||
+        pLower.includes('aaye') ||
+        pLower.includes('aaye the') ||
+        pLower.includes('kitne aaye') ||
+        pLower.includes('kine aaye') ||
+        pLower.includes('hazar') ||
+        pLower.includes('hazir')
       ) {
-        const attendanceData = await fetchAttendance(classId, sectionId, todayStr()).catch(
+        const { dateStr, label, timeContext } = resolveQueryDate(pLower);
+        const attendanceData = await fetchAttendance(classId, sectionId, dateStr).catch(
           () => [] as AttendanceStudent[]
         );
         const presentCount = attendanceData.filter((a) => a.status === 'P').length;
@@ -1037,11 +1226,12 @@ export function TeacherVoiceAssistantModal({
         const leaveCount = attendanceData.filter((a) => a.status === 'L').length;
         const total = attendanceData.length;
 
-        const summary = `In ${classDisplayName} today, ${presentCount} students are Present, ${absentCount} are Absent, and ${leaveCount} on Leave out of ${total} total students.`;
+        const verb = timeContext === 'Today' ? 'are' : 'were';
+        const summary = `${timeContext} (${dateStr}) in ${classDisplayName}, ${presentCount} students ${verb} Present, ${absentCount} ${verb} Absent, and ${leaveCount} on Leave out of ${total} total students.`;
 
         setResult({
           type: 'attendance',
-          title: `Today's Attendance (${classDisplayName})`,
+          title: `${label} Attendance (${classDisplayName} - ${dateStr})`,
           summaryText: summary,
           className: matchedClass.class_name,
           sectionName: matchedClass.section_name ?? undefined,
@@ -1131,17 +1321,18 @@ export function TeacherVoiceAssistantModal({
 
       // 12. HOMEWORK QUERY
       if (pLower.includes('homework') || pLower.includes('assignment')) {
-        const hwList = await fetchHomeworkForDate(classId, sectionId, todayStr()).catch(
+        const { dateStr, label, timeContext } = resolveQueryDate(pLower);
+        const hwList = await fetchHomeworkForDate(classId, sectionId, dateStr).catch(
           () => [] as HomeworkEntry[]
         );
         const summary =
           hwList.length > 0
-            ? `There are ${hwList.length} homework items assigned for ${classDisplayName} today.`
-            : `No homework assigned for ${classDisplayName} today.`;
+            ? `There are ${hwList.length} homework items assigned for ${classDisplayName} on ${timeContext.toLowerCase()} (${dateStr}).`
+            : `No homework assigned for ${classDisplayName} on ${timeContext.toLowerCase()} (${dateStr}).`;
 
         setResult({
           type: 'homework',
-          title: `Homework (${classDisplayName})`,
+          title: `${label} Homework (${classDisplayName} - ${dateStr})`,
           summaryText: summary,
           className: matchedClass.class_name,
           sectionName: matchedClass.section_name ?? undefined,
@@ -1288,14 +1479,23 @@ export function TeacherVoiceAssistantModal({
               </View>
             </View>
             <Pressable onPress={handleClose} hitSlop={10} style={{ padding: 4 }}>
-              <Ionicons name="close" size={24} color={theme.textSecondary} />
+              <Ionicons name="close" size={24} color={theme.text} />
             </Pressable>
           </View>
 
           {/* Assigned Classes Badge Bar */}
-          <View style={[styles.classesScopeBar, { backgroundColor: theme.backgroundElement, borderColor: theme.border, borderWidth: 1 }]}>
-            <Ionicons name="shield-checkmark" size={14} color="#10B981" />
-            <ThemedText type="small" style={{ color: '#10B981', fontSize: 11 }}>
+          <View
+            style={[
+              styles.classesScopeBar,
+              {
+                backgroundColor: isDark ? 'rgba(16, 185, 129, 0.15)' : '#ECFDF5',
+                borderColor: isDark ? 'rgba(16, 185, 129, 0.35)' : '#A7F3D0',
+                borderWidth: 1,
+              },
+            ]}
+          >
+            <Ionicons name="shield-checkmark" size={14} color={isDark ? '#34D399' : '#10B981'} />
+            <ThemedText type="small" style={{ color: isDark ? '#34D399' : '#047857', fontSize: 11, fontWeight: '600' }}>
               Scope: Authorized for{' '}
               {teacherClasses
                 .map((c) => `${c.class_name}${c.section_name ? `-${c.section_name}` : ''}`)
@@ -1304,7 +1504,7 @@ export function TeacherVoiceAssistantModal({
             </ThemedText>
           </View>
 
-          <ScrollView style={styles.bodyScroll} showsVerticalScrollIndicator={false}>
+          <ScrollView ref={scrollViewRef} style={styles.bodyScroll} showsVerticalScrollIndicator={false}>
             {/* Voice Microphone Controller Box */}
             <View style={[styles.voiceBox, { backgroundColor: theme.backgroundElement }]}>
               <Pressable
@@ -1324,10 +1524,30 @@ export function TeacherVoiceAssistantModal({
 
               {transcript ? (
                 <View style={[styles.transcriptBox, { borderColor: theme.tint, backgroundColor: theme.surface }]}>
-                  <ThemedText type="small" style={{ color: theme.tint, fontStyle: 'italic' }}>
+                  <ThemedText type="small" style={{ color: isDark ? '#60A5FA' : theme.tint, fontStyle: 'italic', fontWeight: '500' }}>
                     "{transcript}"
                   </ThemedText>
                 </View>
+              ) : null}
+
+              {result && !processing ? (
+                <Pressable
+                  style={[
+                    styles.scrollToResultBanner,
+                    {
+                      backgroundColor: isDark ? 'rgba(59, 130, 246, 0.25)' : theme.tint + '1A',
+                      borderColor: isDark ? '#60A5FA' : theme.tint,
+                      borderWidth: 1,
+                    },
+                  ]}
+                  onPress={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
+                >
+                  <Ionicons name="sparkles" size={16} color={isDark ? '#93C5FD' : theme.tint} />
+                  <ThemedText type="smallBold" style={{ color: isDark ? '#BFDBFE' : theme.tint, flex: 1, fontSize: 12 }}>
+                    Result Ready! Tap to scroll down ↓
+                  </ThemedText>
+                  <Ionicons name="arrow-down-circle" size={18} color={isDark ? '#93C5FD' : theme.tint} />
+                </Pressable>
               ) : null}
             </View>
 
@@ -1401,6 +1621,7 @@ export function TeacherVoiceAssistantModal({
               <Card
                 style={[
                   styles.resultCard,
+                  { backgroundColor: theme.backgroundElement, borderColor: theme.border, borderWidth: 1 },
                   result.type === 'error' && { borderColor: '#EF4444', borderWidth: 1.5 },
                 ]}
               >
@@ -1422,17 +1643,28 @@ export function TeacherVoiceAssistantModal({
                       }}
                       style={[
                         styles.soundPillBtn,
-                        { backgroundColor: soundEnabled ? theme.tint + '20' : theme.backgroundElement },
+                        {
+                          backgroundColor: soundEnabled
+                            ? isDark
+                              ? 'rgba(59, 130, 246, 0.25)'
+                              : theme.tint + '20'
+                            : theme.backgroundElement,
+                          borderColor: soundEnabled ? (isDark ? '#60A5FA' : theme.tint) : theme.border,
+                          borderWidth: 1,
+                        },
                       ]}
                     >
                       <Ionicons
                         name={soundEnabled ? 'volume-high' : 'volume-mute'}
                         size={14}
-                        color={soundEnabled ? theme.tint : theme.textSecondary}
+                        color={soundEnabled ? (isDark ? '#93C5FD' : theme.tint) : theme.textSecondary}
                       />
                       <ThemedText
                         type="smallBold"
-                        style={{ color: soundEnabled ? theme.tint : theme.textSecondary, fontSize: 11 }}
+                        style={{
+                          color: soundEnabled ? (isDark ? '#BFDBFE' : theme.tint) : theme.textSecondary,
+                          fontSize: 11,
+                        }}
                       >
                         {soundEnabled ? 'Sound ON' : 'Muted'}
                       </ThemedText>
@@ -1448,7 +1680,15 @@ export function TeacherVoiceAssistantModal({
                       }}
                       style={[
                         styles.playVoiceBtn,
-                        { backgroundColor: soundEnabled ? theme.tint : theme.backgroundElement },
+                        {
+                          backgroundColor: soundEnabled
+                            ? isDark
+                              ? '#2563EB'
+                              : theme.tint
+                            : theme.backgroundElement,
+                          borderColor: soundEnabled ? 'transparent' : theme.border,
+                          borderWidth: soundEnabled ? 0 : 1,
+                        },
                       ]}
                     >
                       <Ionicons name="play-circle" size={16} color={soundEnabled ? '#FFFFFF' : theme.textSecondary} />
@@ -1745,28 +1985,31 @@ export function TeacherVoiceAssistantModal({
                     <ThemedText type="smallBold" style={{ marginBottom: 6, color: theme.text }}>
                       Fee Invoices ({result.feeList.length}):
                     </ThemedText>
-                    {result.feeList.map((f, i) => (
-                      <View key={i} style={[styles.listItemRow, { borderBottomColor: theme.border }]}>
-                        <View style={{ flex: 1 }}>
-                          <ThemedText type="smallBold" style={{ color: theme.text }}>
-                            {i + 1}. {f.studentName}
-                          </ThemedText>
-                          <ThemedText type="small" themeColor="textSecondary" style={{ fontSize: 11 }}>
-                            {f.title}
-                          </ThemedText>
-                        </View>
-                        <View style={{ alignItems: 'flex-end' }}>
-                          <ThemedText type="smallBold" style={{ color: f.status === 'PAID' ? '#10B981' : '#EF4444' }}>
-                            {f.amount}
-                          </ThemedText>
-                          <View style={[styles.statusBadge, { backgroundColor: f.status === 'PAID' ? '#D1FAE5' : '#FEE2E2' }]}>
-                            <ThemedText type="small" style={{ color: f.status === 'PAID' ? '#065F46' : '#991B1B', fontSize: 9 }}>
-                              {f.status}
+                    {result.feeList.map((f, i) => {
+                      const bStyle = getBadgeStyle(f.status);
+                      return (
+                        <View key={i} style={[styles.listItemRow, { borderBottomColor: theme.border }]}>
+                          <View style={{ flex: 1 }}>
+                            <ThemedText type="smallBold" style={{ color: theme.text }}>
+                              {i + 1}. {f.studentName}
+                            </ThemedText>
+                            <ThemedText type="small" themeColor="textSecondary" style={{ fontSize: 11 }}>
+                              {f.title}
                             </ThemedText>
                           </View>
+                          <View style={{ alignItems: 'flex-end' }}>
+                            <ThemedText type="smallBold" style={{ color: f.status === 'PAID' ? (isDark ? '#34D399' : '#10B981') : (isDark ? '#FCA5A5' : '#EF4444') }}>
+                              {f.amount}
+                            </ThemedText>
+                            <View style={[styles.statusBadge, { backgroundColor: bStyle.bg }]}>
+                              <ThemedText type="small" style={{ color: bStyle.text, fontSize: 9, fontWeight: '700' }}>
+                                {f.status}
+                              </ThemedText>
+                            </View>
+                          </View>
                         </View>
-                      </View>
-                    ))}
+                      );
+                    })}
                   </View>
                 ) : null}
 
@@ -1801,48 +2044,41 @@ export function TeacherVoiceAssistantModal({
                     <ThemedText type="smallBold" style={{ marginBottom: 6, color: theme.text }}>
                       Student List ({result.studentsList.length}):
                     </ThemedText>
-                    {result.studentsList.slice(0, 15).map((st, i) => (
-                      <View key={i} style={[styles.listItemRow, { borderBottomColor: theme.border }]}>
-                        <ThemedText type="smallBold" style={{ flex: 1, color: theme.text }}>
-                          {i + 1}. {st.name} {st.rollNo ? `(Roll: ${st.rollNo})` : ''}
-                        </ThemedText>
-                        {st.status ? (
-                          <View
-                            style={[
-                              styles.statusBadge,
-                              {
-                                backgroundColor:
-                                  st.status === 'Present'
-                                    ? '#D1FAE5'
-                                    : st.status === 'Absent'
-                                    ? '#FEE2E2'
-                                    : '#FEF3C7',
-                              },
-                            ]}
-                          >
-                            <ThemedText
-                              type="small"
-                              style={{
-                                color:
-                                  st.status === 'Present'
-                                    ? '#065F46'
-                                    : st.status === 'Absent'
-                                    ? '#991B1B'
-                                    : '#92400E',
-                                fontSize: 10,
-                              }}
-                            >
-                              {st.status}
-                            </ThemedText>
-                          </View>
-                        ) : null}
-                      </View>
-                    ))}
+                    {result.studentsList.slice(0, 15).map((st, i) => {
+                      const bStyle = getBadgeStyle(st.status);
+                      return (
+                        <View key={i} style={[styles.listItemRow, { borderBottomColor: theme.border }]}>
+                          <ThemedText type="smallBold" style={{ flex: 1, color: theme.text }}>
+                            {i + 1}. {st.name} {st.rollNo ? `(Roll: ${st.rollNo})` : ''}
+                          </ThemedText>
+                          {st.status ? (
+                            <View style={[styles.statusBadge, { backgroundColor: bStyle.bg }]}>
+                              <ThemedText type="small" style={{ color: bStyle.text, fontSize: 10, fontWeight: '700' }}>
+                                {st.status}
+                              </ThemedText>
+                            </View>
+                          ) : null}
+                        </View>
+                      );
+                    })}
                   </View>
                 ) : null}
               </Card>
             ) : null}
           </ScrollView>
+
+          {/* Floating Sticky Scroll Down Button for Easy Output Viewing */}
+          {result && !processing ? (
+            <Pressable
+              style={[styles.floatingResultButton, { backgroundColor: theme.tint }]}
+              onPress={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
+            >
+              <Ionicons name="arrow-down-circle" size={18} color="#FFFFFF" />
+              <ThemedText type="smallBold" style={{ color: '#FFFFFF', fontSize: 12 }}>
+                View AI Result Below ↓
+              </ThemedText>
+            </Pressable>
+          ) : null}
 
           {/* Hidden Speech Bridge for Native Android/iOS */}
           {Platform.OS !== 'web' ? (
@@ -1851,6 +2087,9 @@ export function TeacherVoiceAssistantModal({
                 ref={webViewRef}
                 originWhitelist={['*']}
                 onMessage={handleWebViewMessage}
+                mediaPlaybackRequiresUserAction={false}
+                allowsInlineMediaPlayback={true}
+                javaScriptEnabled={true}
                 source={{
                   html: `
                     <!DOCTYPE html>
@@ -1862,6 +2101,26 @@ export function TeacherVoiceAssistantModal({
                       <script>
                         let rec = null;
                         let finalTranscriptText = '';
+
+                        function speakTxt(txt) {
+                          if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+                            try {
+                              window.speechSynthesis.cancel();
+                              var u = new SpeechSynthesisUtterance(txt);
+                              u.rate = 1.0;
+                              u.pitch = 1.0;
+                              u.lang = 'en-US';
+                              window.speechSynthesis.speak(u);
+                            } catch(e){}
+                          }
+                        }
+
+                        function stopTxt() {
+                          if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+                            try { window.speechSynthesis.cancel(); } catch(e){}
+                          }
+                        }
+
                         function startRec() {
                           const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
                           if (!SpeechRecognition) {
@@ -1997,6 +2256,34 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
     borderWidth: 1,
     maxWidth: '90%',
+  },
+  scrollToResultBanner: {
+    marginTop: Spacing.two,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: 8,
+    borderRadius: Radius.pill,
+    borderWidth: 1,
+    maxWidth: '92%',
+  },
+  floatingResultButton: {
+    position: 'absolute',
+    bottom: Spacing.three,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: Spacing.four,
+    paddingVertical: 10,
+    borderRadius: Radius.pill,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 8,
+    zIndex: 99,
   },
   audioControlsRow: {
     flexDirection: 'row',
