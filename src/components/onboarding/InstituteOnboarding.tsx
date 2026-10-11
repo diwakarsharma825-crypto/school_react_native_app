@@ -9,7 +9,7 @@ import { Brand, Radius, Shadow, Spacing } from '@/constants/theme';
 import { useBrand } from '@/hooks/use-brand';
 import { useTheme } from '@/hooks/use-theme';
 
-const defaultLogo = require('../../../assets/images/icon.png');
+const defaultLogo = require('../../../assets/images/icon.jpeg');
 const { width } = Dimensions.get('window');
 
 interface SlideData {

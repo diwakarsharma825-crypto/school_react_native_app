@@ -8,7 +8,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { Button } from './Button';
 import { ThemedText } from './ThemedText';
 
-const logoSource = require('../../../assets/images/icon.png');
+const logoSource = require('../../../assets/images/icon.jpeg');
 
 export function Loading({ label = 'Loading…' }: { label?: string }) {
   const theme = useTheme();

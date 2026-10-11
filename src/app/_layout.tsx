@@ -71,18 +71,18 @@ function RootLayoutInner() {
   const [onboarded, setOnboarded] = useState<boolean | null>(null);
   const [instituteOnboarded, setInstituteOnboarded] = useState<boolean | null>(null);
   const [offline, setOffline] = useState(false);
+  const [serverError, setServerError] = useState(false);
   const networkState = useNetworkState();
 
   // expo-network's isConnected can report stale/incorrect state (especially
-  // right after app resume on Android), so never trust it alone to show a
-  // full-screen takeover — confirm with a real network request first.
+  // right after app resume on Android), so confirm with a real network request.
   const probeConnectivity = useCallback(async () => {
     try {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 6000);
-      await fetch(`${BASE_URL}/app_status`, { method: 'HEAD', signal: controller.signal });
+      const res = await fetch(`${BASE_URL}/app_status`, { method: 'HEAD', signal: controller.signal });
       clearTimeout(timeout);
-      return true;
+      return res.ok || res.status < 500;
     } catch {
       return false;
     }
@@ -93,14 +93,22 @@ function RootLayoutInner() {
     try {
       const result = await fetchAppStatus();
       setStatus(result);
+      setServerError(false);
+      setOffline(false);
     } catch {
-      // If the check itself fails (offline, backend down), fail open —
-      // don't lock users out of the whole app over a network hiccup.
-      setStatus(FAIL_OPEN_STATUS);
+      // If the check fails (offline or server down), do not fail open with dummy tabs.
+      setStatus(null);
+      if (networkState.isConnected === false) {
+        setOffline(true);
+        setServerError(false);
+      } else {
+        setServerError(true);
+        setOffline(false);
+      }
     } finally {
       setChecking(false);
     }
-  }, []);
+  }, [networkState.isConnected]);
 
   useEffect(() => {
     try {
@@ -131,34 +139,22 @@ function RootLayoutInner() {
     SystemUI.setBackgroundColorAsync(theme.background).catch(() => {});
   }, [theme.background]);
 
-  // Explicit false only — undefined means "not resolved yet", not "offline".
-  // The hook alone is unreliable, so confirm with a real probe before
-  // showing the takeover, and clear it immediately once we're back online
-  // (the hook flipping true, or our own probe succeeding on retry).
+  // Handle network state changes
   useEffect(() => {
     if (networkState.isConnected === false) {
-      let cancelled = false;
-      probeConnectivity().then((reachable) => {
-        if (!cancelled) setOffline(!reachable);
-      });
-      return () => {
-        cancelled = true;
-      };
-    }
-    if (networkState.isConnected === true) {
+      setOffline(true);
+      setServerError(false);
+    } else if (networkState.isConnected === true) {
       setOffline(false);
+      if (serverError || !status) {
+        checkStatus();
+      }
     }
-  }, [networkState.isConnected, probeConnectivity]);
+  }, [networkState.isConnected, serverError, status, checkStatus]);
 
   const handleOfflineRetry = useCallback(async () => {
-    setChecking(true);
-    const reachable = await probeConnectivity();
-    if (reachable) {
-      setOffline(false);
-      await checkStatus();
-    }
-    setChecking(false);
-  }, [probeConnectivity, checkStatus]);
+    await checkStatus();
+  }, [checkStatus]);
 
   return (
     <BrandProvider
@@ -172,10 +168,20 @@ function RootLayoutInner() {
         achieversDisplay: status?.achieversDisplay ?? 'marks',
       }}
     >
-      {offline ? (
+      {offline || (!status && serverError) ? (
         <SafeAreaProvider>
           <StatusBar style="light" />
-          <OfflineScreen onRetry={handleOfflineRetry} retrying={checking} />
+          <OfflineScreen
+            onRetry={handleOfflineRetry}
+            retrying={checking}
+            isServerError={serverError && networkState.isConnected !== false}
+            title={serverError && networkState.isConnected !== false ? 'Server Not Responding' : 'No Internet Connection'}
+            message={
+              serverError && networkState.isConnected !== false
+                ? 'Unable to connect to the school server. Please check your internet connection or try again later.'
+                : 'This app needs an internet connection to show live updates. Please check your Wi-Fi or mobile data and try again.'
+            }
+          />
         </SafeAreaProvider>
       ) : (checking && !status) || onboarded === null || (status?.instituteMode && instituteOnboarded === null) ? (
         <LaunchScreen />

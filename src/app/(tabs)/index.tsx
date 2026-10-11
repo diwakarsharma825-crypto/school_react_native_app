@@ -16,6 +16,8 @@ import { Screen } from '@/components/ui/Screen';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { EmptyState, ErrorState, Loading } from '@/components/ui/states';
+import { OfflineScreen } from '@/components/ui/OfflineScreen';
+import { useNetworkState } from 'expo-network';
 import { Radius, Shadow, Spacing } from '@/constants/theme';
 import { toAchiever } from '@/data/achievers';
 import { fetchHome, fetchSettings, fetchTopAchievers } from '@/data/api';
@@ -102,8 +104,29 @@ export default function HomeScreen() {
     return <LoginChoiceScreen />;
   }
 
+  const networkState = useNetworkState();
+
   if (home.loading || settings.loading) return <Loading />;
-  if (home.error || !home.data) return <ErrorState message={home.error ? (home.error.message || String(home.error)) : 'Failed to load'} onRetry={home.refetch} />;
+  if (home.error || !home.data) {
+    const isOffline = networkState.isConnected === false;
+    return (
+      <OfflineScreen
+        onRetry={() => {
+          home.refetch();
+          settings.refetch();
+          if (topStudentsEnabled) achievers.refetch();
+        }}
+        retrying={home.loading}
+        isServerError={!isOffline}
+        title={isOffline ? 'No Internet Connection' : 'Server Not Responding'}
+        message={
+          isOffline
+            ? 'This app needs an internet connection to show live updates. Please check your Wi-Fi or mobile data and try again.'
+            : 'Unable to connect to the school server. Please check your internet connection or try again later.'
+        }
+      />
+    );
+  }
 
   return (
     <Screen>

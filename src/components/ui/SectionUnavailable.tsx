@@ -9,7 +9,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { Screen } from './Screen';
 import { ThemedText } from './ThemedText';
 
-const logoSource = require('../../../assets/images/icon.png');
+const logoSource = require('../../../assets/images/icon.jpeg');
 
 /** Shown when a section the admin has turned off is opened — the nav tile
  * for it stays visible (so the app doesn't feel like features vanished),

@@ -32,7 +32,7 @@ import { ExportPdfButton } from '@/components/ui/ExportPdfButton';
 import { exportHomeworkToPdf, exportToPdf } from '@/lib/pdf-export';
 import { StudentHomeworkSubmitModal } from '@/components/ui/StudentHomeworkSubmitModal';
 
-const defaultLogo = require('../../assets/images/icon.png');
+const defaultLogo = require('../../assets/images/icon.jpeg');
 
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',

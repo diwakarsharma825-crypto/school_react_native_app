@@ -25,7 +25,7 @@ import { PasswordInput } from '@/components/ui/PasswordInput';
 import { SelectField } from '@/components/ui/SelectField';
 import { ThemedText } from '@/components/ui/ThemedText';
 
-const logoSource = require('../../../assets/images/icon.png');
+const logoSource = require('../../../assets/images/icon.jpeg');
 const homePreviewImg = require('../../../assets/images/onboarding_home.jpg');
 const galleryPreviewImg = require('../../../assets/images/onboarding_gallery.jpg');
 const eventsPreviewImg = require('../../../assets/images/onboarding_events.jpg');

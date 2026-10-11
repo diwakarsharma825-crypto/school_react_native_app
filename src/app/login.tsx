@@ -13,7 +13,7 @@ import { useStudentAuth } from '@/hooks/use-student-auth';
 import { useTeacherAuth } from '@/hooks/use-teacher-auth';
 import { useTheme } from '@/hooks/use-theme';
 
-const defaultLogo = require('../../assets/images/icon.png');
+const defaultLogo = require('../../assets/images/icon.jpeg');
 
 export default function LoginChoiceScreen() {
   const theme = useTheme();

@@ -4,12 +4,12 @@
     "slug": "saarthak-app",
     "version": "1.9.8",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/icon.jpeg",
     "scheme": "saarthakapp",
     "userInterfaceStyle": "automatic",
     "backgroundColor": "#F5F7FA",
     "ios": {
-      "icon": "./assets/images/icon.png",
+      "icon": "./assets/images/icon.jpeg",
       "bundleIdentifier": "org.saarthakgimsss.app",
       "supportsTablet": true,
       "infoPlist": {
@@ -39,7 +39,7 @@
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/favicon.jpeg"
     },
     "plugins": [
       "expo-router",
@@ -47,7 +47,7 @@
         "expo-splash-screen",
         {
           "backgroundColor": "#123A6B",
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/splash-icon.jpeg",
           "imageWidth": 180
         }
       ],
@@ -60,7 +60,7 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/images/icon.png",
+          "icon": "./assets/images/icon.jpeg",
           "color": "#123A6B",
           "sounds": ["./assets/sounds/notification.wav"]
         }

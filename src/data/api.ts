@@ -38,6 +38,7 @@ interface ApiEnvelope<T> {
 }
 
 function getMockFallback<T>(path: string): T | null {
+  if (!USE_MOCK) return null;
   const p = path.toLowerCase();
   if (p.includes('/home')) return mockHome as unknown as T;
   if (p.includes('/settings')) return { app_name: 'Saarthak GIMSSS 12-A', logo_url: null } as unknown as T;

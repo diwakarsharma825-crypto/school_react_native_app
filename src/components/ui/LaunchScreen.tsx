@@ -6,7 +6,7 @@ import { Brand } from '@/constants/theme';
 import { useBrand } from '@/hooks/use-brand';
 import { useTheme } from '@/hooks/use-theme';
 
-const defaultLogo = require('../../../assets/images/icon.png');
+const defaultLogo = require('../../../assets/images/icon.jpeg');
 
 export function LaunchScreen() {
   const scale = useRef(new Animated.Value(0.7)).current;

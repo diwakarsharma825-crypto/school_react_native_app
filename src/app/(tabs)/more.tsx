@@ -20,7 +20,7 @@ import { clearHomeworkAccess } from '@/lib/homework-access';
 import { useLanguage } from '@/lib/i18n';
 import { getAppVersion } from '@/lib/version';
 
-const logoSource = require('../../../assets/images/icon.png');
+const logoSource = require('../../../assets/images/icon.jpeg');
 
 interface Row {
   label: string;

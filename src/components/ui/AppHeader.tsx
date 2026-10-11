@@ -18,7 +18,7 @@ import { useLayout } from '@/hooks/use-layout';
 import { useStudentAuth } from '@/hooks/use-student-auth';
 import { useTeacherAuth } from '@/hooks/use-teacher-auth';
 
-const logoSource = require('../../../assets/images/icon.png');
+const logoSource = require('../../../assets/images/icon.jpeg');
 
 /** Top-level header: circular logo, school name, address subtitle, bell icon.
  * Fetches its own copy of /settings (same endpoint the More screen uses) so
