@@ -1,4 +1,5 @@
 import * as SystemUI from 'expo-system-ui';
+import * as SplashScreen from 'expo-splash-screen';
 import { router, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useNetworkState } from 'expo-network';
@@ -8,6 +9,8 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { OfflineScreen } from '@/components/ui/OfflineScreen';
 import { LaunchScreen } from '@/components/ui/LaunchScreen';
+
+SplashScreen.preventAutoHideAsync().catch(() => {});
 import { DynamicBottomBar } from '@/components/ui/DynamicBottomBar';
 import { TrialBanner } from '@/components/ui/TrialBanner';
 
@@ -134,6 +137,10 @@ function RootLayoutInner() {
       })
     );
   }, [checkStatus]);
+
+  useEffect(() => {
+    SplashScreen.hideAsync().catch(() => {});
+  }, []);
 
   useEffect(() => {
     SystemUI.setBackgroundColorAsync(theme.background).catch(() => {});

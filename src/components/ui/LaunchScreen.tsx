@@ -1,16 +1,15 @@
 import { Image } from 'expo-image';
 import React, { useEffect, useRef } from 'react';
-import { Animated, Easing, StyleSheet } from 'react-native';
+import { Animated, Easing, StyleSheet, View } from 'react-native';
 
 import { Brand } from '@/constants/theme';
 import { useBrand } from '@/hooks/use-brand';
 import { useTheme } from '@/hooks/use-theme';
 
-const defaultLogo = require('../../../assets/images/icon.jpeg');
+const defaultLogo = require('../../../assets/images/icon.png');
 
 export function LaunchScreen() {
-  const scale = useRef(new Animated.Value(0.7)).current;
-  const opacity = useRef(new Animated.Value(0)).current;
+  const scale = useRef(new Animated.Value(0.92)).current;
   const brand = useBrand();
   const theme = useTheme();
 
@@ -18,42 +17,43 @@ export function LaunchScreen() {
   const splashBg = brand.splashColor || brand.primaryColor || theme.tint || Brand.blueDark;
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(opacity, { toValue: 1, duration: 450, useNativeDriver: true }),
-      Animated.spring(scale, { toValue: 1, friction: 5, tension: 60, useNativeDriver: true }),
-    ]).start(() => {
+    Animated.spring(scale, {
+      toValue: 1,
+      friction: 6,
+      tension: 60,
+      useNativeDriver: true,
+    }).start(() => {
       Animated.loop(
         Animated.sequence([
           Animated.timing(scale, {
-            toValue: 1.06,
-            duration: 700,
+            toValue: 1.05,
+            duration: 800,
             easing: Easing.inOut(Easing.ease),
             useNativeDriver: true,
           }),
           Animated.timing(scale, {
             toValue: 1,
-            duration: 700,
+            duration: 800,
             easing: Easing.inOut(Easing.ease),
             useNativeDriver: true,
           }),
         ])
       ).start();
     });
-  }, [opacity, scale]);
+  }, [scale]);
 
   return (
-    <Animated.View style={[styles.container, { backgroundColor: splashBg, opacity }]}>
-      <Animated.View style={styles.logoWrap}>
+    <View style={[styles.container, { backgroundColor: splashBg }]}>
+      <Animated.View style={[styles.logoWrap, { transform: [{ scale }] }]}>
         <Image
           source={logoSource}
-          style={[styles.logo, { transform: [{ scale }] }]}
+          style={styles.logo}
           contentFit="contain"
           cachePolicy="memory-disk"
           priority="high"
-          transition={300}
         />
       </Animated.View>
-    </Animated.View>
+    </View>
   );
 }
 
